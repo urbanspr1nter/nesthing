@@ -27,10 +27,16 @@ var CpuAddressingHelper = /** @class */ (function () {
     };
     CpuAddressingHelper.prototype.atAbsoluteIndirect = function (regPC) {
         var absoluteAddress = this.atAbsolute(regPC);
-        var effectiveLow = this._memory.get(absoluteAddress);
-        var effectiveHigh = this._memory.get(absoluteAddress + 1);
-        var effectiveAddress = (effectiveHigh << 8) | effectiveLow;
-        return effectiveAddress;
+        if ((absoluteAddress & 0x00FF) === 0xFF) {
+            var effectiveLow = this._memory.get(absoluteAddress);
+            var effectiveHigh = this._memory.get(absoluteAddress & 0xFF00);
+            return (effectiveHigh << 8) | effectiveLow;
+        }
+        else {
+            var effectiveLow = this._memory.get(absoluteAddress);
+            var effectiveHigh = this._memory.get(absoluteAddress + 1);
+            return (effectiveHigh << 8) | effectiveLow;
+        }
     };
     /**
      * Gets the direct page effective address.
@@ -113,7 +119,7 @@ var CpuAddressingHelper = /** @class */ (function () {
     CpuAddressingHelper.prototype.atDirectPageIndexedIndirectX = function (regPC, x) {
         var baseLowByte = this.atDirectPage(regPC);
         var indirectLow = (baseLowByte + x.get()) & 0xFF;
-        var indirectHigh = (indirectLow + 1);
+        var indirectHigh = (indirectLow + 1) & 0xFF;
         var baseAddress = (indirectHigh << 8) | (indirectLow);
         var effectiveLow = this._memory.get(indirectLow);
         var effectiveHigh = this._memory.get(indirectHigh);
@@ -129,7 +135,7 @@ var CpuAddressingHelper = /** @class */ (function () {
     CpuAddressingHelper.prototype.atDirectPageIndirectIndexedY = function (regPC, y) {
         var baseLowByte = this.atDirectPage(regPC);
         var indirectLow = this._memory.get(baseLowByte);
-        var indirectHigh = this._memory.get(baseLowByte + 1);
+        var indirectHigh = this._memory.get((baseLowByte + 1) & 0xFF);
         var effectiveLow = (indirectLow + y.get()) & 0xFF;
         var carry = (indirectLow + y.get()) > 255 ? 1 : 0;
         var effectiveHigh = (indirectHigh) + (carry);

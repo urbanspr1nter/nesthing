@@ -206,13 +206,15 @@ export class Cpu {
     }
 
     public stackPush(data: number): void {
-        this._memory.set(0x100 | this._regSP.get(), data);
-        this._regSP.set(this._regSP.get() - 1);
+        const address = 0x100 | (this._regSP.get());
+        this._memory.set(address, data);
+        this._regSP.set(address - 1);
     }
 
     public stackPull(): number {
-        this._regSP.set(this._regSP.get() + 1);
-        return this._memory.get(0x100 | this._regSP.get());
+        const address = 0x100 | (this._regSP.get() + 1);
+        this._regSP.set(address);
+        return this._memory.get(address);
     }
 
     public getA(): number {
@@ -523,7 +525,6 @@ export class Cpu {
                 this.pushLog(this._regPC.get() - 1, opCode, undefined, "ASL", false, false, undefined);
                 this._regA.set(result);
                 this._currentCycles += 2;
-                this._regPC.add(1);
                 break;
             case 0x0E:
                 address = this._addressingHelper.atAbsolute(this._regPC);
@@ -572,13 +573,13 @@ export class Cpu {
             this.clearStatusBit(StatusBitPositions.Carry);
         }
 
-        if(this.isNegative(result)) {
+        if(this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         } else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isZero(result)) {
+        if(this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         } else {
             this.clearStatusBit(StatusBitPositions.Zero);
@@ -599,7 +600,7 @@ export class Cpu {
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BCC", false, false, (this._regPC.get() + 1) + displacement);
 
                 if(!this.getStatusBitFlag(StatusBitPositions.Carry)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
     
                     this._regPC.add(1);
                     this._regPC.add(displacement);
@@ -674,9 +675,8 @@ export class Cpu {
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BEQ", false, false, (this._regPC.get() + 1) + displacement);
 
                 if(this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(1);
                     this._regPC.add(displacement);
         
                     // Page boundary crossed?
@@ -685,6 +685,7 @@ export class Cpu {
                     }
                             
                     this._currentCycles += 1;
+                    this._regPC.add(1);
                 } else {
                     this._regPC.add(1);
                 }
@@ -776,7 +777,7 @@ export class Cpu {
 
 
                 if(this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
                     this._regPC.add(1);
                     this._regPC.add(displacement);
@@ -812,7 +813,7 @@ export class Cpu {
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BNE", false, false, (this._regPC.get() + 1) + displacement);
 
                 if(!this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
                     this._regPC.add(1);
                     this._regPC.add(displacement);
@@ -848,7 +849,7 @@ export class Cpu {
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BPL", false, false, (this._regPC.get() + 1) + displacement);
 
                 if(!this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
                     this._regPC.add(1);
                     this._regPC.add(displacement);
@@ -910,7 +911,7 @@ export class Cpu {
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BVC", false, false, (this._regPC.get() + 1) + displacement);
 
                 if(!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
                     this._regPC.add(1);
                     this._regPC.add(displacement);
@@ -946,7 +947,7 @@ export class Cpu {
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BVS", false, false, (this._regPC.get() + 1) + displacement);
 
                 if(this.getStatusBitFlag(StatusBitPositions.Overflow)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
                     this._regPC.add(1);
                     this._regPC.add(displacement);
@@ -1624,18 +1625,18 @@ export class Cpu {
             case 0x4C:
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 this.pushLog(this._regPC.get() - 1, opCode, address, "JMP", false, false);
-                this._regPC.add(2);
+                //this._regPC.add(2);
                 this._regPC.set(address);
                 this._currentCycles += 3;
                 break;
             case 0x6C:
                 address = this._addressingHelper.atAbsoluteIndirect(this._regPC);
                 this.pushLog(this._regPC.get() - 1, opCode, address, "JMP", false, false);
-                if((this._regPC.get() & 0x00FF) === 0x0FF) {
+                if((this._regPC.get() & 0x00FF) === 0x00FF) {
                     this._currentCycles += 1;
                 }
                 this._regPC.set(address);
-                this._regPC.add(2);
+                //this._regPC.add(2);
                 this._currentCycles += 5;
                 break;
             default:
@@ -1651,7 +1652,7 @@ export class Cpu {
             case 0x20: // Absolute
                 let address = this._addressingHelper.atAbsolute(this._regPC);
                 this.pushLog(this._regPC.get() - 1, opCode, address, "JSR", false, false);
-                this._regPC.add(2);
+                this._regPC.add(1);
                 this.stackPush((this._regPC.get() & 0xFF00) >> 8);
                 this.stackPush((this._regPC.get() & 0x00FF));
                 this._regPC.set(address);
@@ -1938,7 +1939,7 @@ export class Cpu {
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
                 this._memory.set(address, result);
-                this._regPC.add(3);
+                this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x56: // Direct Page Indexed, X
@@ -1956,13 +1957,13 @@ export class Cpu {
                 break;
         }
 
-        if(this.isNegative(result)) {
+        if(this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         } else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isZero(result)) {
+        if(this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         } else {
             this.clearStatusBit(StatusBitPositions.Zero);
@@ -2126,6 +2127,7 @@ export class Cpu {
 
     public pla(opcode: number) {
         this._regPC.add(1);
+
         switch(opcode) {
             case 0x68:
                 this.pushLog(this._regPC.get() - 1, opcode, undefined, "PLA", false, false, undefined);
@@ -2180,7 +2182,7 @@ export class Cpu {
             case 0x2A: // Accumulator
                 operand = this._regA.get();
                 this.pushLog(this._regPC.get() - 1, opcode, undefined, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._regA.set(result);
                 this._currentCycles += 2;
@@ -2189,7 +2191,7 @@ export class Cpu {
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(2);
@@ -2199,7 +2201,7 @@ export class Cpu {
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(1);
@@ -2209,7 +2211,7 @@ export class Cpu {
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(2);
@@ -2219,7 +2221,7 @@ export class Cpu {
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(1);
@@ -2230,13 +2232,13 @@ export class Cpu {
                 break;
         }
 
-        if(this.isNegative(result)) {
+        if(this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         } else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isZero(result)) {
+        if(this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         } else {
             this.clearStatusBit(StatusBitPositions.Zero);
@@ -2311,13 +2313,13 @@ export class Cpu {
                 break;
         }
 
-        if(this.isNegative(result)) {
+        if(this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         } else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isZero(result)) {
+        if(this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         } else {
             this.clearStatusBit(StatusBitPositions.Zero);
@@ -2363,6 +2365,7 @@ export class Cpu {
                 this.pushLog(this._regPC.get(), opcode, undefined, "RTS", false, false, undefined);
 
                 this._regPC.set((newHighPC << 8) | newLowPC);
+                this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             default:
@@ -3216,7 +3219,6 @@ export class Cpu {
                 this.cmp(opCode);
                 break;
             case 0xC6:
-                console.debug(`DEC`);
                 this.dec(opCode);
                 break;
             case 0xC8:
@@ -3255,8 +3257,7 @@ export class Cpu {
                 this.cmp(opCode);
                 break;
             case 0xD6:
-                console.debug(`DEC`);
-                this.cmp(opCode);
+                this.dec(opCode);
                 break;
             case 0xD8:
                 console.debug(`CLD`);

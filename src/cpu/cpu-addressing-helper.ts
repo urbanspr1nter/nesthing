@@ -35,12 +35,17 @@ export class CpuAddressingHelper {
 
     public atAbsoluteIndirect(regPC: DoubleByteRegister): number {
         const absoluteAddress = this.atAbsolute(regPC);
-        const effectiveLow = this._memory.get(absoluteAddress);
-        const effectiveHigh = this._memory.get(absoluteAddress + 1);
+        if((absoluteAddress & 0x00FF) === 0xFF) {
+            let effectiveLow = this._memory.get(absoluteAddress);
+            let effectiveHigh = this._memory.get(absoluteAddress & 0xFF00);
+            
+            return (effectiveHigh << 8) | effectiveLow;
+        } else {
+            let effectiveLow = this._memory.get(absoluteAddress);
+            let effectiveHigh = this._memory.get(absoluteAddress + 1);
 
-        const effectiveAddress = (effectiveHigh << 8) | effectiveLow;
-
-        return effectiveAddress;
+            return (effectiveHigh << 8) | effectiveLow;
+        }
     }
 
     /**
@@ -134,7 +139,7 @@ export class CpuAddressingHelper {
     public atDirectPageIndexedIndirectX(regPC: DoubleByteRegister, x: ByteRegister) {
         const baseLowByte = this.atDirectPage(regPC);
         const indirectLow = (baseLowByte + x.get()) & 0xFF;
-        const indirectHigh = (indirectLow + 1);
+        const indirectHigh = (indirectLow + 1) & 0xFF;
         const baseAddress = (indirectHigh << 8) | (indirectLow);
 
         const effectiveLow = this._memory.get(indirectLow);
@@ -154,7 +159,7 @@ export class CpuAddressingHelper {
     public atDirectPageIndirectIndexedY(regPC: DoubleByteRegister, y: ByteRegister) {
         const baseLowByte = this.atDirectPage(regPC);
         const indirectLow = this._memory.get(baseLowByte);
-        const indirectHigh = this._memory.get(baseLowByte + 1);
+        const indirectHigh = this._memory.get((baseLowByte + 1) & 0xFF);
 
         const effectiveLow = (indirectLow + y.get()) & 0xFF;
         const carry = (indirectLow + y.get()) > 255 ? 1 : 0;

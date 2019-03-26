@@ -146,12 +146,14 @@ var Cpu = /** @class */ (function () {
         this._currentCycles = 7;
     };
     Cpu.prototype.stackPush = function (data) {
-        this._memory.set(0x100 | this._regSP.get(), data);
-        this._regSP.set(this._regSP.get() - 1);
+        var address = 0x100 | (this._regSP.get());
+        this._memory.set(address, data);
+        this._regSP.set(address - 1);
     };
     Cpu.prototype.stackPull = function () {
-        this._regSP.set(this._regSP.get() + 1);
-        return this._memory.get(0x100 | this._regSP.get());
+        var address = 0x100 | (this._regSP.get() + 1);
+        this._regSP.set(address);
+        return this._memory.get(address);
     };
     Cpu.prototype.getA = function () {
         return this._regA.get();
@@ -449,7 +451,6 @@ var Cpu = /** @class */ (function () {
                 this.pushLog(this._regPC.get() - 1, opCode, undefined, "ASL", false, false, undefined);
                 this._regA.set(result);
                 this._currentCycles += 2;
-                this._regPC.add(1);
                 break;
             case 0x0E:
                 address = this._addressingHelper.atAbsolute(this._regPC);
@@ -497,13 +498,13 @@ var Cpu = /** @class */ (function () {
         else {
             this.clearStatusBit(StatusBitPositions.Carry);
         }
-        if (this.isNegative(result)) {
+        if (this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         }
         else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
-        if (this.isZero(result)) {
+        if (this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         }
         else {
@@ -523,7 +524,7 @@ var Cpu = /** @class */ (function () {
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BCC", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -588,14 +589,14 @@ var Cpu = /** @class */ (function () {
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BEQ", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
-                    this._regPC.add(1);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
                     }
                     this._currentCycles += 1;
+                    this._regPC.add(1);
                 }
                 else {
                     this._regPC.add(1);
@@ -679,7 +680,7 @@ var Cpu = /** @class */ (function () {
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BMI", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -711,7 +712,7 @@ var Cpu = /** @class */ (function () {
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BNE", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -743,7 +744,7 @@ var Cpu = /** @class */ (function () {
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BPL", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -795,7 +796,7 @@ var Cpu = /** @class */ (function () {
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BVC", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -827,7 +828,7 @@ var Cpu = /** @class */ (function () {
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BVS", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Overflow)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -1493,18 +1494,18 @@ var Cpu = /** @class */ (function () {
             case 0x4C:
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 this.pushLog(this._regPC.get() - 1, opCode, address, "JMP", false, false);
-                this._regPC.add(2);
+                //this._regPC.add(2);
                 this._regPC.set(address);
                 this._currentCycles += 3;
                 break;
             case 0x6C:
                 address = this._addressingHelper.atAbsoluteIndirect(this._regPC);
                 this.pushLog(this._regPC.get() - 1, opCode, address, "JMP", false, false);
-                if ((this._regPC.get() & 0x00FF) === 0x0FF) {
+                if ((this._regPC.get() & 0x00FF) === 0x00FF) {
                     this._currentCycles += 1;
                 }
                 this._regPC.set(address);
-                this._regPC.add(2);
+                //this._regPC.add(2);
                 this._currentCycles += 5;
                 break;
             default:
@@ -1518,7 +1519,7 @@ var Cpu = /** @class */ (function () {
             case 0x20:// Absolute
                 var address = this._addressingHelper.atAbsolute(this._regPC);
                 this.pushLog(this._regPC.get() - 1, opCode, address, "JSR", false, false);
-                this._regPC.add(2);
+                this._regPC.add(1);
                 this.stackPush((this._regPC.get() & 0xFF00) >> 8);
                 this.stackPush((this._regPC.get() & 0x00FF));
                 this._regPC.set(address);
@@ -1796,7 +1797,7 @@ var Cpu = /** @class */ (function () {
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
                 this._memory.set(address, result);
-                this._regPC.add(3);
+                this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x56:// Direct Page Indexed, X
@@ -1813,13 +1814,13 @@ var Cpu = /** @class */ (function () {
                 console.error("ERROR: Unhandled LSR opcode! " + opcode);
                 break;
         }
-        if (this.isNegative(result)) {
+        if (this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         }
         else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
-        if (this.isZero(result)) {
+        if (this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         }
         else {
@@ -2026,7 +2027,7 @@ var Cpu = /** @class */ (function () {
             case 0x2A:// Accumulator
                 operand = this._regA.get();
                 this.pushLog(this._regPC.get() - 1, opcode, undefined, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._regA.set(result);
                 this._currentCycles += 2;
@@ -2035,7 +2036,7 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(2);
@@ -2045,7 +2046,7 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(1);
@@ -2055,7 +2056,7 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(2);
@@ -2065,7 +2066,7 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 this.pushLog(this._regPC.get() - 1, opcode, address, "ROL", false, false, undefined);
-                newCarry = ((operand & 0x1000) > 0) ? 1 : 0;
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(1);
@@ -2075,13 +2076,13 @@ var Cpu = /** @class */ (function () {
                 console.error("ERROR: Unhandled ROL opcode! " + opcode);
                 break;
         }
-        if (this.isNegative(result)) {
+        if (this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         }
         else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
-        if (this.isZero(result)) {
+        if (this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         }
         else {
@@ -2154,13 +2155,13 @@ var Cpu = /** @class */ (function () {
                 console.error("ERROR: Unhandled ROR opcode! " + opcode);
                 break;
         }
-        if (this.isNegative(result)) {
+        if (this.isNegative(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Negative);
         }
         else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
-        if (this.isZero(result)) {
+        if (this.isZero(result & 0xFF)) {
             this.setStatusBit(StatusBitPositions.Zero);
         }
         else {
@@ -2200,6 +2201,7 @@ var Cpu = /** @class */ (function () {
                 var newHighPC = this.stackPull();
                 this.pushLog(this._regPC.get(), opcode, undefined, "RTS", false, false, undefined);
                 this._regPC.set((newHighPC << 8) | newLowPC);
+                this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             default:
@@ -2578,6 +2580,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x8A:
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "TXA", false, false, undefined);
                 this._regA.set(this._regX.get());
                 this._currentCycles += 2;
                 break;
@@ -2602,6 +2605,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x9A:
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "TXS", false, false, undefined);
                 this._regSP.set(this._regX.get());
                 this._currentCycles += 2;
                 break;
@@ -2614,6 +2618,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x98:
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "TYA", false, false, undefined);
                 this._regA.set(this._regY.get());
                 this._currentCycles += 2;
                 break;
@@ -2637,147 +2642,114 @@ var Cpu = /** @class */ (function () {
     Cpu.prototype.handleOp = function (opCode) {
         switch (opCode) {
             case 0x00:
-                console.debug("BRK");
                 this.brk(opCode);
                 break;
             case 0x01:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x05:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x06:
-                console.debug("ASL");
                 this.asl(opCode);
                 break;
             case 0x08:
                 this.php(opCode);
                 break;
             case 0x09:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x0A:
-                console.debug("ASL");
                 this.asl(opCode);
                 break;
             case 0x0D:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x0E:
-                console.debug("ASL");
                 this.asl(opCode);
                 break;
             case 0x10:
-                console.debug("BPL");
                 this.bpl(opCode);
                 break;
             case 0x11:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x15:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x16:
-                console.debug("ASL");
                 this.asl(opCode);
                 break;
             case 0x18:
                 this.clc(opCode);
                 break;
             case 0x19:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x1D:
-                console.debug("ORA");
                 this.ora(opCode);
                 break;
             case 0x1E:
-                console.debug("ASL");
                 this.asl(opCode);
                 break;
             case 0x20:
                 this.jsr(opCode);
                 break;
             case 0x21:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x24:
-                console.debug("BIT");
                 this.bit(opCode);
                 break;
             case 0x25:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x26:
-                console.debug("ROL");
                 this.rol(opCode);
                 break;
             case 0x28:
-                console.debug("PLP");
                 this.plp(opCode);
                 break;
             case 0x29:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x2A:
-                console.debug("ROL");
                 this.rol(opCode);
                 break;
             case 0x2C:
-                console.debug("BIT");
                 this.bit(opCode);
                 break;
             case 0x2D:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x2E:
-                console.debug("ROL");
                 this.rol(opCode);
                 break;
             case 0x30:
-                console.debug("BMI");
                 this.bmi(opCode);
                 break;
             case 0x31:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x35:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x36:
-                console.debug("ROL");
                 this.rol(opCode);
                 break;
             case 0x38:
                 this.sec(opCode);
                 break;
             case 0x39:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x3D:
-                console.debug("AND");
                 this.and(opCode);
                 break;
             case 0x3E:
-                console.debug("ROL");
                 this.rol(opCode);
                 break;
             case 0x40:
-                console.debug("RTI");
                 this.rti(opCode);
                 break;
             case 0x41:
@@ -2787,65 +2759,51 @@ var Cpu = /** @class */ (function () {
                 this.eor(opCode);
                 break;
             case 0x46:
-                console.debug("LSR");
                 this.lsr(opCode);
                 break;
             case 0x48:
-                console.debug("PHA");
                 this.pha(opCode);
                 break;
             case 0x49:
-                console.debug("EOR");
                 this.eor(opCode);
                 break;
             case 0x4A:
-                console.debug("LSR");
                 this.lsr(opCode);
                 break;
             case 0x4C:
                 this.jmp(opCode);
                 break;
             case 0x4D:
-                console.debug("EOR");
                 this.eor(opCode);
                 break;
             case 0x4E:
-                console.debug("LSR");
                 this.lsr(opCode);
                 break;
             case 0x50:
                 this.bvc(opCode);
                 break;
             case 0x51:
-                console.debug("EOR");
                 this.eor(opCode);
                 break;
             case 0x55:
-                console.debug("EOR");
                 this.eor(opCode);
                 break;
             case 0x56:
-                console.debug("LSR");
                 this.lsr(opCode);
                 break;
             case 0x58:
-                console.debug("CLI");
                 this.cli(opCode);
                 break;
             case 0x59:
-                console.debug("EOR");
                 this.eor(opCode);
                 break;
             case 0x5D:
-                console.debug("EOR");
                 this.eor(opCode);
                 break;
             case 0x5E:
-                console.debug("LSR");
                 this.lsr(opCode);
                 break;
             case 0x60:
-                console.debug("RTS");
                 this.rts(opCode);
                 break;
             case 0x61:
@@ -2855,15 +2813,12 @@ var Cpu = /** @class */ (function () {
                 this.adc(opCode);
                 break;
             case 0x66:
-                console.debug("ROR");
                 this.ror(opCode);
                 break;
             case 0x68:
-                console.debug("PLA");
                 this.pla(opCode);
                 break;
             case 0x69:
-                console.debug("ADC");
                 this.adc(opCode);
                 break;
             case 0x6A:
@@ -3081,7 +3036,6 @@ var Cpu = /** @class */ (function () {
                 this.cmp(opCode);
                 break;
             case 0xC6:
-                console.debug("DEC");
                 this.dec(opCode);
                 break;
             case 0xC8:
@@ -3120,97 +3074,76 @@ var Cpu = /** @class */ (function () {
                 this.cmp(opCode);
                 break;
             case 0xD6:
-                console.debug("DEC");
-                this.cmp(opCode);
+                this.dec(opCode);
                 break;
             case 0xD8:
                 console.debug("CLD");
                 this.cld(opCode);
                 break;
             case 0xD9:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xDD:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xDE:
-                console.debug("DEC");
                 this.dec(opCode);
                 break;
             case 0xE0:
-                console.debug("CPX");
                 this.cpx(opCode);
                 break;
             case 0xE1:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xE4:
-                console.debug("CPX");
                 this.cpx(opCode);
                 break;
             case 0xE5:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xE6:
-                console.debug("INC");
                 this.inc(opCode);
                 break;
             case 0xE8:
-                console.debug("INX");
                 this.inx(opCode);
                 break;
             case 0xE9:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xEA:
                 this.nop(opCode);
                 break;
             case 0xEC:
-                console.debug("CPX");
                 this.cpx(opCode);
                 break;
             case 0xED:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xEE:
-                console.debug("INC");
                 this.inc(opCode);
                 break;
             case 0xF0:
                 this.beq(opCode);
                 break;
             case 0xF1:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xF5:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xF6:
-                console.debug("INC");
                 this.inc(opCode);
                 break;
             case 0xF8:
-                console.debug("SED");
                 this.sed(opCode);
                 break;
             case 0xF9:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xFD:
-                console.debug("SBC");
                 this.sbc(opCode);
                 break;
             case 0xFE:
-                console.debug("INC");
                 this.inc(opCode);
                 break;
             default:

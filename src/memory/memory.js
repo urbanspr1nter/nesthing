@@ -13,6 +13,7 @@ var Memory = /** @class */ (function () {
         //  -> 0x800 - 0x0FFF
         //  -> 0x1000 - 0x17FF
         //  -> 0x1800 - 0x1FFF
+        value = value & 0xFF;
         if (address >= 0x800 && address <= 0x0FFF) {
             this._memory[address & 0xFFFF] = value;
             this._memory[(address + 1 * 0x800) & 0xFFFF] = value;
@@ -42,7 +43,7 @@ var Memory = /** @class */ (function () {
         if (address >= 0x2000 && address <= 0x3FFF) {
             return this._memory[(0x20 << 8) | (address & 0x0007)];
         }
-        return this._memory[address & 0xFFFF];
+        return this._memory[address & 0xFFFF] & 0xFF;
     };
     Memory.prototype.printDebug = function (startAddress, endAddress) {
         var output = '';

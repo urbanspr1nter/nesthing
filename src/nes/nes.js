@@ -18,7 +18,7 @@ var Nes = /** @class */ (function () {
             _this._memory.set(address, value);
             address++;
         });
-        while (this._cpu.getCurrentCycles() <= 2070) {
+        while (this._cpu.getCurrentCycles() <= 14575) {
             // fetch
             var opCode = this._memory.get(this._cpu.getPC());
             //console.log(opCode.toString(16));
