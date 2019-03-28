@@ -597,7 +597,7 @@ export class Cpu {
         }
 
         for(let i = 0x0000; i <= 0x07FF; i++) {
-            this._memory.set(i, 0x0);
+            this._memory.set(i, 0xFF);
         }
 
         this._regPC.set(0xC000);
@@ -983,19 +983,14 @@ export class Cpu {
         switch(opCode) {
             case 0x90:
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                    displacement *= 1;
-                } else {
+                if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
 
-                
-
                 if(!this.getStatusBitFlag(StatusBitPositions.Carry)) {
-                    const pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
-    
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    
+                    this._regPC.add(displacement + 1);
 
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1021,17 +1016,14 @@ export class Cpu {
         switch(opCode) {
             case 0xB0:
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                   displacement *= 1;
-                } else {
+                if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
     
                 if(this.getStatusBitFlag(StatusBitPositions.Carry)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
         
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1056,18 +1048,14 @@ export class Cpu {
         switch(opCode) {
             case 0xF0:
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                    displacement *= 1;
-                } else {
+                if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
 
-                
-
                 if(this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    const pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
         
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1075,7 +1063,6 @@ export class Cpu {
                     }
                             
                     this._currentCycles += 1;
-                    this._regPC.add(1);
                 } else {
                     this._regPC.add(1);
                 }
@@ -1157,19 +1144,15 @@ export class Cpu {
         switch(opCode) {
             case 0x30:
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                    displacement *= 1;
-                } else {
+                if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
 
                 
-
                 if(this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    const pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
         
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1193,19 +1176,14 @@ export class Cpu {
         switch(opCode) {
             case 0xD0:
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                    displacement *= 1;
-                } else {
+                if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
 
-                
-
                 if(!this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
         
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1229,19 +1207,15 @@ export class Cpu {
         switch(opCode) {
             case 0x10: 
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                displacement *= 1;
-                } else {
+                if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
 
                 
-
                 if(!this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    const pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
+                    const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
         
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1291,10 +1265,8 @@ export class Cpu {
         switch(opCode) {
             case 0x50:
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                displacement *= 1;
-                } else {
-                    displacement *= -1;
+                if(displacement >= 0x80) {
+                    displacement = -(0xFF - displacement + 0x1);
                 }
 
                 
@@ -1302,8 +1274,7 @@ export class Cpu {
                 if(!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
                     const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
             
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1327,20 +1298,14 @@ export class Cpu {
         switch(opCode) {
             case 0x70:
                 let displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if(displacement < 0x80) {
-                displacement *= 1;
-                } else {
-                    displacement *= -1;
+                if(displacement >= 0x80) {
+                    displacement = -(0xFF - displacement + 0x1);
                 }
-
-                
 
                 if(this.getStatusBitFlag(StatusBitPositions.Overflow)) {
                     const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
-        
+                    this._regPC.add(displacement + 1);
         
                     // Page boundary crossed?
                     if(pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -1769,7 +1734,7 @@ export class Cpu {
                 this._currentCycles += 6;    
                 break;
             case 0xDB:
-                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
                 operand--;
 
@@ -1784,7 +1749,7 @@ export class Cpu {
                 this._currentCycles += (7);    
                 break;
             case 0xDF:
-                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 operand--;
 
@@ -2344,6 +2309,9 @@ export class Cpu {
                 break;
             case 0xB3:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                if(this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
+                    this._currentCycles++;
+                }
                 operand = this._memory.get(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
@@ -2360,6 +2328,9 @@ export class Cpu {
                 break;
             case 0xBF:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
+                    this._currentCycles++;
+                }
                 operand = this._memory.get(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
@@ -3460,8 +3431,6 @@ export class Cpu {
             case 0x60:
                 const newLowPC = this.stackPull();
                 const newHighPC = this.stackPull();
-
-                
 
                 this._regPC.set((newHighPC << 8) | newLowPC);
                 this._regPC.add(1);

@@ -391,7 +391,7 @@ var Cpu = /** @class */ (function () {
                 if (byteString.length < 2) {
                     byteString = "0" + byteString;
                 }
-                byteString = "$" + byteString + ";";
+                byteString = "$" + byteString;
                 break;
             case AddressingModes.Accumulator:
                 byteString = "A";
@@ -531,7 +531,7 @@ var Cpu = /** @class */ (function () {
             this._memory.set(i, 0x0);
         }
         for (var i = 0x0000; i <= 0x07FF; i++) {
-            this._memory.set(i, 0x0);
+            this._memory.set(i, 0xFF);
         }
         this._regPC.set(0xC000);
         this._currentCycles = 7;
@@ -881,16 +881,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0x90:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
+                if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
                 if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
-                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
@@ -913,16 +909,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0xB0:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
+                if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
                 if (this.getStatusBitFlag(StatusBitPositions.Carry)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
@@ -944,21 +936,17 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0xF0:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
+                if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
                 if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
-                    this._regPC.add(displacement);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
                     }
                     this._currentCycles += 1;
-                    this._regPC.add(1);
                 }
                 else {
                     this._regPC.add(1);
@@ -1032,16 +1020,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0x30:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
+                if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
                 if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
@@ -1063,16 +1047,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0xD0:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
+                if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
                 if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
@@ -1094,16 +1074,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0x10:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
+                if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
                 if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
@@ -1144,16 +1120,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0x50:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
-                    displacement *= -1;
+                if (displacement >= 0x80) {
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 if (!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
@@ -1175,16 +1147,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0x70:
                 var displacement = this._memory.get(this._regPC.get()) & 0xFF;
-                if (displacement < 0x80) {
-                    displacement *= 1;
-                }
-                else {
-                    displacement *= -1;
+                if (displacement >= 0x80) {
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 if (this.getStatusBitFlag(StatusBitPositions.Overflow)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
-                    this._regPC.add(1);
-                    this._regPC.add(displacement);
+                    this._regPC.add(displacement + 1);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
                         this._currentCycles += 1;
@@ -1589,7 +1557,7 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += 6;
                 break;
             case 0xDB:
-                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
                 operand--;
                 this._memory.set(address, operand);
@@ -1603,7 +1571,7 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += (7);
                 break;
             case 0xDF:
-                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 operand--;
                 this._memory.set(address, operand);
@@ -2106,6 +2074,9 @@ var Cpu = /** @class */ (function () {
                 break;
             case 0xB3:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
+                    this._currentCycles++;
+                }
                 operand = this._memory.get(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
@@ -2122,6 +2093,9 @@ var Cpu = /** @class */ (function () {
                 break;
             case 0xBF:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
+                    this._currentCycles++;
+                }
                 operand = this._memory.get(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
