@@ -429,7 +429,11 @@ export class Cpu {
                 byteString = `#$${data}`;
                 break;
             case AddressingModes.DirectPage:
-                byteString = `$${this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase()}`;
+                byteString = `${this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase()}`;
+                if(byteString.length < 2) {
+                    byteString = `0${byteString}`;
+                }
+                byteString = `$${byteString}`
                 break;
             case AddressingModes.Accumulator:
                 byteString = `A`;
