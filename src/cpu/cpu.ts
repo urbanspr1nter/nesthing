@@ -388,14 +388,38 @@ export class Cpu {
         this._log.push(output);
     }
 
-    public getByteString(address: number) {
-        const byteValue = this._memory.get(address);
+    /*
+        Immediate,
+    Absolute,
+    AbsoluteIndirect,
+    DirectPage,
+    AbsoluteIndexedX,
+    AbsoluteIndexedY,
+    DirectPageIndexedX,
+    DirectPageIndexedY,
+    DirectPageIndexedIndirectX,
+    DirectPageIndirectIndexedY,
+    Implicit,
+    Accumulator,
+    Relative
+    */
 
-        if(byteValue <= 0xF) {
-            return `0${byteValue.toString(16).toUpperCase()}`;
-        } else {
-            return byteValue.toString(16).toUpperCase();
+    public getAddressString(addressingMode: AddressingModes) {
+
+        let byteString = ``;
+        switch(addressingMode) {
+            case AddressingModes.Immediate:
+                byteString = `#$${this._memory.get(this._regPC.get()).toString(16).toUpperCase()}`;
+                break;
+            case AddressingModes.Absolute:
+                byteString  = `$${(this._memory.get(this._regPC.get() + 1)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get()).toString(16).toUpperCase()}`;
+                break;
+            case AddressingModes.AbsoluteIndirect:
+                byteString  = `($${(this._memory.get(this._regPC.get() + 1)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get()).toString(16).toUpperCase()})`;
+                break;
         }
+
+        return byteString;
     }
 
     public getPcLog() {
