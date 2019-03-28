@@ -520,11 +520,11 @@ var Cpu = /** @class */ (function () {
                     displacement *= 1;
                 }
                 else {
-                    displacement *= -1;
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BCC", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
-                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -553,7 +553,7 @@ var Cpu = /** @class */ (function () {
                     displacement *= 1;
                 }
                 else {
-                    displacement *= -1;
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BCS", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Carry)) {
@@ -585,11 +585,11 @@ var Cpu = /** @class */ (function () {
                     displacement *= 1;
                 }
                 else {
-                    displacement *= -1;
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BEQ", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
                     if (pcPageBoundaryByte !== (this._regPC.get() & 0xFF00)) {
@@ -676,11 +676,11 @@ var Cpu = /** @class */ (function () {
                     displacement *= 1;
                 }
                 else {
-                    displacement *= -1;
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BMI", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -708,11 +708,11 @@ var Cpu = /** @class */ (function () {
                     displacement *= 1;
                 }
                 else {
-                    displacement *= -1;
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BNE", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
-                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -740,11 +740,11 @@ var Cpu = /** @class */ (function () {
                     displacement *= 1;
                 }
                 else {
-                    displacement *= -1;
+                    displacement = -(0xFF - displacement + 0x1);
                 }
                 this.pushLog(this._regPC.get() - 1, opCode, displacement, "BPL", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
-                    var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
+                    var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(1);
                     this._regPC.add(displacement);
                     // Page boundary crossed?
@@ -1175,6 +1175,141 @@ var Cpu = /** @class */ (function () {
             this.clearStatusBit(StatusBitPositions.Carry);
         }
     };
+    Cpu.prototype.dcp = function (opcode) {
+        var address = 0;
+        var operand = 0;
+        var pageBoundaryCycle = 0;
+        var carry = 0;
+        // DEC then CMP
+        this._regPC.add(1);
+        switch (opcode) {
+            case 0xC3:
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                operand--;
+                this._memory.set(address, operand);
+                if (this._regA.get() >= this._memory.get(address)) {
+                    carry = 1;
+                }
+                else {
+                    carry = 0;
+                }
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0xC7:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                operand = this._memory.get(address);
+                operand--;
+                this._memory.set(address, operand);
+                if (this._regA.get() >= this._memory.get(address)) {
+                    carry = 1;
+                }
+                else {
+                    carry = 0;
+                }
+                this._regPC.add(1);
+                this._currentCycles += 5;
+                break;
+            case 0xCF:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                operand = this._memory.get(address);
+                operand--;
+                this._memory.set(address, operand);
+                if (this._regA.get() >= this._memory.get(address)) {
+                    carry = 1;
+                }
+                else {
+                    carry = 0;
+                }
+                this._regPC.add(2);
+                this._currentCycles += 6;
+                break;
+            case 0xD3:
+                address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
+                    pageBoundaryCycle = 1;
+                }
+                operand = this._memory.get(address);
+                operand--;
+                this._memory.set(address, operand);
+                if (this._regA.get() >= this._memory.get(address)) {
+                    carry = 1;
+                }
+                else {
+                    carry = 0;
+                }
+                this._regPC.add(1);
+                this._currentCycles += (8 + pageBoundaryCycle);
+                break;
+            case 0xD7:
+                address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                operand--;
+                this._memory.set(address, operand);
+                if (this._regA.get() >= this._memory.get(address)) {
+                    carry = 1;
+                }
+                else {
+                    carry = 0;
+                }
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0xDB:
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
+                    pageBoundaryCycle = 1;
+                }
+                operand = this._memory.get(address);
+                operand--;
+                this._memory.set(address, operand);
+                if (this._regA.get() >= this._memory.get(address)) {
+                    carry = 1;
+                }
+                else {
+                    carry = 0;
+                }
+                this._regPC.add(2);
+                this._currentCycles += (7 + pageBoundaryCycle);
+                break;
+            case 0xDF:
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
+                    pageBoundaryCycle = 1;
+                }
+                operand = this._memory.get(address);
+                operand--;
+                this._memory.set(address, operand);
+                if (this._regA.get() >= this._memory.get(address)) {
+                    carry = 1;
+                }
+                else {
+                    carry = 0;
+                }
+                this._regPC.add(2);
+                this._currentCycles += (7 + pageBoundaryCycle);
+                break;
+        }
+        if (this.isNegative(this._regA.get() - this._memory.get(address))) {
+            this.setStatusBit(StatusBitPositions.Negative);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Negative);
+        }
+        if (this.isZero(this._regA.get() - this._memory.get(address))) {
+            this.setStatusBit(StatusBitPositions.Zero);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Zero);
+        }
+        if (carry === 1) {
+            this.setStatusBit(StatusBitPositions.Carry);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Carry);
+        }
+    };
     Cpu.prototype.dec = function (opCode) {
         var address = 0;
         var operand = 0;
@@ -1487,6 +1622,113 @@ var Cpu = /** @class */ (function () {
             this.clearStatusBit(StatusBitPositions.Zero);
         }
     };
+    Cpu.prototype.isb = function (opcode) {
+        var address = 0;
+        var operand = 0;
+        var pageBoundaryCycle = 0;
+        var result = 0;
+        var oldA = this._regA.get();
+        // Subtract 1 more if carry is clear!
+        var currentCarry = !this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        this._regPC.add(1);
+        // INC then SBC
+        switch (opcode) {
+            case 0xE3:
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                operand++;
+                this._memory.set(address, operand);
+                result = oldA - this._memory.get(address) - currentCarry;
+                this._regA.set(result);
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0xE7:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                operand = this._memory.get(address);
+                operand++;
+                this._memory.set(address, operand);
+                result = oldA - this._memory.get(address) - currentCarry;
+                this._regA.set(result);
+                this._regPC.add(1);
+                this._currentCycles += 5;
+                break;
+            case 0xEF:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                operand = this._memory.get(address);
+                operand++;
+                this._memory.set(address, operand);
+                result = oldA - this._memory.get(address) - currentCarry;
+                this._regA.set(result);
+                this._regPC.add(2);
+                this._currentCycles += 6;
+                break;
+            case 0xF3:
+                address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                operand++;
+                this._memory.set(address, operand);
+                result = oldA - this._memory.get(address) - currentCarry;
+                this._regA.set(result);
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0xF7:
+                address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                operand++;
+                this._memory.set(address, operand);
+                result = oldA - this._memory.get(address) - currentCarry;
+                this._regA.set(result);
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0xFB:
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                operand++;
+                this._memory.set(address, operand);
+                result = oldA - this._memory.get(address) - currentCarry;
+                this._regA.set(result);
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+            case 0xFF:
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                operand++;
+                this._memory.set(address, operand);
+                result = oldA - this._memory.get(address) - currentCarry;
+                this._regA.set(result);
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+        }
+        if (this.isNegative(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Negative);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Negative);
+        }
+        if (this.isOverflow(oldA, this._memory.get(address), this._regA.get(), false)) {
+            this.setStatusBit(StatusBitPositions.Overflow);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Overflow);
+        }
+        if (this.isZero(result)) {
+            this.setStatusBit(StatusBitPositions.Zero);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Zero);
+        }
+        if (this.isCarry(oldA, this._memory.get(address), currentCarry, false)) {
+            this.setStatusBit(StatusBitPositions.Carry);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Carry);
+        }
+    };
     Cpu.prototype.jmp = function (opCode) {
         var address = 0;
         this._regPC.add(1);
@@ -1528,6 +1770,76 @@ var Cpu = /** @class */ (function () {
             default:
                 console.error("ERROR: Unhandled JSR opcode! " + opCode);
                 break;
+        }
+    };
+    Cpu.prototype.lax = function (opcode) {
+        var address = 0;
+        var operand = 0;
+        this._regPC.add(1);
+        switch (opcode) {
+            case 0xA3:// Direct Indirect X
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                this._regA.set(operand);
+                this._regX.set(this._regA.get());
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0xA7:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                operand = this._memory.get(address);
+                this._regA.set(operand);
+                this._regX.set(this._regA.get());
+                this._regPC.add(1);
+                this._currentCycles += 3;
+                break;
+            case 0xAF:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                operand = this._memory.get(address);
+                this._regA.set(operand);
+                this._regX.set(this._regA.get());
+                this._regPC.add(2);
+                this._currentCycles += 4;
+                break;
+            case 0xB3:
+                address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                this._regA.set(operand);
+                this._regX.set(this._regA.get());
+                this._regPC.add(1);
+                this._currentCycles += 5;
+                break;
+            case 0xB7:
+                address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                this._regA.set(operand);
+                this._regX.set(this._regA.get());
+                this._regPC.add(1);
+                this._currentCycles += 4;
+                break;
+            case 0xBF:
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                this._regA.set(operand);
+                this._regX.set(this._regA.get());
+                this._regPC.add(2);
+                this._currentCycles += 4;
+                break;
+            default:
+                console.error("ERROR: Unhandled LAX opcode! " + opcode);
+                break;
+        }
+        if (this.isNegative(this._regX.get())) {
+            this.setStatusBit(StatusBitPositions.Negative);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Negative);
+        }
+        if (this.isZero(this._regX.get())) {
+            this.setStatusBit(StatusBitPositions.Zero);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.lda = function (opCode) {
@@ -1836,12 +2148,79 @@ var Cpu = /** @class */ (function () {
     Cpu.prototype.nop = function (opcode) {
         this._regPC.add(1);
         switch (opcode) {
+            case 0x1A:
+            case 0x3A:
+            case 0x5A:
+            case 0x7A:
+            case 0xDA:
+            case 0xFA:
             case 0xEA:
                 this.pushLog(this._regPC.get() - 1, opcode, undefined, "NOP", false, false);
                 this._currentCycles += 2;
                 break;
             default:
                 console.error("ERROR: Unhandled NOP opcode! " + opcode);
+                break;
+        }
+    };
+    Cpu.prototype.skb = function (opcode) {
+        this._regPC.add(1);
+        switch (opcode) {
+            case 0x80:
+            case 0x82:
+            case 0x89:
+            case 0xC2:
+            case 0xE2:
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "SKB", false, false);
+                this._regPC.add(1);
+                this._currentCycles += 2;
+                break;
+            default:
+                console.error("ERROR: Unhandled SKB opcode! " + opcode);
+                break;
+        }
+    };
+    Cpu.prototype.ign = function (opcode) {
+        this._regPC.add(1);
+        switch (opcode) {
+            case 0x0C:
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "IGN", false, false);
+                this._regPC.add(2);
+                this._currentCycles += 4;
+                break;
+            case 0x1C:
+            case 0x3C:
+            case 0x5C:
+            case 0x7C:
+            case 0xDC:
+            case 0xFC:
+                var pageBoundaryCycle = 0;
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "IGN", false, false);
+                if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
+                    pageBoundaryCycle = 1;
+                }
+                this._regPC.add(2);
+                this._currentCycles += (4 + pageBoundaryCycle);
+                break;
+            case 0x04:
+            case 0x44:
+            case 0x64:
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "IGN", false, false);
+                this._regPC.add(1);
+                this._currentCycles += 3;
+                break;
+            case 0x14:
+            case 0x34:
+            case 0x54:
+            case 0x74:
+            case 0xD4:
+            case 0xF4:
+                this.pushLog(this._regPC.get() - 1, opcode, undefined, "IGN", false, false);
+                this._regPC.add(1);
+                this._currentCycles += 4;
+                break;
+            default:
+                console.error("ERROR: Unhandled IGN opcode! " + opcode);
                 break;
         }
     };
@@ -2016,6 +2395,97 @@ var Cpu = /** @class */ (function () {
                 break;
         }
     };
+    Cpu.prototype.rla = function (opcode) {
+        var address = 0;
+        var operand = 0;
+        var newCarry = 0;
+        var oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        this._regPC.add(1);
+        // ROL and AND
+        switch (opcode) {
+            case 0x23:
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
+                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x27:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
+                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 5;
+                break;
+            case 0x2F:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
+                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 6;
+                break;
+            case 0x33:
+                address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
+                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x37:
+                address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
+                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0x3B:
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
+                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+            case 0x3F:
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x80) > 0) ? 1 : 0;
+                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+        }
+        if (newCarry === 1) {
+            this.setStatusBit(StatusBitPositions.Carry);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Carry);
+        }
+        if (this.isNegative(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Negative);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Negative);
+        }
+        if (this.isZero(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Zero);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Zero);
+        }
+    };
     Cpu.prototype.rol = function (opcode) {
         var operand = 0;
         var address = 0;
@@ -2174,6 +2644,167 @@ var Cpu = /** @class */ (function () {
             this.clearStatusBit(StatusBitPositions.Carry);
         }
     };
+    Cpu.prototype.rra = function (opcode) {
+        var address = 0;
+        var operand = 0;
+        var oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var newCarry = 0;
+        var oldA = 0;
+        // ROR and then ADC
+        this._regPC.add(1);
+        switch (opcode) {
+            case 0x63:
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
+                operand = ((operand >> 1) | (oldCarry << 7));
+                this._memory.set(address, operand);
+                if (newCarry === 1) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                // adc time
+                oldA = this._regA.get();
+                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x67:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
+                operand = ((operand >> 1) | (oldCarry << 7));
+                this._memory.set(address, operand);
+                if (newCarry === 1) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                // adc time
+                oldA = this._regA.get();
+                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regPC.add(1);
+                this._currentCycles += 5;
+                break;
+            case 0x6F:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
+                operand = ((operand >> 1) | (oldCarry << 7));
+                this._memory.set(address, operand);
+                if (newCarry === 1) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                // adc time
+                oldA = this._regA.get();
+                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regPC.add(2);
+                this._currentCycles += 6;
+                break;
+            case 0x73:
+                address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
+                operand = ((operand >> 1) | (oldCarry << 7));
+                this._memory.set(address, operand);
+                if (newCarry === 1) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                // adc time
+                oldA = this._regA.get();
+                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x77:
+                address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
+                operand = ((operand >> 1) | (oldCarry << 7));
+                this._memory.set(address, operand);
+                if (newCarry === 1) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                // adc time
+                oldA = this._regA.get();
+                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0x7B:
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
+                operand = ((operand >> 1) | (oldCarry << 7));
+                this._memory.set(address, operand);
+                if (newCarry === 1) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                // adc time
+                oldA = this._regA.get();
+                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+            case 0x7F:
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
+                operand = ((operand >> 1) | (oldCarry << 7));
+                this._memory.set(address, operand);
+                if (newCarry === 1) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                // adc time
+                oldA = this._regA.get();
+                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+        }
+        if (this.isNegative(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Negative);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Negative);
+        }
+        if (this.isOverflow(oldA, this._memory.get(address), this._regA.get(), true)) {
+            this.setStatusBit(StatusBitPositions.Overflow);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Overflow);
+        }
+        if (this._regA.get() === 0) {
+            this.setStatusBit(StatusBitPositions.Zero);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Zero);
+        }
+        if (this.isCarry(oldA, this._memory.get(address), newCarry, true)) {
+            this.setStatusBit(StatusBitPositions.Carry);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Carry);
+        }
+    };
     Cpu.prototype.rti = function (opcode) {
         this._regPC.add(1);
         switch (opcode) {
@@ -2209,6 +2840,39 @@ var Cpu = /** @class */ (function () {
                 break;
         }
     };
+    Cpu.prototype.sax = function (opcode) {
+        var address = 0;
+        this._regPC.add(1);
+        switch (opcode) {
+            case 0x83:
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0x87:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._regPC.add(1);
+                this._currentCycles += 3;
+                break;
+            case 0x8F:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._regPC.add(2);
+                this._currentCycles += 4;
+                break;
+            case 0x97:
+                address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
+                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._regPC.add(1);
+                this._currentCycles += 4;
+                break;
+            default:
+                console.error();
+                break;
+        }
+    };
     Cpu.prototype.sbc = function (opcode) {
         var address = 0;
         var operand = 0;
@@ -2219,6 +2883,7 @@ var Cpu = /** @class */ (function () {
         var currentCarry = !this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
         this._regPC.add(1);
         switch (opcode) {
+            case 0xEB:
             case 0xE9:// Immediate
                 operand = this._memory.get(this._regPC.get());
                 this.pushLog(this._regPC.get() - 1, opcode, operand, "SBC", true, false, undefined);
@@ -2365,6 +3030,228 @@ var Cpu = /** @class */ (function () {
             default:
                 console.error("ERROR: Unhandled SEI opcode! " + opcode);
                 break;
+        }
+    };
+    Cpu.prototype.slo = function (opcode) {
+        var address = 0;
+        var operand = 0;
+        this._regPC.add(1);
+        //ASL value then ORA value
+        switch (opcode) {
+            case 0x03:
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                if ((this._memory.get(address) & 0x80) === 0x80) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                operand <<= 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x07:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                operand = this._memory.get(address);
+                if ((this._memory.get(address) & 0x80) === 0x80) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                operand <<= 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 5;
+                break;
+            case 0x0F:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                operand = this._memory.get(address);
+                if ((this._memory.get(address) & 0x80) === 0x80) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                operand <<= 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 6;
+                break;
+            case 0x13:
+                address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                if ((this._memory.get(address) & 0x80) === 0x80) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                operand <<= 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x17:
+                address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                if ((this._memory.get(address) & 0x80) === 0x80) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                operand <<= 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0x1B:
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                if ((this._memory.get(address) & 0x80) === 0x80) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                operand <<= 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+            case 0x1F:
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                if ((this._memory.get(address) & 0x80) === 0x80) {
+                    this.setStatusBit(StatusBitPositions.Carry);
+                }
+                else {
+                    this.clearStatusBit(StatusBitPositions.Carry);
+                }
+                operand <<= 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+        }
+        if (this.isNegative(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Negative);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Negative);
+        }
+        if (this.isZero(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Zero);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Zero);
+        }
+    };
+    Cpu.prototype.sre = function (opcode) {
+        var address = 0;
+        var operand = 0;
+        var carry = 0;
+        // LSR then EOR
+        this._regPC.add(1);
+        switch (opcode) {
+            case 0x43:
+                address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                carry = (operand & 0x0001) === 1 ? 1 : 0;
+                operand = operand >> 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x47:
+                address = this._addressingHelper.atDirectPage(this._regPC);
+                operand = this._memory.get(address);
+                carry = (operand & 0x0001) === 1 ? 1 : 0;
+                operand = operand >> 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 5;
+                break;
+            case 0x4F:
+                address = this._addressingHelper.atAbsolute(this._regPC);
+                operand = this._memory.get(address);
+                carry = (operand & 0x0001) === 1 ? 1 : 0;
+                operand = operand >> 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 6;
+                break;
+            case 0x53:
+                address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                carry = (operand & 0x0001) === 1 ? 1 : 0;
+                operand = operand >> 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 8;
+                break;
+            case 0x57:
+                address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                carry = (operand & 0x0001) === 1 ? 1 : 0;
+                operand = operand >> 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regPC.add(1);
+                this._currentCycles += 6;
+                break;
+            case 0x5B:
+                address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
+                operand = this._memory.get(address);
+                carry = (operand & 0x0001) === 1 ? 1 : 0;
+                operand = operand >> 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+            case 0x5F:
+                address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
+                operand = this._memory.get(address);
+                carry = (operand & 0x0001) === 1 ? 1 : 0;
+                operand = operand >> 1;
+                this._memory.set(address, operand);
+                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regPC.add(2);
+                this._currentCycles += 7;
+                break;
+        }
+        if (carry === 1) {
+            this.setStatusBit(StatusBitPositions.Carry);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Carry);
+        }
+        if (this.isNegative(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Negative);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Negative);
+        }
+        if (this.isZero(this._regA.get())) {
+            this.setStatusBit(StatusBitPositions.Zero);
+        }
+        else {
+            this.clearStatusBit(StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.sta = function (opcode) {
@@ -2662,6 +3549,24 @@ var Cpu = /** @class */ (function () {
             case 0x0A:
                 this.asl(opCode);
                 break;
+            case 0x0C:
+            case 0x1C:
+            case 0x3C:
+            case 0x5C:
+            case 0x7C:
+            case 0xDC:
+            case 0xFC:
+            case 0x04:
+            case 0x44:
+            case 0x64:
+            case 0x14:
+            case 0x34:
+            case 0x54:
+            case 0x74:
+            case 0xD4:
+            case 0xF4:
+                this.ign(opCode);
+                break;
             case 0x0D:
                 this.ora(opCode);
                 break;
@@ -2955,29 +3860,24 @@ var Cpu = /** @class */ (function () {
                 this.lda(opCode);
                 break;
             case 0xA6:
-                console.debug("LDX");
                 this.ldx(opCode);
                 break;
             case 0xA8:
-                console.debug("TAY");
                 this.tay(opCode);
                 break;
             case 0xA9:
                 this.lda(opCode);
                 break;
             case 0xAA:
-                console.debug("TAX");
                 this.tax(opCode);
                 break;
             case 0xAC:
-                console.debug("LDY");
                 this.ldy(opCode);
                 break;
             case 0xAD:
                 this.lda(opCode);
                 break;
             case 0xAE:
-                console.debug("LDX");
                 this.ldx(opCode);
                 break;
             case 0xB0:
@@ -2987,97 +3887,78 @@ var Cpu = /** @class */ (function () {
                 this.lda(opCode);
                 break;
             case 0xB4:
-                console.debug("LDY");
                 this.ldy(opCode);
                 break;
             case 0xB5:
                 this.lda(opCode);
                 break;
             case 0xB6:
-                console.debug("LDX");
                 this.ldx(opCode);
                 break;
             case 0xB8:
-                console.debug("CLV");
                 this.clv(opCode);
                 break;
             case 0xB9:
                 this.lda(opCode);
                 break;
             case 0xBA:
-                console.debug("TSX");
                 this.tsx(opCode);
                 break;
             case 0xBC:
-                console.debug("LDY");
                 this.ldy(opCode);
                 break;
             case 0xBD:
                 this.lda(opCode);
                 break;
             case 0xBE:
-                console.debug("LDX");
                 this.ldx(opCode);
                 break;
             case 0xC0:
-                console.debug("CPY");
                 this.cpy(opCode);
                 break;
             case 0xC1:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xC4:
-                console.debug("CPY");
                 this.cpy(opCode);
                 break;
             case 0xC5:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xC6:
                 this.dec(opCode);
                 break;
             case 0xC8:
-                console.debug("INY");
                 this.iny(opCode);
                 break;
             case 0xC9:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xCA:
-                console.debug("DEX");
                 this.dex(opCode);
                 break;
             case 0xCC:
-                console.debug("CPY");
                 this.cpy(opCode);
                 break;
             case 0xCD:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xCE:
-                console.debug("DEC");
                 this.dec(opCode);
                 break;
             case 0xD0:
                 this.bne(opCode);
                 break;
             case 0xD1:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xD5:
-                console.debug("CMP");
                 this.cmp(opCode);
                 break;
             case 0xD6:
                 this.dec(opCode);
                 break;
             case 0xD8:
-                console.debug("CLD");
                 this.cld(opCode);
                 break;
             case 0xD9:
@@ -3107,11 +3988,25 @@ var Cpu = /** @class */ (function () {
             case 0xE8:
                 this.inx(opCode);
                 break;
+            case 0xEB:
             case 0xE9:
                 this.sbc(opCode);
                 break;
+            case 0x1A:
+            case 0x3A:
+            case 0x5A:
+            case 0x7A:
+            case 0xDA:
+            case 0xFA:
             case 0xEA:
                 this.nop(opCode);
+                break;
+            case 0x80:
+            case 0x82:
+            case 0x89:
+            case 0xC2:
+            case 0xE2:
+                this.skb(opCode);
                 break;
             case 0xEC:
                 this.cpx(opCode);
@@ -3145,6 +4040,74 @@ var Cpu = /** @class */ (function () {
                 break;
             case 0xFE:
                 this.inc(opCode);
+                break;
+            case 0xA3:
+            case 0xA7:
+            case 0xAF:
+            case 0xB3:
+            case 0xB7:
+            case 0xBF:
+                this.lax(opCode);
+                break;
+            case 0x83:
+            case 0x87:
+            case 0x8F:
+            case 0x97:
+                this.sax(opCode);
+                break;
+            case 0xC3:
+            case 0xC7:
+            case 0xCF:
+            case 0xD3:
+            case 0xD7:
+            case 0xDB:
+            case 0xDF:
+                this.dcp(opCode);
+                break;
+            case 0xE3:
+            case 0xE7:
+            case 0xEF:
+            case 0xF3:
+            case 0xF7:
+            case 0xFB:
+            case 0xFF:
+                this.isb(opCode);
+                break;
+            case 0x03:
+            case 0x07:
+            case 0x0F:
+            case 0x13:
+            case 0x17:
+            case 0x1B:
+            case 0x1F:
+                this.slo(opCode);
+                break;
+            case 0x23:
+            case 0x27:
+            case 0x2F:
+            case 0x33:
+            case 0x37:
+            case 0x3B:
+            case 0x3F:
+                this.rla(opCode);
+                break;
+            case 0x43:
+            case 0x47:
+            case 0x4F:
+            case 0x53:
+            case 0x57:
+            case 0x5B:
+            case 0x5F:
+                this.sre(opCode);
+                break;
+            case 0x63:
+            case 0x67:
+            case 0x6F:
+            case 0x73:
+            case 0x77:
+            case 0x7B:
+            case 0x7F:
+                this.rra(opCode);
                 break;
             default:
                 break;

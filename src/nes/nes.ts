@@ -25,7 +25,7 @@ export class Nes {
             address++;
         });
 
-        while(this._cpu.getCurrentCycles() <= 14575) {
+        while(this._cpu.getCurrentCycles() <= 26556) {
             // fetch
             const opCode = this._memory.get(this._cpu.getPC());
 
@@ -35,7 +35,11 @@ export class Nes {
         }
 
         for(const entry of this._log) {
-            console.log(entry);
+            //console.log(entry);
         }
+
+        console.log(this._memory.get(0x02).toString(16).toUpperCase());
+        console.log(this._memory.get(0x03).toString(16).toUpperCase());
+
     }
 }
