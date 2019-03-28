@@ -412,9 +412,11 @@ export class Cpu {
                 byteString = `#$${this._memory.get(this._regPC.get()).toString(16).toUpperCase()}`;
                 break;
             case AddressingModes.Absolute:
+            case AddressingModes.AbsoluteIndirect:
+            case AddressingModes.Relative:
                 byteString  = `$${(this._memory.get(this._regPC.get() + 1)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get()).toString(16).toUpperCase()}`;
                 break;
-            case AddressingModes.AbsoluteIndirect:
+            case AddressingModes.Relative:
                 byteString  = `($${(this._memory.get(this._regPC.get() + 1)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get()).toString(16).toUpperCase()})`;
                 break;
         }
