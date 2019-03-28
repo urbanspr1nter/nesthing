@@ -62,8 +62,268 @@ var AddressingModes;
     AddressingModes[AddressingModes["DirectPageIndexedIndirectX"] = 8] = "DirectPageIndexedIndirectX";
     AddressingModes[AddressingModes["DirectPageIndirectIndexedY"] = 9] = "DirectPageIndirectIndexedY";
     AddressingModes[AddressingModes["Implicit"] = 10] = "Implicit";
+    AddressingModes[AddressingModes["Accumulator"] = 11] = "Accumulator";
+    AddressingModes[AddressingModes["Relative"] = 12] = "Relative";
 })(AddressingModes || (AddressingModes = {}));
 ;
+var OpAddressingMode = {
+    0x00: AddressingModes.Implicit,
+    0x01: AddressingModes.DirectPageIndexedIndirectX,
+    0x02: null,
+    0x03: AddressingModes.DirectPageIndexedIndirectX,
+    0x04: AddressingModes.DirectPage,
+    0x05: AddressingModes.DirectPage,
+    0x06: AddressingModes.DirectPage,
+    0x07: AddressingModes.DirectPage,
+    0x08: AddressingModes.Implicit,
+    0x09: AddressingModes.Immediate,
+    0x0A: AddressingModes.Accumulator,
+    0x0B: null,
+    0x0C: AddressingModes.Absolute,
+    0x0D: AddressingModes.Absolute,
+    0x0E: AddressingModes.Absolute,
+    0x0F: AddressingModes.Absolute,
+    0x10: AddressingModes.Relative,
+    0x11: AddressingModes.DirectPageIndirectIndexedY,
+    0x12: null,
+    0x13: AddressingModes.DirectPageIndirectIndexedY,
+    0x14: AddressingModes.DirectPageIndexedX,
+    0x15: AddressingModes.DirectPageIndexedX,
+    0x16: AddressingModes.DirectPageIndexedX,
+    0x17: AddressingModes.DirectPageIndexedX,
+    0x18: AddressingModes.Implicit,
+    0x19: AddressingModes.AbsoluteIndexedY,
+    0x1A: AddressingModes.Implicit,
+    0x1B: AddressingModes.AbsoluteIndexedY,
+    0x1C: AddressingModes.AbsoluteIndexedX,
+    0x1D: AddressingModes.AbsoluteIndexedX,
+    0x1E: AddressingModes.AbsoluteIndexedX,
+    0x1F: AddressingModes.AbsoluteIndexedX,
+    0x20: null,
+    0x21: AddressingModes.DirectPageIndexedIndirectX,
+    0x22: null,
+    0x23: AddressingModes.DirectPageIndexedIndirectX,
+    0x24: AddressingModes.DirectPage,
+    0x25: AddressingModes.DirectPage,
+    0x26: AddressingModes.DirectPage,
+    0x27: AddressingModes.DirectPage,
+    0x28: AddressingModes.Implicit,
+    0x29: AddressingModes.Immediate,
+    0x2A: AddressingModes.Accumulator,
+    0x2B: null,
+    0x2C: AddressingModes.Absolute,
+    0x2D: AddressingModes.Absolute,
+    0x2E: AddressingModes.Absolute,
+    0x2F: AddressingModes.Absolute,
+    0x30: AddressingModes.Relative,
+    0x31: AddressingModes.DirectPageIndirectIndexedY,
+    0x32: null,
+    0x33: AddressingModes.DirectPageIndirectIndexedY,
+    0x34: AddressingModes.DirectPageIndexedX,
+    0x35: AddressingModes.DirectPageIndexedX,
+    0x36: AddressingModes.DirectPageIndexedX,
+    0x37: AddressingModes.DirectPageIndexedX,
+    0x38: AddressingModes.Implicit,
+    0x39: AddressingModes.AbsoluteIndexedY,
+    0x3A: AddressingModes.Implicit,
+    0x3B: AddressingModes.AbsoluteIndexedY,
+    0x3C: AddressingModes.AbsoluteIndexedX,
+    0x3D: AddressingModes.AbsoluteIndexedX,
+    0x3E: AddressingModes.AbsoluteIndexedX,
+    0x3F: AddressingModes.AbsoluteIndexedX,
+    0x40: AddressingModes.Implicit,
+    0x41: AddressingModes.DirectPageIndexedIndirectX,
+    0x42: null,
+    0x43: AddressingModes.DirectPageIndexedIndirectX,
+    0x44: AddressingModes.DirectPage,
+    0x45: AddressingModes.DirectPage,
+    0x46: AddressingModes.DirectPage,
+    0x47: AddressingModes.DirectPage,
+    0x48: AddressingModes.Implicit,
+    0x49: AddressingModes.Immediate,
+    0x4A: AddressingModes.Accumulator,
+    0x4B: null,
+    0x4C: AddressingModes.Absolute,
+    0x4D: AddressingModes.Absolute,
+    0x4E: AddressingModes.Absolute,
+    0x4F: AddressingModes.Absolute,
+    0x50: AddressingModes.Relative,
+    0x51: AddressingModes.DirectPageIndirectIndexedY,
+    0x52: null,
+    0x53: AddressingModes.DirectPageIndirectIndexedY,
+    0x54: AddressingModes.DirectPageIndexedX,
+    0x55: AddressingModes.DirectPageIndexedX,
+    0x56: AddressingModes.DirectPageIndexedX,
+    0x57: AddressingModes.DirectPageIndexedX,
+    0x58: AddressingModes.Implicit,
+    0x59: AddressingModes.AbsoluteIndexedY,
+    0x5A: AddressingModes.Implicit,
+    0x5B: AddressingModes.AbsoluteIndexedY,
+    0x5C: AddressingModes.AbsoluteIndexedX,
+    0x5D: AddressingModes.AbsoluteIndexedX,
+    0x5E: AddressingModes.AbsoluteIndexedX,
+    0x5F: AddressingModes.AbsoluteIndexedX,
+    0x60: AddressingModes.Implicit,
+    0x61: AddressingModes.DirectPageIndexedIndirectX,
+    0x62: null,
+    0x63: AddressingModes.DirectPageIndexedIndirectX,
+    0x64: AddressingModes.DirectPage,
+    0x65: AddressingModes.DirectPage,
+    0x66: AddressingModes.DirectPage,
+    0x67: AddressingModes.DirectPage,
+    0x68: AddressingModes.Implicit,
+    0x69: AddressingModes.Immediate,
+    0x6A: AddressingModes.Accumulator,
+    0x6B: null,
+    0x6C: AddressingModes.AbsoluteIndirect,
+    0x6D: AddressingModes.Absolute,
+    0x6E: AddressingModes.Absolute,
+    0x6F: AddressingModes.Absolute,
+    0x70: AddressingModes.Relative,
+    0x71: AddressingModes.DirectPageIndirectIndexedY,
+    0x72: null,
+    0x73: AddressingModes.DirectPageIndirectIndexedY,
+    0x74: AddressingModes.DirectPageIndexedX,
+    0x75: AddressingModes.DirectPageIndexedX,
+    0x76: AddressingModes.DirectPageIndexedX,
+    0x77: AddressingModes.DirectPageIndexedX,
+    0x78: AddressingModes.Implicit,
+    0x79: AddressingModes.AbsoluteIndexedY,
+    0x7A: AddressingModes.Implicit,
+    0x7B: AddressingModes.AbsoluteIndexedY,
+    0x7C: AddressingModes.AbsoluteIndexedX,
+    0x7D: AddressingModes.AbsoluteIndexedX,
+    0x7E: AddressingModes.AbsoluteIndexedX,
+    0x7F: AddressingModes.AbsoluteIndexedX,
+    0x80: AddressingModes.Immediate,
+    0x81: AddressingModes.DirectPageIndexedIndirectX,
+    0x82: AddressingModes.Immediate,
+    0x83: AddressingModes.DirectPageIndexedIndirectX,
+    0x84: AddressingModes.DirectPage,
+    0x85: AddressingModes.DirectPage,
+    0x86: AddressingModes.DirectPage,
+    0x87: AddressingModes.DirectPage,
+    0x88: AddressingModes.Implicit,
+    0x89: AddressingModes.Immediate,
+    0x8A: AddressingModes.Implicit,
+    0x8B: null,
+    0x8C: AddressingModes.Absolute,
+    0x8D: AddressingModes.Absolute,
+    0x8E: AddressingModes.Absolute,
+    0x8F: AddressingModes.Absolute,
+    0x90: AddressingModes.Relative,
+    0x91: AddressingModes.DirectPageIndirectIndexedY,
+    0x92: null,
+    0x93: null,
+    0x94: AddressingModes.DirectPageIndexedX,
+    0x95: AddressingModes.DirectPageIndexedX,
+    0x96: AddressingModes.DirectPageIndexedY,
+    0x97: AddressingModes.DirectPageIndirectIndexedY,
+    0x98: AddressingModes.Implicit,
+    0x99: AddressingModes.AbsoluteIndexedY,
+    0x9A: AddressingModes.Implicit,
+    0x9B: null,
+    0x9C: null,
+    0x9D: AddressingModes.AbsoluteIndexedX,
+    0x9E: null,
+    0x9F: null,
+    0xA0: AddressingModes.Immediate,
+    0xA1: AddressingModes.DirectPageIndexedIndirectX,
+    0xA2: AddressingModes.Immediate,
+    0xA3: AddressingModes.DirectPageIndexedIndirectX,
+    0xA4: AddressingModes.DirectPage,
+    0xA5: AddressingModes.DirectPage,
+    0xA6: AddressingModes.DirectPage,
+    0xA7: AddressingModes.DirectPage,
+    0xA8: AddressingModes.Implicit,
+    0xA9: AddressingModes.Immediate,
+    0xAA: AddressingModes.Implicit,
+    0xAB: null,
+    0xAC: AddressingModes.Absolute,
+    0xAD: AddressingModes.Absolute,
+    0xAE: AddressingModes.Absolute,
+    0xAF: AddressingModes.Absolute,
+    0xB0: AddressingModes.Relative,
+    0xB1: AddressingModes.DirectPageIndirectIndexedY,
+    0xB2: null,
+    0xB3: AddressingModes.DirectPageIndirectIndexedY,
+    0xB4: AddressingModes.DirectPageIndexedX,
+    0xB5: AddressingModes.DirectPageIndexedX,
+    0xB6: AddressingModes.DirectPageIndexedY,
+    0xB7: AddressingModes.DirectPageIndexedY,
+    0xB8: AddressingModes.Implicit,
+    0xB9: AddressingModes.AbsoluteIndexedY,
+    0xBA: AddressingModes.Implicit,
+    0xBB: null,
+    0xBC: AddressingModes.AbsoluteIndexedX,
+    0xBD: AddressingModes.AbsoluteIndexedX,
+    0xBE: AddressingModes.AbsoluteIndexedY,
+    0xBF: AddressingModes.AbsoluteIndexedY,
+    0xC0: AddressingModes.Immediate,
+    0xC1: AddressingModes.DirectPageIndexedIndirectX,
+    0xC2: AddressingModes.Immediate,
+    0xC3: AddressingModes.DirectPageIndexedIndirectX,
+    0xC4: AddressingModes.DirectPage,
+    0xC5: AddressingModes.DirectPage,
+    0xC6: AddressingModes.DirectPage,
+    0xC7: AddressingModes.DirectPage,
+    0xC8: AddressingModes.Implicit,
+    0xC9: AddressingModes.Immediate,
+    0xCA: AddressingModes.Implicit,
+    0xCB: null,
+    0xCC: AddressingModes.Absolute,
+    0xCD: AddressingModes.Absolute,
+    0xCE: AddressingModes.Absolute,
+    0xCF: AddressingModes.Absolute,
+    0xD0: AddressingModes.Relative,
+    0xD1: AddressingModes.DirectPageIndirectIndexedY,
+    0xD2: null,
+    0xD3: AddressingModes.DirectPageIndirectIndexedY,
+    0xD4: AddressingModes.DirectPageIndexedX,
+    0xD5: AddressingModes.DirectPageIndexedX,
+    0xD6: AddressingModes.DirectPageIndexedX,
+    0xD7: AddressingModes.DirectPageIndexedX,
+    0xD8: AddressingModes.Implicit,
+    0xD9: AddressingModes.AbsoluteIndexedY,
+    0xDA: AddressingModes.Implicit,
+    0xDB: AddressingModes.AbsoluteIndexedY,
+    0xDC: AddressingModes.AbsoluteIndexedX,
+    0xDD: AddressingModes.AbsoluteIndexedX,
+    0xDE: AddressingModes.AbsoluteIndexedX,
+    0xDF: AddressingModes.AbsoluteIndexedX,
+    0xE0: AddressingModes.Immediate,
+    0xE1: AddressingModes.DirectPageIndexedIndirectX,
+    0xE2: AddressingModes.Immediate,
+    0xE3: AddressingModes.DirectPageIndexedIndirectX,
+    0xE4: AddressingModes.DirectPage,
+    0xE5: AddressingModes.DirectPage,
+    0xE6: AddressingModes.DirectPage,
+    0xE7: AddressingModes.DirectPage,
+    0xE8: AddressingModes.Implicit,
+    0xE9: AddressingModes.Immediate,
+    0xEA: AddressingModes.Implicit,
+    0xEB: AddressingModes.Immediate,
+    0xEC: AddressingModes.Absolute,
+    0xED: AddressingModes.Absolute,
+    0xEE: AddressingModes.Absolute,
+    0xEF: AddressingModes.Absolute,
+    0xF0: AddressingModes.Relative,
+    0xF1: AddressingModes.DirectPageIndirectIndexedY,
+    0xF2: null,
+    0xF3: AddressingModes.DirectPageIndirectIndexedY,
+    0xF4: AddressingModes.DirectPageIndexedX,
+    0xF5: AddressingModes.DirectPageIndexedX,
+    0xF6: AddressingModes.DirectPageIndexedX,
+    0xF7: AddressingModes.DirectPageIndexedX,
+    0xF8: AddressingModes.Implicit,
+    0xF9: AddressingModes.AbsoluteIndexedY,
+    0xFA: null,
+    0xFB: AddressingModes.AbsoluteIndexedY,
+    0xFC: AddressingModes.AbsoluteIndexedX,
+    0xFD: AddressingModes.AbsoluteIndexedX,
+    0xFE: AddressingModes.AbsoluteIndexedX,
+    0xFF: AddressingModes.AbsoluteIndexedX
+};
 var Cpu = /** @class */ (function () {
     function Cpu(memory, log) {
         this._currentCycles = 0;
@@ -79,68 +339,79 @@ var Cpu = /** @class */ (function () {
         this._regSP = new byte_register_1.ByteRegister(0x00);
         this._regP = new byte_register_1.ByteRegister(0x00);
     }
-    Cpu.prototype.pushLog = function (opcode, address, instruction, immediate, againstValue, branchAddress) {
+    Cpu.prototype.pushLog = function (opcode) {
+        var formattedOpcode = "" + opcode.toString(16).toUpperCase();
+        if (formattedOpcode.length < 2) {
+            formattedOpcode = "0" + formattedOpcode;
+        }
         var output = "";
-        var xformedOpCode = opcode.toString(16).toUpperCase();
-        if (xformedOpCode.length < 2) {
-            var paddingOpCode = '0';
-            xformedOpCode = paddingOpCode + xformedOpCode;
+        // Format of the log entry:
+        // C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0,  0 CYC:7
+        output = this.getPcLog() + "  " + formattedOpcode + " " + this.getByteLookAhead(OpAddressingMode[opcode]);
+        var spaces = 16 - output.length;
+        for (var i = 0; i < spaces; i++) {
+            output += " ";
         }
-        var xformedAddress = '';
-        var xformedAddressLow = '';
-        var xformedAddressHigh = '';
-        var xformedInstruction = OpLabel[opcode];
-        if (address !== undefined) {
-            xformedAddressLow = (address & 0x00FF).toString(16).toUpperCase();
-            if (xformedAddressLow.length < 2) {
-                var paddingAddressLow = '0';
-                xformedAddressLow = paddingAddressLow + xformedAddressLow;
-            }
-            xformedAddressHigh = ((address & 0xFF00) >> 8).toString(16).toUpperCase();
-            if (xformedAddressHigh.length < 2) {
-                var paddingAddressHigh = '0';
-                xformedAddressHigh = paddingAddressHigh + xformedAddressHigh;
-            }
-            xformedAddress = "$" + xformedAddressHigh + xformedAddressLow;
-            if (immediate) {
-                xformedAddress = "#$" + xformedAddressLow;
-            }
-            else if (xformedAddressHigh === '00') {
-                xformedAddress = "$" + xformedAddressLow;
-            }
-            if (againstValue && !immediate) {
-                xformedAddress = xformedAddress + " = " + this.getByteString(address);
-            }
+        output = "" + output + OpLabel[opcode] + " " + this.getAddressString(OpAddressingMode[opcode]);
+        spaces = 48 - output.length;
+        for (var i = 0; i < spaces; i++) {
+            output += " ";
         }
-        else {
-            xformedAddressLow = '  ';
-            xformedAddressHigh = '  ';
-        }
-        var instructionString = branchAddress
-            ?
-                this.getPcLog() + "  " + xformedOpCode + " " + xformedAddressLow + "     " + xformedInstruction + " $" + branchAddress.toString(16).toUpperCase()
-            :
-                this.getPcLog() + "  " + xformedOpCode + " " + xformedAddressLow + " " + xformedAddressHigh + "  " + xformedInstruction + " " + xformedAddress;
-        var spaces = '';
-        var max = 48 - instructionString.length;
-        for (var i = 0; i < max; i++) {
-            spaces += ' ';
-        }
-        var cpuCycles = "CYC:" + this._currentCycles;
-        output = "" + instructionString + spaces + this.getRegisterLog() + " " + this.getPpuLog() + " " + cpuCycles;
+        output += " ";
+        output += this.getRegisterLog() + " " + this.getPpuLog() + " " + this.getCpuCycleLog();
         this._log.push(output);
     };
-    Cpu.prototype.getByteString = function (address) {
-        var byteValue = this._memory.get(address);
-        if (byteValue <= 0xF) {
-            return "0" + byteValue.toString(16).toUpperCase();
+    /*
+        Immediate,
+    Absolute,
+    AbsoluteIndirect,
+    DirectPage,
+    AbsoluteIndexedX,
+    AbsoluteIndexedY,
+    DirectPageIndexedX,
+    DirectPageIndexedY,
+    DirectPageIndexedIndirectX,
+    DirectPageIndirectIndexedY,
+    Implicit,
+    Accumulator,
+    Relative
+    */
+    Cpu.prototype.getAddressString = function (addressingMode) {
+        var byteString = "";
+        switch (addressingMode) {
+            case AddressingModes.Immediate:
+                var data = this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase();
+                if (data.length < 2) {
+                    data = '0' + data;
+                }
+                byteString = "#$" + data;
+                break;
+            case AddressingModes.DirectPage:
+                byteString = "$" + this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase();
+                break;
+            case AddressingModes.Accumulator:
+                byteString = "A";
+                break;
+            case AddressingModes.Absolute:
+            case AddressingModes.AbsoluteIndirect:
+                byteString = "$" + (this._memory.get(this._regPC.get() + 2)).toString(16).toUpperCase() + this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase();
+                break;
+            case AddressingModes.Relative:
+                var displacement = this._memory.get(this._regPC.get() + 1);
+                if (displacement >= 0x80) {
+                    displacement = -((0xFF - displacement) + 1);
+                }
+                var final = (this._regPC.get() + 2) + displacement;
+                byteString = "$" + final.toString(16).toUpperCase();
+                break;
+            case AddressingModes.Implicit:
+                byteString = "";
+                break;
         }
-        else {
-            return byteValue.toString(16).toUpperCase();
-        }
+        return byteString;
     };
     Cpu.prototype.getPcLog = function () {
-        var currentPC = this._regPC.get() - 1;
+        var currentPC = this._regPC.get();
         var xformedPC = currentPC.toString(16).toUpperCase();
         if (xformedPC.length < 4) {
             var difference = 4 - xformedPC.length;
@@ -151,6 +422,51 @@ var Cpu = /** @class */ (function () {
             xformedPC = paddingPC + xformedPC;
         }
         return xformedPC;
+    };
+    Cpu.prototype.getByteLookAhead = function (addressingMode) {
+        switch (addressingMode) {
+            case AddressingModes.Immediate:
+            case AddressingModes.DirectPage:
+            case AddressingModes.DirectPageIndexedIndirectX:
+            case AddressingModes.DirectPageIndexedX:
+            case AddressingModes.DirectPageIndexedY:
+            case AddressingModes.DirectPageIndirectIndexedY:
+            case AddressingModes.Relative:
+                var byte = '';
+                var val = this._memory.get(this._regPC.get() + 1);
+                if (val < 0x10) {
+                    byte = "0" + val.toString(16).toUpperCase();
+                }
+                else {
+                    byte = "" + val.toString(16).toUpperCase();
+                }
+                return "" + byte;
+            case AddressingModes.Implicit:
+                return "";
+            case AddressingModes.Absolute:
+            case AddressingModes.AbsoluteIndexedX:
+            case AddressingModes.AbsoluteIndexedY:
+            case AddressingModes.AbsoluteIndirect:
+                var highByte = "";
+                var lowByte = "";
+                var highVal = this._memory.get(this._regPC.get() + 2);
+                var lowVal = this._memory.get(this._regPC.get() + 1);
+                if (highVal < 0x10) {
+                    highByte = "0" + highVal.toString(16).toUpperCase();
+                }
+                else {
+                    highByte = "" + highVal.toString(16).toUpperCase();
+                }
+                if (lowVal < 0x10) {
+                    lowByte = "0" + lowVal.toString(16).toUpperCase();
+                }
+                else {
+                    lowByte = "" + lowVal.toString(16).toUpperCase();
+                }
+                return lowByte + " " + highByte;
+            default:
+                return "";
+        }
     };
     Cpu.prototype.getPpuLog = function () {
         var scanlineCycles = this._currentPpuScanlineCycles;
@@ -166,6 +482,9 @@ var Cpu = /** @class */ (function () {
             formattedScanlinesString = ' ' + formattedScanlinesString;
         }
         return "PPU:" + formattedScanlineCyclesString + "," + formattedScanlinesString;
+    };
+    Cpu.prototype.getCpuCycleLog = function () {
+        return "CYC:" + this._currentCycles;
     };
     Cpu.prototype.getRegisterLog = function () {
         var xformedA = this._regA.get().toString(16).toUpperCase();
@@ -307,75 +626,67 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0x69:// Immediate
+            case 0x69: // Immediate
                 address = this._addressingHelper.atImmediate(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "ADC", true, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0x6D:// Absolute
+            case 0x6D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "ADC", false, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 4;
                 this._regPC.add(2);
                 break;
-            case 0x65:// Direct Page
+            case 0x65: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "ADC", false, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 3;
                 this._regPC.add(1);
                 break;
-            case 0x7D:// Absolute Indexed, X
+            case 0x7D: // Absolute Indexed, X
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "ADC", false, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 this._regPC.add(2);
                 break;
-            case 0x79:// Absolute Indexed, Y
+            case 0x79: // Absolute Indexed, Y
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "ADC", false, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 this._regPC.add(2);
                 break;
-            case 0x75:// Direct Page Indexed, X
+            case 0x75: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "ADC", false, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 4;
                 this._regPC.add(1);
                 break;
-            case 0x61:// Direct Page Indexed Indirect, X
+            case 0x61: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "ADC", false, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 6;
                 this._regPC.add(1);
                 break;
-            case 0x71:// Direct Page Indirect Indexed, Y
+            case 0x71: // Direct Page Indirect Indexed, Y
                 if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "ADC", false, false, undefined);
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += (5 + pageBoundaryCycle);
                 this._regPC.add(1);
@@ -417,7 +728,6 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0x29:
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opCode, operand, "AND", true, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 2;
                 this._regPC.add(1);
@@ -425,7 +735,6 @@ var Cpu = /** @class */ (function () {
             case 0x2D:
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "AND", false, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 4;
                 this._regPC.add(2);
@@ -433,7 +742,6 @@ var Cpu = /** @class */ (function () {
             case 0x25:
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "AND", false, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 3;
                 this._regPC.add(1);
@@ -444,7 +752,6 @@ var Cpu = /** @class */ (function () {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "AND", false, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 this._regPC.add(2);
@@ -455,7 +762,6 @@ var Cpu = /** @class */ (function () {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "AND", false, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 this._regPC.add(2);
@@ -463,7 +769,6 @@ var Cpu = /** @class */ (function () {
             case 0x35:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "AND", false, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 4;
                 this._regPC.add(1);
@@ -471,7 +776,6 @@ var Cpu = /** @class */ (function () {
             case 0x21:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "AND", false, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 6;
                 this._regPC.add(1);
@@ -480,7 +784,6 @@ var Cpu = /** @class */ (function () {
                 pageBoundaryCycle = this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY) ? 1 : 0;
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "AND", false, false, undefined);
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += (5 + pageBoundaryCycle);
                 this._regPC.add(1);
@@ -511,14 +814,12 @@ var Cpu = /** @class */ (function () {
             case 0x0A:
                 oldVal = this._regA.get();
                 result = oldVal << 1;
-                this.pushLog(opCode, undefined, "ASL", false, false, undefined);
                 this._regA.set(result);
                 this._currentCycles += 2;
                 break;
             case 0x0E:
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 oldVal = this._memory.get(address);
-                this.pushLog(opCode, address, "ASL", false, false, undefined);
                 result = oldVal << 1;
                 this._memory.set(address, result);
                 this._currentCycles += 6;
@@ -527,7 +828,6 @@ var Cpu = /** @class */ (function () {
             case 0x06:
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 oldVal = this._memory.get(address);
-                this.pushLog(opCode, address, "ASL", false, false, undefined);
                 result = oldVal << 1;
                 this._memory.set(address, result);
                 this._currentCycles += 5;
@@ -536,7 +836,6 @@ var Cpu = /** @class */ (function () {
             case 0x1E:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 oldVal = this._memory.get(address);
-                this.pushLog(opCode, address, "ASL", false, false, undefined);
                 result = oldVal << 1;
                 this._memory.set(address, result);
                 this._currentCycles += 7;
@@ -545,7 +844,6 @@ var Cpu = /** @class */ (function () {
             case 0x16:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 oldVal = this._memory.get(address);
-                this.pushLog(opCode, address, "ASL", false, false, undefined);
                 result = oldVal << 1;
                 this._memory.set(address, result);
                 this._currentCycles += 6;
@@ -585,7 +883,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                this.pushLog(opCode, displacement, "BCC", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
                     var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(1);
@@ -618,7 +915,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                this.pushLog(opCode, displacement, "BCS", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Carry)) {
                     var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
                     this._regPC.add(1);
@@ -650,7 +946,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                this.pushLog(opCode, displacement, "BEQ", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
                     var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(displacement);
@@ -675,10 +970,9 @@ var Cpu = /** @class */ (function () {
         var operand = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0x2C:// Absolute Addressing
+            case 0x2C: // Absolute Addressing
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "BIT", false, true, undefined);
                 if ((operand & 0x80) > 0) {
                     this.setStatusBit(StatusBitPositions.Negative);
                 }
@@ -700,10 +994,9 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += 4;
                 this._regPC.add(2);
                 break;
-            case 0x24:// Direct Page Addressing
+            case 0x24: // Direct Page Addressing
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "BIT", false, true, undefined);
                 if (this.isNegative(operand)) {
                     this.setStatusBit(StatusBitPositions.Negative);
                 }
@@ -741,7 +1034,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                this.pushLog(opCode, displacement, "BMI", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
                     var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(1);
@@ -773,7 +1065,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                this.pushLog(opCode, displacement, "BNE", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
                     var pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
                     this._regPC.add(1);
@@ -805,7 +1096,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                this.pushLog(opCode, displacement, "BPL", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
                     var pcPageBoundaryByte = ((this._regPC.get()) & 0xFF00);
                     this._regPC.add(1);
@@ -830,7 +1120,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(2);
         switch (opCode) {
             case 0x00:
-                this.pushLog(opCode, undefined, "BRK", false, false, undefined);
                 this.stackPush((this._regPC.get() | 0xFF00) >> 8);
                 this.stackPush((this._regPC.get() | 0x00FF));
                 this.setStatusBit(StatusBitPositions.BrkCausedInterrupt);
@@ -857,7 +1146,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement *= -1;
                 }
-                this.pushLog(opCode, displacement, "BVC", false, false, (this._regPC.get() + 1) + displacement);
                 if (!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
@@ -889,7 +1177,6 @@ var Cpu = /** @class */ (function () {
                 else {
                     displacement *= -1;
                 }
-                this.pushLog(opCode, displacement, "BVS", false, false, (this._regPC.get() + 1) + displacement);
                 if (this.getStatusBitFlag(StatusBitPositions.Overflow)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(1);
@@ -914,7 +1201,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0x18:
-                this.pushLog(opCode, undefined, "CLC", false, false, undefined);
                 this.clearStatusBit(StatusBitPositions.Carry);
                 this._currentCycles += 2;
                 break;
@@ -927,7 +1213,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0xD8:
-                this.pushLog(opCode, undefined, "CLD", false, false, undefined);
                 this.clearStatusBit(StatusBitPositions.DecimalMode);
                 this._currentCycles += 2;
                 break;
@@ -940,7 +1225,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0x58:
-                this.pushLog(opCode, undefined, "CLI", false, false, undefined);
                 this.clearStatusBit(StatusBitPositions.InterruptDisable);
                 this._currentCycles += 2;
                 break;
@@ -953,7 +1237,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0xB8:
-                this.pushLog(opCode, undefined, "CLV", false, false, undefined);
                 this.clearStatusBit(StatusBitPositions.Overflow);
                 this._currentCycles += 2;
                 break;
@@ -969,9 +1252,8 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0xC9:// Immediate
+            case 0xC9: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opCode, operand, "CMP", true, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -981,10 +1263,9 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += 2;
                 this._regPC.add(1);
                 break;
-            case 0xCD:// Absolute
+            case 0xCD: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "CMP", false, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -994,10 +1275,9 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += 4;
                 this._regPC.add(2);
                 break;
-            case 0xC5:// Direct Page
+            case 0xC5: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "CMP", false, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -1007,13 +1287,12 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += 3;
                 this._regPC.add(1);
                 break;
-            case 0xDD:// Absolute Indexed, X
+            case 0xDD: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "CMP", false, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -1023,13 +1302,12 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += (4 + pageBoundaryCycle);
                 this._regPC.add(2);
                 break;
-            case 0xD9:// Absolute Indexed Y
+            case 0xD9: // Absolute Indexed Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "CMP", false, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -1039,10 +1317,9 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += (4 + pageBoundaryCycle);
                 this._regPC.add(2);
                 break;
-            case 0xD5:// Direct Page Indexed, X
+            case 0xD5: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "CMP", false, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -1052,10 +1329,9 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += 4;
                 this._regPC.add(1);
                 break;
-            case 0xC1:// Direct Page Indexed Indirect, X
+            case 0xC1: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "CMP", false, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -1065,13 +1341,12 @@ var Cpu = /** @class */ (function () {
                 this._currentCycles += 6;
                 this._regPC.add(1);
                 break;
-            case 0xD1:// Direct Page Indirect Indexed, Y
+            case 0xD1: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, operand, "CMP", false, false, undefined);
                 if (this._regA.get() >= operand) {
                     carry = 1;
                 }
@@ -1110,9 +1385,8 @@ var Cpu = /** @class */ (function () {
         var carry = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0xE0:// Immediate
+            case 0xE0: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opCode, operand, "CPX", true, false, undefined);
                 if (this._regX.get() >= operand) {
                     carry = 1;
                 }
@@ -1122,10 +1396,9 @@ var Cpu = /** @class */ (function () {
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0xEC:// Absolute
+            case 0xEC: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "CPX", false, false, undefined);
                 if (this._regX.get() >= operand) {
                     carry = 1;
                 }
@@ -1135,10 +1408,9 @@ var Cpu = /** @class */ (function () {
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0xE4:// Direct Page
+            case 0xE4: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "CPX", false, false, undefined);
                 if (this._regX.get() >= operand) {
                     carry = 1;
                 }
@@ -1177,9 +1449,8 @@ var Cpu = /** @class */ (function () {
         var carry = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0xC0:// Immediate
+            case 0xC0: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opCode, operand, "CPY", true, false, undefined);
                 if (this._regY.get() >= operand) {
                     carry = 1;
                 }
@@ -1189,10 +1460,9 @@ var Cpu = /** @class */ (function () {
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0xCC:// Absolute
+            case 0xCC: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "CPY", false, false, undefined);
                 if (this._regY.get() >= operand) {
                     carry = 1;
                 }
@@ -1202,10 +1472,9 @@ var Cpu = /** @class */ (function () {
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0xC4:// Direct Page
+            case 0xC4: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "CPY", false, false, undefined);
                 if (this._regY.get() >= operand) {
                     carry = 1;
                 }
@@ -1368,34 +1637,30 @@ var Cpu = /** @class */ (function () {
         var operand = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0xCE:// Absolute
+            case 0xCE: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "DEC", false, false, undefined);
                 this._memory.set(address, operand - 1);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
-            case 0xC6:// Direct Page
+            case 0xC6: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "DEC", false, false, undefined);
                 this._memory.set(address, operand - 1);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
-            case 0xDE:// Absolute Indexed, X
+            case 0xDE: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "DEC", false, false, undefined);
                 this._memory.set(address, operand - 1);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
-            case 0xD6:// Direct Page Indexed, X
+            case 0xD6: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "DEC", false, false, undefined);
                 this._memory.set(address, operand - 1);
                 this._regPC.add(1);
                 this._currentCycles += 6;
@@ -1421,7 +1686,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0xCA:
-                this.pushLog(opCode, undefined, "DEX", false, false, undefined);
                 this._regX.set(this._regX.get() - 1);
                 this._currentCycles += 2;
                 break;
@@ -1446,7 +1710,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0x88:
-                this.pushLog(opCode, undefined, "DEY", false, undefined, undefined);
                 this._regY.set(this._regY.get() - 1);
                 this._currentCycles += 2;
                 break;
@@ -1474,81 +1737,73 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0x49:// Immediate
+            case 0x49: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opCode, operand, "EOR", true, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0x4D:// Absolute
+            case 0x4D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "EOR", false, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0x45:// Direct Page
+            case 0x45: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "EOR", false, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0x5D:// Absolute Indexed, X
+            case 0x5D: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "EOR", false, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0x59:// Absolute Indexed, Y
+            case 0x59: // Absolute Indexed, Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "EOR", false, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0x55:// Direct Page Indexed, X
+            case 0x55: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "EOR", false, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
-            case 0x41:// Direct Page Indexed Indirect, X
+            case 0x41: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "EOR", false, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            case 0x51:// Direct Page Indirect Indexed, Y
+            case 0x51: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "EOR", false, false, undefined);
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
                 this._regPC.add(1);
@@ -1576,34 +1831,30 @@ var Cpu = /** @class */ (function () {
         var operand = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0xEE:// Absolute
+            case 0xEE: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "INC", false, false, undefined);
                 this._memory.set(address, operand + 1);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
-            case 0xE6:// Direct Page
+            case 0xE6: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "INC", false, false, undefined);
                 this._memory.set(address, operand + 1);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
-            case 0xFE:// Absolute Indexed, X
+            case 0xFE: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "INC", false, false, undefined);
                 this._memory.set(address, operand + 1);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
-            case 0xF6:// Direct Page Indexed, X
+            case 0xF6: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "INC", false, false, undefined);
                 this._memory.set(address, operand + 1);
                 this._regPC.add(1);
                 this._currentCycles += 6;
@@ -1629,7 +1880,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0xE8:
-                this.pushLog(opCode, undefined, "INX", false, false, undefined);
                 this._regX.set(this._regX.get() + 1);
                 this._currentCycles += 2;
                 break;
@@ -1654,7 +1904,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0xC8:
-                this.pushLog(opCode, undefined, "INY", false, false, undefined);
                 this._regY.set(this._regY.get() + 1);
                 this._currentCycles += 2;
                 break;
@@ -1788,14 +2037,12 @@ var Cpu = /** @class */ (function () {
         switch (opCode) {
             case 0x4C:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                this.pushLog(opCode, address, "JMP", false, false);
                 //this._regPC.add(2);
                 this._regPC.set(address);
                 this._currentCycles += 3;
                 break;
             case 0x6C:
                 address = this._addressingHelper.atAbsoluteIndirect(this._regPC);
-                this.pushLog(opCode, address, "JMP", false, false);
                 if ((this._regPC.get() & 0x00FF) === 0x00FF) {
                     this._currentCycles += 1;
                 }
@@ -1811,9 +2058,8 @@ var Cpu = /** @class */ (function () {
     Cpu.prototype.jsr = function (opCode) {
         this._regPC.add(1);
         switch (opCode) {
-            case 0x20:// Absolute
+            case 0x20: // Absolute
                 var address = this._addressingHelper.atAbsolute(this._regPC);
-                this.pushLog(opCode, address, "JSR", false, false);
                 this._regPC.add(1);
                 this.stackPush((this._regPC.get() & 0xFF00) >> 8);
                 this.stackPush((this._regPC.get() & 0x00FF));
@@ -1830,7 +2076,7 @@ var Cpu = /** @class */ (function () {
         var operand = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0xA3:// Direct Indirect X
+            case 0xA3: // Direct Indirect X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 this._regA.set(operand);
@@ -1901,74 +2147,66 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0xA9:// Immediate
+            case 0xA9: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opCode, operand, "LDA", true, true, undefined);
                 this._currentCycles += 2;
                 this._regA.set(operand);
                 this._regPC.add(1);
                 break;
-            case 0xAD:// Absolute
+            case 0xAD: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDA", false, true, undefined);
                 this._regA.set(operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0xA5:// Direct Page
+            case 0xA5: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDA", false, true, undefined);
                 this._regA.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0xBD:// Absolute Indexed, X
+            case 0xBD: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDA", false, true, undefined);
                 this._regA.set(operand);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0xB9:// Absolute Indexed, Y
+            case 0xB9: // Absolute Indexed, Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDA", false, true, undefined);
                 this._regA.set(operand);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0xB5:// Direct Page Indexed, X
+            case 0xB5: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDA", false, true, undefined);
                 this._regA.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
-            case 0xA1:// Direct Page Indexed Indirect, X
+            case 0xA1: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDA", false, true, undefined);
                 this._regA.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            case 0xB1:// Direct Page Indirect Indexed, Y
+            case 0xB1: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDA", false, true, undefined);
                 this._regA.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += (5 + pageBoundaryCycle);
@@ -1996,44 +2234,39 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         this._regPC.add(1);
         switch (opCode) {
-            case 0xA2:// Immediate
+            case 0xA2: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opCode, operand, "LDX", true, false);
                 this._regX.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0xAE:// Absolute
+            case 0xAE: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDX", false, false);
                 this._regX.set(operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0xA6:// Direct Page
+            case 0xA6: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDX", false, false);
                 this._regX.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0xBE:// Absolute Indexed, Y
+            case 0xBE: // Absolute Indexed, Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDX", false, false);
                 this._regX.set(operand);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0xB6:// Direct Page Indexed, Y
+            case 0xB6: // Direct Page Indexed, Y
                 address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
-                this.pushLog(opCode, address, "LDX", false, false);
                 this._regX.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
@@ -2061,44 +2294,39 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0xA0:// Immediate
+            case 0xA0: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opcode, operand, "LDY", true, false, undefined);
                 this._regY.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0xAC:// Absolute
+            case 0xAC: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LDY", true, false, undefined);
                 this._regY.set(operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0xA4:// Direct Page
+            case 0xA4: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LDY", true, false, undefined);
                 this._regY.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0xBC:// Absolute Indexed X
+            case 0xBC: // Absolute Indexed X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LDY", true, false, undefined);
                 this._regY.set(operand);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0xB4:// Direct Page Indexed, X
+            case 0xB4: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LDY", true, false, undefined);
                 this._regY.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
@@ -2127,48 +2355,43 @@ var Cpu = /** @class */ (function () {
         var result = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0x4A:// Accumulator
+            case 0x4A: // Accumulator
                 operand = this._regA.get();
-                this.pushLog(opcode, undefined, "LSR", false, false, undefined);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
                 this._regA.set(result);
                 this._currentCycles += 2;
                 break;
-            case 0x4E:// Absolute
+            case 0x4E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LSR", false, false, undefined);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
                 this._memory.set(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
-            case 0x46:// Direct Page
+            case 0x46: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LSR", false, false, undefined);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
                 this._memory.set(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
-            case 0x5E:// Absolute Indexed, X
+            case 0x5E: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LSR", false, false, undefined);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
                 this._memory.set(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
-            case 0x56:// Direct Page Indexed, X
+            case 0x56: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "LSR", false, false, undefined);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
                 this._memory.set(address, result);
@@ -2208,7 +2431,6 @@ var Cpu = /** @class */ (function () {
             case 0xDA:
             case 0xFA:
             case 0xEA:
-                this.pushLog(opcode, undefined, "NOP", false, false);
                 this._currentCycles += 2;
                 break;
             default:
@@ -2224,7 +2446,6 @@ var Cpu = /** @class */ (function () {
             case 0x89:
             case 0xC2:
             case 0xE2:
-                this.pushLog(opcode, undefined, "SKB", false, false);
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
@@ -2237,7 +2458,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x0C:
-                this.pushLog(opcode, undefined, "IGN", false, false);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
@@ -2248,7 +2468,6 @@ var Cpu = /** @class */ (function () {
             case 0xDC:
             case 0xFC:
                 var pageBoundaryCycle = 0;
-                this.pushLog(opcode, undefined, "IGN", false, false);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
@@ -2258,7 +2477,6 @@ var Cpu = /** @class */ (function () {
             case 0x04:
             case 0x44:
             case 0x64:
-                this.pushLog(opcode, undefined, "IGN", false, false);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
@@ -2268,7 +2486,6 @@ var Cpu = /** @class */ (function () {
             case 0x74:
             case 0xD4:
             case 0xF4:
-                this.pushLog(opcode, undefined, "IGN", false, false);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
@@ -2284,81 +2501,73 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0x09:// Immediate
+            case 0x09: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opcode, operand, "ORA", true, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0x0D:// Absolute
+            case 0x0D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ORA", false, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0x05:// Direct Page
+            case 0x05: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ORA", false, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0x1D:// Absolute Indexed, X
+            case 0x1D: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ORA", false, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0x19:// Absolute Indexed, Y
+            case 0x19: // Absolute Indexed, Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ORA", false, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0x15:// Direct Page Indexed, X
+            case 0x15: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ORA", false, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
-            case 0x01:// Direct Page Indexed Indirect, X
+            case 0x01: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ORA", false, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            case 0x11:// Direct Page Indirect Indexed, Y
+            case 0x11: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ORA", false, false, undefined);
                 result = this._regA.get() | operand;
                 this._regA.set(result);
                 this._regPC.add(1);
@@ -2384,7 +2593,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x48:
-                this.pushLog(opcode, undefined, "PHA", false, false, undefined);
                 this.stackPush(this._regA.get());
                 this._currentCycles += 3;
                 break;
@@ -2397,7 +2605,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x08:
-                this.pushLog(opcode, undefined, "PHP", false, false, undefined);
                 var pStatus = this._regP.get() | 0x10;
                 this.stackPush(pStatus);
                 this._currentCycles += 3;
@@ -2411,7 +2618,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x68:
-                this.pushLog(opcode, undefined, "PLA", false, false, undefined);
                 this._regA.set(this.stackPull());
                 this._currentCycles += 4;
                 break;
@@ -2438,7 +2644,6 @@ var Cpu = /** @class */ (function () {
             case 0x28:
                 var pStatus = this.stackPull();
                 pStatus = pStatus | 0x20;
-                this.pushLog(opcode, undefined, "PLP", false, false, undefined);
                 this._regP.set(pStatus);
                 this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
                 this._currentCycles += 4;
@@ -2547,48 +2752,43 @@ var Cpu = /** @class */ (function () {
         var newCarry = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0x2A:// Accumulator
+            case 0x2A: // Accumulator
                 operand = this._regA.get();
-                this.pushLog(opcode, undefined, "ROL", false, false, undefined);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._regA.set(result);
                 this._currentCycles += 2;
                 break;
-            case 0x2E:// Absolute
+            case 0x2E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROL", false, false, undefined);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
-            case 0x26:// Direct Page
+            case 0x26: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROL", false, false, undefined);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
-            case 0x3E:// Absolute Indexed, X
+            case 0x3E: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROL", false, false, undefined);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
-            case 0x36:// Direct Page Indexed, X
+            case 0x36: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROL", false, false, undefined);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
                 this._memory.set(address, result);
@@ -2626,48 +2826,43 @@ var Cpu = /** @class */ (function () {
         var newCarry = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0x6A:// Accumulator
+            case 0x6A: // Accumulator
                 operand = this._regA.get();
-                this.pushLog(opcode, undefined, "ROR", false, false, undefined);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
                 this._regA.set(result);
                 this._currentCycles += 2;
                 break;
-            case 0x6E:// Absolute
+            case 0x6E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROR", false, false, undefined);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
-            case 0x66:// Direct Page
+            case 0x66: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROR", false, false, undefined);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
-            case 0x7E:// Absolute Indexed, X
+            case 0x7E: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROR", false, false, undefined);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
-            case 0x76:// Direct Page Indexed, X
+            case 0x76: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "ROR", false, false, undefined);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, result);
@@ -2862,7 +3057,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x40:
-                this.pushLog(opcode, undefined, "RTI", false, false, undefined);
                 var newP = this.stackPull();
                 var pcLow = this.stackPull();
                 var pcHigh = this.stackPull();
@@ -2883,7 +3077,6 @@ var Cpu = /** @class */ (function () {
             case 0x60:
                 var newLowPC = this.stackPull();
                 var newHighPC = this.stackPull();
-                this.pushLog(opcode, undefined, "RTS", false, false, undefined);
                 this._regPC.set((newHighPC << 8) | newLowPC);
                 this._regPC.add(1);
                 this._currentCycles += 6;
@@ -2937,81 +3130,74 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0xEB:
-            case 0xE9:// Immediate
+            case 0xE9: // Immediate
                 operand = this._memory.get(this._regPC.get());
-                this.pushLog(opcode, operand, "SBC", true, false, undefined);
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 2;
                 break;
-            case 0xED:// Absolute
+            case 0xED: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "SBC", false, false, undefined);
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0xE5:// Direct Page
+            case 0xE5: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "SBC", false, false, undefined);
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0xFD:// Absolute Indexed, X
+            case 0xFD: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "SBC", false, false, undefined);
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0xF9:// Absolute Indexed, Y
+            case 0xF9: // Absolute Indexed, Y
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "SBC", false, false, undefined);
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(2);
                 this._currentCycles += (4 + pageBoundaryCycle);
                 break;
-            case 0xF5:// Direct Page Indexed, X
+            case 0xF5: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "SBC", false, false, undefined);
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
-            case 0xE1:// Direct Page Indexed Indirect, X
+            case 0xE1: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "SBC", false, false, undefined);
+                // 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            case 0xF1:// Direct Page Indirect Indexed, Y
+            case 0xF1: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 if (this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
                 operand = this._memory.get(address);
-                this.pushLog(opcode, address, "SBC", false, false, undefined);
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
                 this._regPC.add(1);
@@ -3050,7 +3236,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x38:
-                this.pushLog(opcode, undefined, "SEC", false, false);
                 this.setStatusBit(StatusBitPositions.Carry);
                 this._currentCycles += 2;
                 break;
@@ -3063,7 +3248,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0xF8:
-                this.pushLog(opcode, undefined, "SED", false, false, undefined);
                 this.setStatusBit(StatusBitPositions.DecimalMode);
                 this._currentCycles += 2;
                 break;
@@ -3076,7 +3260,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x78:
-                this.pushLog(opcode, undefined, "SEI", false, false, undefined);
                 this.setStatusBit(StatusBitPositions.InterruptDisable);
                 this._currentCycles += 2;
                 break;
@@ -3312,58 +3495,51 @@ var Cpu = /** @class */ (function () {
         var address = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0x8D:// Absolute
+            case 0x8D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regA.get();
-                this.pushLog(opcode, address, "STA", false, true, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0x85:// Direct Page
+            case 0x85: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regA.get();
-                this.pushLog(opcode, address, "STA", false, true, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0x9D:// Absolute Indexed X
+            case 0x9D: // Absolute Indexed X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._regA.get();
-                this.pushLog(opcode, address, "STA", false, true, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 5;
                 break;
-            case 0x99:// Absolute Indexed Y
+            case 0x99: // Absolute Indexed Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 operand = this._regA.get();
-                this.pushLog(opcode, address, "STA", false, true, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 5;
                 break;
-            case 0x95:// Direct Page Indexed X
+            case 0x95: // Direct Page Indexed X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._regA.get();
-                this.pushLog(opcode, address, "STA", false, true, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
-            case 0x81:// Direct Page Indexed Indirect, X
+            case 0x81: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._regA.get();
-                this.pushLog(opcode, address, "STA", false, true, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            case 0x91:// Direct Page Indirect Indexed, Y
+            case 0x91: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 operand = this._regA.get();
-                this.pushLog(opcode, address, "STA", false, true, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 6;
@@ -3378,26 +3554,23 @@ var Cpu = /** @class */ (function () {
         var operand = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0x8E:// Absolute
+            case 0x8E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regX.get();
-                this.pushLog(opcode, address, "STX", false, true);
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0x86:// Direct Page
+            case 0x86: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regX.get();
-                this.pushLog(opcode, address, "STX", false, true);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0x96:// Direct Page Indexed, Y
+            case 0x96: // Direct Page Indexed, Y
                 address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
                 operand = this._regX.get();
-                this.pushLog(opcode, address, "STX", false, true);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
@@ -3412,26 +3585,23 @@ var Cpu = /** @class */ (function () {
         var operand = 0;
         this._regPC.add(1);
         switch (opcode) {
-            case 0x8C:// Absolute
+            case 0x8C: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regY.get();
-                this.pushLog(opcode, address, "STY", false, false, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
-            case 0x84:// Direct Page
+            case 0x84: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regY.get();
-                this.pushLog(opcode, address, "STY", false, false, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
-            case 0x94:// Direct Page Indexed, X
+            case 0x94: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._regY.get();
-                this.pushLog(opcode, address, "STY", false, false, undefined);
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
@@ -3445,7 +3615,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0xAA:
-                this.pushLog(opcode, undefined, "TAX", false, false, undefined);
                 this._regX.set(this._regA.get());
                 this._currentCycles += 2;
                 break;
@@ -3470,7 +3639,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0xA8:
-                this.pushLog(opcode, undefined, "TAY", false, false, undefined);
                 this._regY.set(this._regA.get());
                 this._currentCycles += 2;
                 break;
@@ -3495,7 +3663,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0xBA:
-                this.pushLog(opcode, undefined, "TSX", false, false, undefined);
                 this._regX.set(this._regSP.get());
                 this._currentCycles += 2;
                 break;
@@ -3520,7 +3687,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x8A:
-                this.pushLog(opcode, undefined, "TXA", false, false, undefined);
                 this._regA.set(this._regX.get());
                 this._currentCycles += 2;
                 break;
@@ -3545,7 +3711,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x9A:
-                this.pushLog(opcode, undefined, "TXS", false, false, undefined);
                 this._regSP.set(this._regX.get());
                 this._currentCycles += 2;
                 break;
@@ -3558,7 +3723,6 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x98:
-                this.pushLog(opcode, undefined, "TYA", false, false, undefined);
                 this._regA.set(this._regY.get());
                 this._currentCycles += 2;
                 break;
@@ -3581,6 +3745,7 @@ var Cpu = /** @class */ (function () {
     };
     Cpu.prototype.handleOp = function (opCode) {
         var prevCycles = this._currentCycles;
+        this.pushLog(opCode);
         switch (opCode) {
             case 0x00:
                 this.brk(opCode);

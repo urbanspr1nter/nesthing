@@ -2,6 +2,7 @@ import { ByteRegister } from './byte-register';
 import { DoubleByteRegister } from './double-byte-register';
 import { Memory } from '../memory/memory';
 import { CpuAddressingHelper } from './cpu-addressing-helper';
+import { format } from 'path';
 
 enum StatusBitPositions {
     Carry = 0,
@@ -372,19 +373,31 @@ export class Cpu {
     public pushLog(
         opcode: number
     ) {        
-        let addressingMode = AddressingModes.Immediate;
+        let formattedOpcode = `${opcode.toString(16).toUpperCase()}`;
+        if(formattedOpcode.length < 2) {
+            formattedOpcode = `0${formattedOpcode}`;
+        }
+
         let output = ``;
 
         // Format of the log entry:
         // C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0,  0 CYC:7
 
-        let byteString = ``;
-        if(addressingMode === AddressingModes.Immediate) {
-            byteString = `${this._memory.get(this._regPC.get())}`;
-        } else if(addressingMode === AddressingModes.Absolute) {
-            byteString = `${this._memory.get(this._regPC.get())} ${this._memory.get(this._regPC.get() + 1)}`;
+
+        output = `${this.getPcLog()}  ${formattedOpcode} ${this.getByteLookAhead(OpAddressingMode[opcode])}`;
+        let spaces = 16 - output.length;
+        for(let i = 0; i < spaces; i++) {
+            output += ` `;
         }
-        output = `${this.getPcLog()}  ${byteString}`;
+        output = `${output}${OpLabel[opcode]} ${this.getAddressString(OpAddressingMode[opcode])}`;
+        
+        spaces = 48 - output.length;
+        for(let i = 0; i < spaces; i++) {
+            output += ` `;
+        }
+        output += ` `;
+
+        output += `${this.getRegisterLog()} ${this.getPpuLog()} ${this.getCpuCycleLog()}`;
         this._log.push(output);
     }
 
@@ -409,15 +422,33 @@ export class Cpu {
         let byteString = ``;
         switch(addressingMode) {
             case AddressingModes.Immediate:
-                byteString = `#$${this._memory.get(this._regPC.get()).toString(16).toUpperCase()}`;
+                let data = this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase();
+                if(data.length < 2) {
+                    data = '0' + data;
+                }
+                byteString = `#$${data}`;
+                break;
+            case AddressingModes.DirectPage:
+                byteString = `$${this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase()}`;
+                break;
+            case AddressingModes.Accumulator:
+                byteString = `A`;
                 break;
             case AddressingModes.Absolute:
             case AddressingModes.AbsoluteIndirect:
-            case AddressingModes.Relative:
-                byteString  = `$${(this._memory.get(this._regPC.get() + 1)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get()).toString(16).toUpperCase()}`;
+                byteString  = `$${(this._memory.get(this._regPC.get() + 2)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase()}`;
                 break;
             case AddressingModes.Relative:
-                byteString  = `($${(this._memory.get(this._regPC.get() + 1)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get()).toString(16).toUpperCase()})`;
+                let displacement = this._memory.get(this._regPC.get() + 1);
+                if(displacement >= 0x80) {
+                    displacement = -((0xFF - displacement) + 1);
+                }
+                let final = (this._regPC.get() + 2) + displacement;
+
+                byteString = `$${final.toString(16).toUpperCase()}`;
+                break;
+            case AddressingModes.Implicit:
+                byteString  = ``;
                 break;
         }
 
@@ -425,7 +456,7 @@ export class Cpu {
     }
 
     public getPcLog() {
-        const currentPC = this._regPC.get() - 1;
+        const currentPC = this._regPC.get();
 
         let xformedPC = currentPC.toString(16).toUpperCase();
         if(xformedPC.length < 4) {
@@ -438,6 +469,53 @@ export class Cpu {
         }
 
         return xformedPC;
+    }
+
+    public getByteLookAhead(addressingMode: AddressingModes) {
+        switch(addressingMode) {
+            case AddressingModes.Immediate:
+            case AddressingModes.DirectPage:
+            case AddressingModes.DirectPageIndexedIndirectX:
+            case AddressingModes.DirectPageIndexedX:
+            case AddressingModes.DirectPageIndexedY:
+            case AddressingModes.DirectPageIndirectIndexedY:
+            case AddressingModes.Relative:
+                let byte = '';
+                let val = this._memory.get(this._regPC.get() + 1);
+                if(val < 0x10) {
+                    byte = `0${val.toString(16).toUpperCase()}`;
+                } else {
+                    byte = `${val.toString(16).toUpperCase()}`;
+                }
+                return `${byte}`;
+            case AddressingModes.Implicit:
+                return ``;
+            case AddressingModes.Absolute:
+            case AddressingModes.AbsoluteIndexedX:
+            case AddressingModes.AbsoluteIndexedY:
+            case AddressingModes.AbsoluteIndirect:
+                let highByte = ``;
+                let lowByte = ``;
+                let highVal = this._memory.get(this._regPC.get() + 2);
+                let lowVal = this._memory.get(this._regPC.get() + 1);
+
+                if(highVal < 0x10) {
+                    highByte = `0${highVal.toString(16).toUpperCase()}`;
+                } else {
+                    highByte = `${highVal.toString(16).toUpperCase()}`;
+                }
+
+                if(lowVal < 0x10) {
+                    lowByte = `0${lowVal.toString(16).toUpperCase()}`;
+                } else {
+                    lowByte = `${lowVal.toString(16).toUpperCase()}`;
+                }
+
+                return `${lowByte} ${highByte}`;
+
+            default:
+                return ``;
+        }
     }
 
     public getPpuLog() {
@@ -458,6 +536,10 @@ export class Cpu {
         }
 
         return `PPU:${formattedScanlineCyclesString},${formattedScanlinesString}`;
+    }
+
+    public getCpuCycleLog() {
+        return `CYC:${this._currentCycles}`;
     }
 
     public getRegisterLog() {
@@ -941,8 +1023,6 @@ export class Cpu {
                     displacement = -(0xFF - displacement + 0x1);
                 }
     
-                
-
                 if(this.getStatusBitFlag(StatusBitPositions.Carry)) {
                     const pcPageBoundaryByte = (this._regPC.get() & 0xFF00);
 
@@ -4146,6 +4226,7 @@ export class Cpu {
     public handleOp(opCode: number) {
         let prevCycles = this._currentCycles;
 
+        this.pushLog(opCode);
         switch(opCode) {
             case 0x00:
                 this.brk(opCode);
