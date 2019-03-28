@@ -18,16 +18,15 @@ var Nes = /** @class */ (function () {
             _this._memory.set(address, value);
             address++;
         });
-        while (this._cpu.getCurrentCycles() <= 26556) {
+        while (this._cpu.getCurrentCycles() <= 26555) {
             // fetch
             var opCode = this._memory.get(this._cpu.getPC());
-            //console.log(opCode.toString(16));
             // decode, execute, wb
             this._cpu.handleOp(opCode);
         }
         for (var _i = 0, _a = this._log; _i < _a.length; _i++) {
             var entry = _a[_i];
-            //console.log(entry);
+            console.log(entry);
         }
         console.log(this._memory.get(0x02).toString(16).toUpperCase());
         console.log(this._memory.get(0x03).toString(16).toUpperCase());

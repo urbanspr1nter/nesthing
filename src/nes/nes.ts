@@ -25,17 +25,16 @@ export class Nes {
             address++;
         });
 
-        while(this._cpu.getCurrentCycles() <= 26556) {
+        while(this._cpu.getCurrentCycles() <= 26555) {
             // fetch
             const opCode = this._memory.get(this._cpu.getPC());
 
-            //console.log(opCode.toString(16));
             // decode, execute, wb
             this._cpu.handleOp(opCode);
         }
 
         for(const entry of this._log) {
-            //console.log(entry);
+            console.log(entry);
         }
 
         console.log(this._memory.get(0x02).toString(16).toUpperCase());
