@@ -2,7 +2,6 @@ import { ByteRegister } from './byte-register';
 import { DoubleByteRegister } from './double-byte-register';
 import { Memory } from '../memory/memory';
 import { CpuAddressingHelper } from './cpu-addressing-helper';
-import { format } from 'path';
 
 enum StatusBitPositions {
     Carry = 0,
