@@ -97,16 +97,40 @@ export class Ppu {
         this._memory.set(PpuRegister.PPUSTATUS, ppuStatus & ~(0x1 << PpuStatusBits.VblankStarted));  
     }
     public run() {
-        // RUN THE PPU!
-        if(this._scanlines === 242 && this._cycles === 1) {
-            this._startVblankNmi();
+        // Pre-Render Scanline
+        if(this._scanlines === -1) {
+            if(this._cycles === 1) {
+                this._clearVblankNmi();
+            }
         }
 
-        // NOW READ REGISTER 2002
-        // --> read here
-        // AFTER reading 2002, and if in Pre-render line (262) AND cycle === 1
-        if(this._isPreRenderScanline() && this._cycles === 1) {
-            this._clearVblankNmi();
+        // The other scanlines???
+        if(this._scanlines >= 0 && this._scanlines <= 239) {
+            if(this._cycles === 0) {
+                // Idle cycle
+            } else if(this._cycles >= 1 && this._cycles <= 256) {
+                // The data for each tile is fetched. (2 PPU cycles)
+                // 1. Nametable byte
+                // 2. Attribute table byte
+                // 3. Tile bitmap low byte
+                // 4. Tile bitmap high byte (+8, or maybe +32.. depends?)
+            }
+
+        }
+
+        // POST-RENDER SCANLINE
+        if(this._scanlines === 240) {
+        
+        }
+
+        // VBLANK!
+        if(this._scanlines >= 241 && this._scanlines <= 260) {
+            // VBLANK START
+            if(this._scanlines === 241 && this._cycles === 1) {
+                this._startVblankNmi();
+            } else {
+
+            }
         }
 
         // Programmer make PPU Memory accesses if we are in the VBLANk range.
