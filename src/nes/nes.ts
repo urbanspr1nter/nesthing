@@ -1,6 +1,9 @@
 import { Memory } from '../memory/memory';
 import { Ppu } from '../ppu/ppu';
 import { Cpu } from '../cpu/cpu';
+import { 
+    NmiVectorLocation
+} from '../cpu/cpu.interface';
 import * as fs from 'fs';
 
 export class Nes {
@@ -42,23 +45,38 @@ export class Nes {
     }
 
     public run() {
+        /**
+         * The general approach to this run loop is to simulate both the CPU, PPU and APU 
+         * all running at the same time. Each piece of hardware will run for the necessary amount of
+         * cycles.
+         */
         while(this._cpu.getCurrentCycles() <= 100) {
-            // fetch
             const beginCpuCycles = this._cpu.getCurrentCycles();
-            const opCode = this._memory.get(this._cpu.getPC());
 
-            // decode, execute, wb
-            this._cpu.handleOp(opCode);
+            // If we are entering in VBLANK, Enter NMI handling routine!
+            if(this._ppu.isVblankNmi()) {
+                this._cpu.handleNmiIrq();
+
+                this._cpu.setPC(
+                    (this._memory.get(NmiVectorLocation.High) << 8) 
+                        | this._memory.get(NmiVectorLocation.Low)
+                );
+                // Make sure during next execution, we continue the routine.
+                this._ppu.clearVblankNmi();
+            } else {
+                const opCode = this._memory.get(this._cpu.getPC());
+                this._cpu.handleOp(opCode);
+            }
 
             const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
 
-            this._ppu.addCycles(cpuCyclesRan);
+            // Run the PPU for the appropriate amount of cycles.
+            let ppuCyclesToRun = cpuCyclesRan * 3;
+            while(ppuCyclesToRun > 0) {
+                this._ppu.run();
+                ppuCyclesToRun--;
+            }
         }
-
-        // console.log(this._ppu.getScanlines(), this._ppu.getCycles());
-        // console.log(this._memory.get(0x02).toString(16).toUpperCase());
-        // console.log(this._memory.get(0x03).toString(16).toUpperCase());
-
     }
 
     private _initialize() {

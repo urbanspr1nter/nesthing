@@ -287,6 +287,10 @@ export class Cpu {
         return this._memory.get(address);
     }
 
+    public setPC(address: number) {
+        this._regPC.set(address);
+    }
+
     public getA(): number {
         return this._regA.get();
     }
@@ -365,6 +369,22 @@ export class Cpu {
             // return (first + second + carry) >= 0x0 && (first + second) <= 0xFF;
             return !(first < second);
         }
+    }
+
+    public handleNmiIrq() {
+        const currPcLow = this._regPC.get() & 0xFF;
+        const currPcHigh = (this._regPC.get() >> 8) & 0xFF;
+
+        this.stackPush(currPcHigh);
+        this.stackPush(currPcLow);
+
+        this.stackPush(this._regP.get());
+
+        this.setStatusBit(StatusBitPositions.InterruptDisable);
+
+        this._regPC.set((NmiVectorLocation.High << 8) | NmiVectorLocation.Low);
+        
+        this._currentCycles += 7;
     }
 
     public adc(opCode: number) {
