@@ -13,6 +13,8 @@ export class Nes {
 
     private _log: string[];
 
+    private _screen: number[][];
+
     constructor() {
         this._log = [];
         this._memory = new Memory();
@@ -54,15 +56,11 @@ export class Nes {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!
-            if(this._ppu.isVblankNmi()) {
+            if(this._ppu.getScanlines() === 242 
+                && this._ppu.getCycles() === 2 
+                && this._ppu.isVblankNmi()
+            ) {
                 this._cpu.handleNmiIrq();
-
-                this._cpu.setPC(
-                    (this._memory.get(NmiVectorLocation.High) << 8) 
-                        | this._memory.get(NmiVectorLocation.Low)
-                );
-                // Make sure during next execution, we continue the routine.
-                this._ppu.clearVblankNmi();
             } else {
                 const opCode = this._memory.get(this._cpu.getPC());
                 this._cpu.handleOp(opCode);
@@ -73,13 +71,23 @@ export class Nes {
             // Run the PPU for the appropriate amount of cycles.
             let ppuCyclesToRun = cpuCyclesRan * 3;
             while(ppuCyclesToRun > 0) {
-                this._ppu.run();
+                this._ppu.run();                
                 ppuCyclesToRun--;
+
+                // Fire a dot into the screen
+                // this._screen.doSOMETHING!
             }
         }
     }
 
     private _initialize() {
+        for(let i = 0; i < 256; i++) {
+            this._screen.push([]);
+            for(let j = 0; j < 240; j++) {
+                this._screen[i].push(0x00);
+            }
+        }
+
         this.loadRom('./DK.nes');
         this._cpu.powerUp();
     }

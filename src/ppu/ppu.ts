@@ -14,6 +14,12 @@ export enum PpuRegister {
     OAMDMA = 0x4014
 };
 
+export enum PpuStatusBits {
+    SpriteOverflow = 5,
+    SpriteZeroHit = 6,
+    VblankStarted = 7
+}
+
 export enum PpuCtrlBits {
     NametableSelectLsb = 0,
     NametableSelectMsb = 1,
@@ -46,9 +52,6 @@ export class Ppu {
     private _currentVramReadAddress: number;
     private _currentVramReadAddressShiftCount: number;
 
-    private _startVblank: boolean;
-    private _vblankNmi: boolean;
-
     private _cycles: number;
     private _scanlines: number;
 
@@ -56,9 +59,6 @@ export class Ppu {
         this._memory = memory;
         this._ppuMemory = new PpuMemory();
         this._oamMemory = new OamMemory();
-
-        this._startVblank = false;
-        this._vblankNmi = false;
 
         this._scanlines = 0;
         this._cycles = 0;
@@ -68,10 +68,6 @@ export class Ppu {
         this._cycles = this._cycles + (cpuCycles * 3);
         if(this._cycles > 341) {
             this._scanlines++;
-
-            if(this._scanlines === 242) {
-                this._startVblank = true;
-            }
 
             const remaining = this._cycles - 341;
             this._cycles = remaining;
@@ -87,24 +83,31 @@ export class Ppu {
     }
 
     public isVblankNmi() {
-        return this._vblankNmi;
+        const ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
+        return (ppuStatus & (0x1 << PpuStatusBits.VblankStarted)) > 0x0;
     }
 
-    public clearVblankNmi() {
-        this._vblankNmi = false;
+    private _startVblankNmi() {
+        const ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
+        this._memory.set(PpuRegister.PPUSTATUS, ppuStatus | (0x1 << PpuStatusBits.VblankStarted));
     }
 
+    private _clearVblankNmi() {
+        const ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
+        this._memory.set(PpuRegister.PPUSTATUS, ppuStatus & ~(0x1 << PpuStatusBits.VblankStarted));  
+    }
     public run() {
         // RUN THE PPU!
-        if(this._isInVblankScanline() && this._startVblank) {
-            // START THE VBLANK!
-            // 1. SET VBLANK!
-            
-            this._startVblank = false;
-            // 2. Tell CPU to RUN VBLANK NMI
-            this._vblankNmi = true;
+        if(this._scanlines === 242 && this._cycles === 1) {
+            this._startVblankNmi();
         }
 
+        // NOW READ REGISTER 2002
+        // --> read here
+        // AFTER reading 2002, and if in Pre-render line (262) AND cycle === 1
+        if(this._isPreRenderScanline() && this._cycles === 1) {
+            this._clearVblankNmi();
+        }
 
         // Programmer make PPU Memory accesses if we are in the VBLANk range.
         this._readFromVram();
@@ -112,7 +115,6 @@ export class Ppu {
 
         // Tick!
         this.addCycles(1);
-        
     }
 
     private _writeToVram(): boolean {
@@ -153,77 +155,13 @@ export class Ppu {
         }
     }
 
-    private _isInPreRenderScanline(): boolean {
-        return this._scanlines === 0 || this._scanlines === 262 
+    private _isPreRenderScanline(): boolean {
+        return this._scanlines === 262 
             ? true : false;
     }
 
     private _isInVblankScanline(): boolean {
         return this._scanlines >= 242 && this._scanlines <= 261 
             ? true : false;
-    }
-
-    public setPpuCtrlBits(bits: PpuCtrlBits) {
-        switch(bits) {
-            case PpuCtrlBits.NametableSelectLsb:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x01));
-                break;
-            case PpuCtrlBits.NametableSelectMsb: 
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x02));
-                break;
-            case PpuCtrlBits.Increment:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x04));
-                break;
-            case PpuCtrlBits.SpriteTileSelect:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x08));
-                break;
-            case PpuCtrlBits.BackgroundTileSelect:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x10));
-                break;
-            case PpuCtrlBits.SpriteHeight:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x20));
-                break;
-            case PpuCtrlBits.MasterToggle:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x40));
-                break;
-            case PpuCtrlBits.Vblank:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) | (0x80));
-                break;
-        }
-    }
-
-    public clearPpuCtrlBits(bits: PpuCtrlBits) {
-        switch(bits) {
-            case PpuCtrlBits.NametableSelectLsb:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) & ~(0x01));
-                break;
-            case PpuCtrlBits.NametableSelectMsb: 
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) & ~(0x02));
-                break;
-            case PpuCtrlBits.Increment:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) & ~(0x04));
-                break;
-            case PpuCtrlBits.SpriteTileSelect:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) & ~(0x08));
-                break;
-            case PpuCtrlBits.BackgroundTileSelect:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) & ~(0x10));
-                break;
-            case PpuCtrlBits.SpriteHeight:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) & ~(0x20));
-                break;
-            case PpuCtrlBits.MasterToggle:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) & ~(0x40));
-                break;
-            case PpuCtrlBits.Vblank:
-                this._memory.set(PpuRegister.PPUCTRL, this._memory.get(PpuRegister.PPUCTRL) &  ~(0x80));
-                break;
-        }
-    }
-
-    public setPpuMaskBits(bits: PpuMaskBits) {
-    }
-
-    public clearPpuMaskBits(bits: PpuMaskBits) {
     }
 }
