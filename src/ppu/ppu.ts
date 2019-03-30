@@ -114,6 +114,22 @@ export class Ppu {
                 // 2. Attribute table byte
                 // 3. Tile bitmap low byte
                 // 4. Tile bitmap high byte (+8, or maybe +32.. depends?)
+                // 
+                // placed into internal latches, then fed to the appropriate shift 
+                // registers when it is time... (EVERY 8 CYCLES) ... 
+                /// shifters are reloaded during ticks 9, 17, 25...,257
+
+                // THEN ALSO DO SPRITE EVALUATION FOR NEXT SCANLINE ... see below
+            } else if(this._cycles >= 257 && this._cycles <= 320) {
+                // Tile data for the next scanline are fetched. (2 PPU cycles)
+                // 1. Garbage nametable byte
+                // 2. Garbage nametable bytes
+                // 3. Tile bitmap low
+                // 4. tilel bitmap high (+8)
+            } else if(this._cycles >= 321 && this._cycles <= 336) {
+                // FIRST TWO TILES OF NEXT SCANLINE ARE FETCHED!
+            } else if(this._cycles >= 337 && this._cycles <= 340) {
+                // two bytes are fetched. Dunno why, but 2 PPU cycles each
             }
 
         }
@@ -131,14 +147,14 @@ export class Ppu {
             } else {
 
             }
+            
+            // TICK!
+            this.addCycles(1);
         }
 
         // Programmer make PPU Memory accesses if we are in the VBLANk range.
         this._readFromVram();
         this._writeToVram();
-
-        // Tick!
-        this.addCycles(1);
     }
 
     private _writeToVram(): boolean {
