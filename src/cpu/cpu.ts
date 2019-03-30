@@ -1,6 +1,7 @@
 import { ByteRegister } from './byte-register';
 import { DoubleByteRegister } from './double-byte-register';
 import { Memory } from '../memory/memory';
+import { AddressingModes, OpAddressingMode, OpLabel } from './cpu.interface';
 import { CpuAddressingHelper } from './cpu-addressing-helper';
 
 enum StatusBitPositions {
@@ -12,316 +13,6 @@ enum StatusBitPositions {
     Bit5 = 5,
     Overflow = 6,
     Negative = 7
-};
-
-const OpLabel: any = {
-    0x00: 'BRK', 0x01: 'ORA', 0x02: '---', 0x03: '---', 0x04: '---', 0x05: 'ORA', 0x06: '---', 0x07: '---',
-    0x08: 'PHP', 0x09: 'ORA', 0x0A: 'ASL', 0x0B: '---', 0x0C: 'IGN', 0x0D: 'ORA', 0x0E: 'ASL', 0x0F: '---',
-    0x10: 'BPL', 0x11: 'ORA', 0x12: '---', 0x13: 'SLO', 0x14: 'IGN', 0x15: 'ORA', 0x16: 'ASL', 0x17: 'SLO',
-    0x18: 'CLC', 0x19: 'ORA', 0x1A: 'NOP', 0x1B: 'SLO', 0x1C: 'IGN', 0x1D: 'ORA', 0x1E: 'ASL', 0x1F: 'SLO',
-    0x20: 'JSR', 0x21: 'AND', 0x22: '---', 0x23: 'RLA', 0x24: 'BIT', 0x25: 'AND', 0x26: 'ROL', 0x27: 'RLA',
-    0x28: 'PLP', 0x29: 'AND', 0x2A: 'ROL', 0x2B: '---', 0x2C: 'BIT', 0x2D: 'AND', 0x2E: 'ROL', 0x2F: 'RLA',
-    0x30: 'BMI', 0x31: 'AND', 0x32: '---', 0x33: 'RLA', 0x34: 'IGN', 0x35: 'AND', 0x36: 'ROL', 0x37: '---',
-    0x38: 'SEC', 0x39: 'AND', 0x3A: 'NOP', 0x3B: 'RLA', 0x3C: 'IGN', 0x3D: 'AND', 0x3E: 'ROL', 0x3F: 'RLA',
-    0x40: 'RTI', 0x41: 'EOR', 0x42: '---', 0x43: 'SRE', 0x44: 'IGN', 0x45: 'EOR', 0x46: 'LSR', 0x47: 'SRE',
-    0x48: 'PHA', 0x49: 'EOR', 0x4A: 'LSR', 0x4B: '---', 0x4C: 'JMP', 0x4D: 'EOR', 0x4E: 'LSR', 0x4F: 'SRE',
-    0x50: 'BVC', 0x51: 'EOR', 0x52: '---', 0x53: 'SRE', 0x54: 'IGN', 0x55: 'EOR', 0x56: 'LSR', 0x57: 'SRE',
-    0x58: 'CLI', 0x59: 'EOR', 0x5A: 'NOP', 0x5B: 'SRE', 0x5C: 'IGN', 0x5D: 'EOR', 0x5E: 'LSR', 0x5F: 'SRE',
-    0x60: 'RTS', 0x61: 'ADC', 0x62: '---', 0x63: 'RRA', 0x64: 'IGN', 0x65: 'ADC', 0x66: 'ROR', 0x67: 'RRA',
-    0x68: 'PLA', 0x69: 'ADC', 0x6A: 'ROR', 0x6B: '---', 0x6C: 'JMP', 0x6D: 'ADC', 0x6E: 'ROR', 0x6F: 'RRA',
-    0x70: 'BVS', 0x71: 'ADC', 0x72: '---', 0x73: 'RRA', 0x74: 'IGN', 0x75: 'ADC', 0x76: 'ROR', 0x77: 'RRA',
-    0x78: 'SEI', 0x79: 'ADC', 0x7A: 'NOP', 0x7B: 'RRA', 0x7C: 'IGN', 0x7D: 'ADC', 0x7E: 'ROR', 0x7F: 'RRA',
-    0x80: 'SKB', 0x81: 'STA', 0x82: 'SKB', 0x83: 'SAX', 0x84: 'STY', 0x85: 'STA', 0x86: 'STX', 0x87: 'SAX',
-    0x88: 'DEY', 0x89: 'SKB', 0x8A: 'TXA', 0x8B: '---', 0x8C: 'STY', 0x8D: 'STA', 0x8E: 'STX', 0x8F: 'SAX',
-    0x90: 'BCC', 0x91: 'STA', 0x92: '---', 0x93: '---', 0x94: 'STY', 0x95: 'STA', 0x96: 'STX', 0x97: 'SAX',
-    0x98: 'TYA', 0x99: 'STA', 0x9A: 'TXS', 0x9B: '---', 0x9C: '---', 0x9D: 'STA', 0x9E: '---', 0x9F: '---',
-    0xA0: 'LDY', 0xA1: 'LDA', 0xA2: 'LDX', 0xA3: 'LAX', 0xA4: 'LDY', 0xA5: 'LDA', 0xA6: 'LDX', 0xA7: 'LAX',
-    0xA8: 'TAY', 0xA9: 'LDA', 0xAA: 'TAX', 0xAB: '---', 0xAC: 'LDY', 0xAD: 'LDA', 0xAE: 'LDX', 0xAF: 'LAX',
-    0xB0: 'BCS', 0xB1: 'LDA', 0xB2: '---', 0xB3: 'LAX', 0xB4: 'LDY', 0xB5: 'LDA', 0xB6: 'LDX', 0xB7: 'LAX',
-    0xB8: 'CLV', 0xB9: 'LDA', 0xBA: 'TSX', 0xBB: '---', 0xBC: 'LDY', 0xBD: 'LDA', 0xBE: 'LDX', 0xBF: 'LAX',
-    0xC0: 'CPY', 0xC1: 'CMP', 0xC2: 'SKB', 0xC3: 'DCP', 0xC4: 'CPY', 0xC5: 'CMP', 0xC6: 'DEC', 0xC7: 'DCP',
-    0xC8: 'INY', 0xC9: 'CMP', 0xCA: 'DEX', 0xCB: '---', 0xCC: 'CPY', 0xCD: 'CMP', 0xCE: 'DEC', 0xCF: 'DCP',
-    0xD0: 'BNE', 0xD1: 'CMP', 0xD2: '---', 0xD3: 'DCP', 0xD4: 'IGN', 0xD5: 'CMP', 0xD6: 'DEC', 0xD7: 'DCP',
-    0xD8: 'CLD', 0xD9: 'CMP', 0xDA: 'NOP', 0xDB: 'DCP', 0xDC: 'IGN', 0xDD: 'CMP', 0xDE: 'DEC', 0xDF: 'DCP',
-    0xE0: 'CPX', 0xE1: 'SBC', 0xE2: 'SKB', 0xE3: 'ISB', 0xE4: 'CPX', 0xE5: 'SBC', 0xE6: 'INC', 0xE7: 'ISB',
-    0xE8: 'INX', 0xE9: 'SBC', 0xEA: 'NOP', 0xEB: 'SBC', 0xEC: 'CPX', 0xED: 'SBC', 0xEE: 'INC', 0xEF: 'ISB',
-    0xF0: 'BEQ', 0xF1: 'SBC', 0xF2: '---', 0xF3: 'ISB', 0xF4: 'IGN', 0xF5: 'SBC', 0xF6: 'INC', 0xF7: 'ISB',
-    0xF8: 'SED', 0xF9: 'SBC', 0xFA: 'NOP', 0xFB: 'ISB', 0xFC: 'IGN', 0xFD: 'SBC', 0xFE: 'INC', 0xFF: 'ISB'
-};
-
-enum AddressingModes {
-    Immediate,
-    Absolute,
-    AbsoluteIndirect,
-    DirectPage,
-    AbsoluteIndexedX,
-    AbsoluteIndexedY,
-    DirectPageIndexedX,
-    DirectPageIndexedY,
-    DirectPageIndexedIndirectX,
-    DirectPageIndirectIndexedY,
-    Implicit,
-    Accumulator,
-    Relative
-};
-
-const OpAddressingMode: any = {
-    0x00: AddressingModes.Implicit, 
-    0x01: AddressingModes.DirectPageIndexedIndirectX,
-    0x02: null,
-    0x03: AddressingModes.DirectPageIndexedIndirectX,
-    0x04: AddressingModes.DirectPage,
-    0x05: AddressingModes.DirectPage,
-    0x06: AddressingModes.DirectPage,
-    0x07: AddressingModes.DirectPage,
-    0x08: AddressingModes.Implicit,
-    0x09: AddressingModes.Immediate,
-    0x0A: AddressingModes.Accumulator,
-    0x0B: null,
-    0x0C: AddressingModes.Absolute,
-    0x0D: AddressingModes.Absolute,
-    0x0E: AddressingModes.Absolute,
-    0x0F: AddressingModes.Absolute,
-    0x10: AddressingModes.Relative, 
-    0x11: AddressingModes.DirectPageIndirectIndexedY,
-    0x12: null,
-    0x13: AddressingModes.DirectPageIndirectIndexedY,
-    0x14: AddressingModes.DirectPageIndexedX,
-    0x15: AddressingModes.DirectPageIndexedX,
-    0x16: AddressingModes.DirectPageIndexedX,
-    0x17: AddressingModes.DirectPageIndexedX,
-    0x18: AddressingModes.Implicit,
-    0x19: AddressingModes.AbsoluteIndexedY,
-    0x1A: AddressingModes.Implicit,
-    0x1B: AddressingModes.AbsoluteIndexedY,
-    0x1C: AddressingModes.AbsoluteIndexedX,
-    0x1D: AddressingModes.AbsoluteIndexedX,
-    0x1E: AddressingModes.AbsoluteIndexedX,
-    0x1F: AddressingModes.AbsoluteIndexedX,
-    0x20: null, 
-    0x21: AddressingModes.DirectPageIndexedIndirectX,
-    0x22: null,
-    0x23: AddressingModes.DirectPageIndexedIndirectX,
-    0x24: AddressingModes.DirectPage,
-    0x25: AddressingModes.DirectPage,
-    0x26: AddressingModes.DirectPage,
-    0x27: AddressingModes.DirectPage,
-    0x28: AddressingModes.Implicit,
-    0x29: AddressingModes.Immediate,
-    0x2A: AddressingModes.Accumulator,
-    0x2B: null,
-    0x2C: AddressingModes.Absolute,
-    0x2D: AddressingModes.Absolute,
-    0x2E: AddressingModes.Absolute,
-    0x2F: AddressingModes.Absolute,
-    0x30: AddressingModes.Relative, 
-    0x31: AddressingModes.DirectPageIndirectIndexedY,
-    0x32: null,
-    0x33: AddressingModes.DirectPageIndirectIndexedY,
-    0x34: AddressingModes.DirectPageIndexedX,
-    0x35: AddressingModes.DirectPageIndexedX,
-    0x36: AddressingModes.DirectPageIndexedX,
-    0x37: AddressingModes.DirectPageIndexedX,
-    0x38: AddressingModes.Implicit,
-    0x39: AddressingModes.AbsoluteIndexedY,
-    0x3A: AddressingModes.Implicit,
-    0x3B: AddressingModes.AbsoluteIndexedY,
-    0x3C: AddressingModes.AbsoluteIndexedX,
-    0x3D: AddressingModes.AbsoluteIndexedX,
-    0x3E: AddressingModes.AbsoluteIndexedX,
-    0x3F: AddressingModes.AbsoluteIndexedX,
-    0x40: AddressingModes.Implicit, 
-    0x41: AddressingModes.DirectPageIndexedIndirectX,
-    0x42: null,
-    0x43: AddressingModes.DirectPageIndexedIndirectX,
-    0x44: AddressingModes.DirectPage,
-    0x45: AddressingModes.DirectPage,
-    0x46: AddressingModes.DirectPage,
-    0x47: AddressingModes.DirectPage,
-    0x48: AddressingModes.Implicit,
-    0x49: AddressingModes.Immediate,
-    0x4A: AddressingModes.Accumulator,
-    0x4B: null,
-    0x4C: AddressingModes.Absolute,
-    0x4D: AddressingModes.Absolute,
-    0x4E: AddressingModes.Absolute,
-    0x4F: AddressingModes.Absolute,
-    0x50: AddressingModes.Relative, 
-    0x51: AddressingModes.DirectPageIndirectIndexedY,
-    0x52: null,
-    0x53: AddressingModes.DirectPageIndirectIndexedY,
-    0x54: AddressingModes.DirectPageIndexedX,
-    0x55: AddressingModes.DirectPageIndexedX,
-    0x56: AddressingModes.DirectPageIndexedX,
-    0x57: AddressingModes.DirectPageIndexedX,
-    0x58: AddressingModes.Implicit,
-    0x59: AddressingModes.AbsoluteIndexedY,
-    0x5A: AddressingModes.Implicit,
-    0x5B: AddressingModes.AbsoluteIndexedY,
-    0x5C: AddressingModes.AbsoluteIndexedX,
-    0x5D: AddressingModes.AbsoluteIndexedX,
-    0x5E: AddressingModes.AbsoluteIndexedX,
-    0x5F: AddressingModes.AbsoluteIndexedX,
-    0x60: AddressingModes.Implicit, 
-    0x61: AddressingModes.DirectPageIndexedIndirectX,
-    0x62: null,
-    0x63: AddressingModes.DirectPageIndexedIndirectX,
-    0x64: AddressingModes.DirectPage,
-    0x65: AddressingModes.DirectPage,
-    0x66: AddressingModes.DirectPage,
-    0x67: AddressingModes.DirectPage,
-    0x68: AddressingModes.Implicit,
-    0x69: AddressingModes.Immediate,
-    0x6A: AddressingModes.Accumulator,
-    0x6B: null,
-    0x6C: AddressingModes.AbsoluteIndirect,
-    0x6D: AddressingModes.Absolute,
-    0x6E: AddressingModes.Absolute,
-    0x6F: AddressingModes.Absolute,
-    0x70: AddressingModes.Relative, 
-    0x71: AddressingModes.DirectPageIndirectIndexedY,
-    0x72: null,
-    0x73: AddressingModes.DirectPageIndirectIndexedY,
-    0x74: AddressingModes.DirectPageIndexedX,
-    0x75: AddressingModes.DirectPageIndexedX,
-    0x76: AddressingModes.DirectPageIndexedX,
-    0x77: AddressingModes.DirectPageIndexedX,
-    0x78: AddressingModes.Implicit,
-    0x79: AddressingModes.AbsoluteIndexedY,
-    0x7A: AddressingModes.Implicit,
-    0x7B: AddressingModes.AbsoluteIndexedY,
-    0x7C: AddressingModes.AbsoluteIndexedX,
-    0x7D: AddressingModes.AbsoluteIndexedX,
-    0x7E: AddressingModes.AbsoluteIndexedX,
-    0x7F: AddressingModes.AbsoluteIndexedX,
-    0x80: AddressingModes.Immediate, 
-    0x81: AddressingModes.DirectPageIndexedIndirectX,
-    0x82: AddressingModes.Immediate,
-    0x83: AddressingModes.DirectPageIndexedIndirectX,
-    0x84: AddressingModes.DirectPage,
-    0x85: AddressingModes.DirectPage,
-    0x86: AddressingModes.DirectPage,
-    0x87: AddressingModes.DirectPage,
-    0x88: AddressingModes.Implicit,
-    0x89: AddressingModes.Immediate,
-    0x8A: AddressingModes.Implicit,
-    0x8B: null,
-    0x8C: AddressingModes.Absolute,
-    0x8D: AddressingModes.Absolute,
-    0x8E: AddressingModes.Absolute,
-    0x8F: AddressingModes.Absolute,
-    0x90: AddressingModes.Relative, 
-    0x91: AddressingModes.DirectPageIndirectIndexedY,
-    0x92: null,
-    0x93: null,
-    0x94: AddressingModes.DirectPageIndexedX,
-    0x95: AddressingModes.DirectPageIndexedX,
-    0x96: AddressingModes.DirectPageIndexedY,
-    0x97: AddressingModes.DirectPageIndirectIndexedY,
-    0x98: AddressingModes.Implicit,
-    0x99: AddressingModes.AbsoluteIndexedY,
-    0x9A: AddressingModes.Implicit,
-    0x9B: null,
-    0x9C: null,
-    0x9D: AddressingModes.AbsoluteIndexedX,
-    0x9E: null,
-    0x9F: null,
-    0xA0: AddressingModes.Immediate, 
-    0xA1: AddressingModes.DirectPageIndexedIndirectX,
-    0xA2: AddressingModes.Immediate,
-    0xA3: AddressingModes.DirectPageIndexedIndirectX,
-    0xA4: AddressingModes.DirectPage,
-    0xA5: AddressingModes.DirectPage,
-    0xA6: AddressingModes.DirectPage,
-    0xA7: AddressingModes.DirectPage,
-    0xA8: AddressingModes.Implicit,
-    0xA9: AddressingModes.Immediate,
-    0xAA: AddressingModes.Implicit,
-    0xAB: null,
-    0xAC: AddressingModes.Absolute,
-    0xAD: AddressingModes.Absolute,
-    0xAE: AddressingModes.Absolute,
-    0xAF: AddressingModes.Absolute,
-    0xB0: AddressingModes.Relative, 
-    0xB1: AddressingModes.DirectPageIndirectIndexedY,
-    0xB2: null,
-    0xB3: AddressingModes.DirectPageIndirectIndexedY,
-    0xB4: AddressingModes.DirectPageIndexedX,
-    0xB5: AddressingModes.DirectPageIndexedX,
-    0xB6: AddressingModes.DirectPageIndexedY,
-    0xB7: AddressingModes.DirectPageIndexedY,
-    0xB8: AddressingModes.Implicit,
-    0xB9: AddressingModes.AbsoluteIndexedY,
-    0xBA: AddressingModes.Implicit,
-    0xBB: null,
-    0xBC: AddressingModes.AbsoluteIndexedX,
-    0xBD: AddressingModes.AbsoluteIndexedX,
-    0xBE: AddressingModes.AbsoluteIndexedY,
-    0xBF: AddressingModes.AbsoluteIndexedY,
-    0xC0: AddressingModes.Immediate, 
-    0xC1: AddressingModes.DirectPageIndexedIndirectX,
-    0xC2: AddressingModes.Immediate,
-    0xC3: AddressingModes.DirectPageIndexedIndirectX,
-    0xC4: AddressingModes.DirectPage,
-    0xC5: AddressingModes.DirectPage,
-    0xC6: AddressingModes.DirectPage,
-    0xC7: AddressingModes.DirectPage,
-    0xC8: AddressingModes.Implicit,
-    0xC9: AddressingModes.Immediate,
-    0xCA: AddressingModes.Implicit,
-    0xCB: null,
-    0xCC: AddressingModes.Absolute,
-    0xCD: AddressingModes.Absolute,
-    0xCE: AddressingModes.Absolute,
-    0xCF: AddressingModes.Absolute,
-    0xD0: AddressingModes.Relative, 
-    0xD1: AddressingModes.DirectPageIndirectIndexedY,
-    0xD2: null,
-    0xD3: AddressingModes.DirectPageIndirectIndexedY,
-    0xD4: AddressingModes.DirectPageIndexedX,
-    0xD5: AddressingModes.DirectPageIndexedX,
-    0xD6: AddressingModes.DirectPageIndexedX,
-    0xD7: AddressingModes.DirectPageIndexedX,
-    0xD8: AddressingModes.Implicit,
-    0xD9: AddressingModes.AbsoluteIndexedY,
-    0xDA: AddressingModes.Implicit,
-    0xDB: AddressingModes.AbsoluteIndexedY,
-    0xDC: AddressingModes.AbsoluteIndexedX,
-    0xDD: AddressingModes.AbsoluteIndexedX,
-    0xDE: AddressingModes.AbsoluteIndexedX,
-    0xDF: AddressingModes.AbsoluteIndexedX,
-    0xE0: AddressingModes.Immediate, 
-    0xE1: AddressingModes.DirectPageIndexedIndirectX,
-    0xE2: AddressingModes.Immediate,
-    0xE3: AddressingModes.DirectPageIndexedIndirectX,
-    0xE4: AddressingModes.DirectPage,
-    0xE5: AddressingModes.DirectPage,
-    0xE6: AddressingModes.DirectPage,
-    0xE7: AddressingModes.DirectPage,
-    0xE8: AddressingModes.Implicit,
-    0xE9: AddressingModes.Immediate,
-    0xEA: AddressingModes.Implicit,
-    0xEB: AddressingModes.Immediate,
-    0xEC: AddressingModes.Absolute,
-    0xED: AddressingModes.Absolute,
-    0xEE: AddressingModes.Absolute,
-    0xEF: AddressingModes.Absolute,
-    0xF0: AddressingModes.Relative, 
-    0xF1: AddressingModes.DirectPageIndirectIndexedY,
-    0xF2: null,
-    0xF3: AddressingModes.DirectPageIndirectIndexedY,
-    0xF4: AddressingModes.DirectPageIndexedX,
-    0xF5: AddressingModes.DirectPageIndexedX,
-    0xF6: AddressingModes.DirectPageIndexedX,
-    0xF7: AddressingModes.DirectPageIndexedX,
-    0xF8: AddressingModes.Implicit,
-    0xF9: AddressingModes.AbsoluteIndexedY,
-    0xFA: null,
-    0xFB: AddressingModes.AbsoluteIndexedY,
-    0xFC: AddressingModes.AbsoluteIndexedX,
-    0xFD: AddressingModes.AbsoluteIndexedX,
-    0xFE: AddressingModes.AbsoluteIndexedX,
-    0xFF: AddressingModes.AbsoluteIndexedX
 };
 
 export class Cpu {
@@ -369,7 +60,7 @@ export class Cpu {
         this._regP = new ByteRegister(0x00);
     }
 
-    public pushLog(
+    public getLogEntry(
         opcode: number
     ) {        
         let formattedOpcode = `${opcode.toString(16).toUpperCase()}`;
@@ -378,10 +69,6 @@ export class Cpu {
         }
 
         let output = ``;
-
-        // Format of the log entry:
-        // C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0,  0 CYC:7
-
 
         output = `${this.getPcLog()}  ${formattedOpcode} ${this.getByteLookAhead(OpAddressingMode[opcode])}`;
         let spaces = 16 - output.length;
@@ -397,24 +84,9 @@ export class Cpu {
         output += ` `;
 
         output += `${this.getRegisterLog()} ${this.getPpuLog()} ${this.getCpuCycleLog()}`;
-        this._log.push(output);
-    }
 
-    /*
-        Immediate,
-    Absolute,
-    AbsoluteIndirect,
-    DirectPage,
-    AbsoluteIndexedX,
-    AbsoluteIndexedY,
-    DirectPageIndexedX,
-    DirectPageIndexedY,
-    DirectPageIndexedIndirectX,
-    DirectPageIndirectIndexedY,
-    Implicit,
-    Accumulator,
-    Relative
-    */
+        return output;
+    }
 
     public getAddressString(addressingMode: AddressingModes) {
 
@@ -599,7 +271,12 @@ export class Cpu {
             this._memory.set(i, 0xFF);
         }
 
-        this._regPC.set(0xC000);
+        // The PC is set from the bytes found in 0xFFFC, 0xFFFD
+        const lowByte = this._memory.get(0xFFFC);
+        const highByte = this._memory.get(0xFFFD);
+
+        this._regPC.set((highByte << 8) | lowByte);
+        // this._regPC.set(0xC000);
         this._currentCycles = 7;
     }
 
@@ -778,9 +455,6 @@ export class Cpu {
                 this._currentCycles+= (5 + pageBoundaryCycle);
                 this._regPC.add(1);
                 break;
-            default:
-                console.error(`ERROR: Unhandled ADC opcode!`);
-                break;
         }
 
         if(this.isNegative(this._regA.get())) {
@@ -885,9 +559,6 @@ export class Cpu {
                 this._currentCycles += (5 + pageBoundaryCycle);
                 this._regPC.add(1);
                 break;
-            default:
-                console.error(`ERROR: Unhandled AND opcode! ${opCode}`);
-                break;
         }
 
         if(this.isNegative(this._regA.get())) {
@@ -953,9 +624,6 @@ export class Cpu {
                 this._currentCycles += 6;
                 this._regPC.add(1);
                 break;
-            default:
-                console.error(`ERROR: Invalid ASL opcode! ${opCode}`);
-                break;
         }
 
         if((oldVal & 0x80) === 0x80) {
@@ -1004,9 +672,6 @@ export class Cpu {
                 this._currentCycles += 2;
 
                 break;
-            default:
-                console.error(`ERROR: Unhandled BCC opcode! ${opCode}`);
-                break;
         }
     }
 
@@ -1036,9 +701,6 @@ export class Cpu {
 
                 this._currentCycles += 2;
                 break;
-            default:
-                console.error(`ERROR: Unhandled BCS opcode! ${opCode}`);
-                break;
         }
     }
 
@@ -1067,8 +729,6 @@ export class Cpu {
                 }
                 this._currentCycles += 2;
                 break;
-            default: 
-                console.error(`ERROR: Unhandled BEQ opcode! ${opCode}`);
         }
     }
 
@@ -1081,8 +741,6 @@ export class Cpu {
             case 0x2C: // Absolute Addressing
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
-
-                
 
                 if((operand & 0x80) > 0) {
                     this.setStatusBit(StatusBitPositions.Negative);
@@ -1109,8 +767,6 @@ export class Cpu {
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
 
-                
-
                 if(this.isNegative(operand)) {
                     this.setStatusBit(StatusBitPositions.Negative);
                 } else {
@@ -1131,9 +787,6 @@ export class Cpu {
 
                 this._currentCycles += 3;
                 this._regPC.add(1);
-                break;
-            default:
-                console.error(`ERROR: Unhandled BIT opcode! ${opCode}`);
                 break;
         }
     }
@@ -1164,9 +817,6 @@ export class Cpu {
                 }
                 this._currentCycles += 2;
                 break;
-            default:
-                console.error(`ERROR: Unhandled BMI opcode! ${opCode}`);
-                break;
         }
     }
 
@@ -1194,9 +844,6 @@ export class Cpu {
                     this._regPC.add(1);
                 }
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled BNE opcode! ${opCode}`);
                 break;
         }
     }
@@ -1227,9 +874,6 @@ export class Cpu {
                 }
                 this._currentCycles += 2;
                 break;
-            default:
-                console.error(`ERROR: Unhandled BPL opcode! ${opCode}`);
-                break;
         }
     }
 
@@ -1237,8 +881,6 @@ export class Cpu {
         this._regPC.add(2);
         switch(opCode) {
             case 0x00:
-                
-
                 this.stackPush((this._regPC.get() | 0xFF00) >> 8);
                 this.stackPush((this._regPC.get() | 0x00FF));
 
@@ -1268,8 +910,6 @@ export class Cpu {
                     displacement = -(0xFF - displacement + 0x1);
                 }
 
-                
-
                 if(!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
                     const pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
 
@@ -1285,9 +925,6 @@ export class Cpu {
                     this._regPC.add(1);
                 }
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled BVC opcode! ${opCode}`);
                 break;
         }
     }
@@ -1317,9 +954,6 @@ export class Cpu {
                 }
                 this._currentCycles += 2;
                 break;
-            default:
-                console.error(`ERROR: Unhandled BVS opcode! ${opCode}`);
-                break;
         }
     }
 
@@ -1327,12 +961,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x18:
-                
                 this.clearStatusBit(StatusBitPositions.Carry);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled CLC opcode! ${opCode}`);
                 break;
         }
     }
@@ -1341,12 +971,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xD8:
-                
                 this.clearStatusBit(StatusBitPositions.DecimalMode);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled CLD opcode! ${opCode}`);
                 break;
         }
     }
@@ -1355,12 +981,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x58:
-                
                 this.clearStatusBit(StatusBitPositions.InterruptDisable);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled CLI opcode! ${opCode}`);
                 break;
         }
     }
@@ -1369,12 +991,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xB8:
-                
                 this.clearStatusBit(StatusBitPositions.Overflow);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled CLV opcode! ${opCode}`);
                 break;
         }
     }
@@ -1491,9 +1109,6 @@ export class Cpu {
                 this._currentCycles += (5 + pageBoundaryCycle);
                 this._regPC.add(1);
                 break;
-            default:
-                console.error(`ERROR: Unhandled CMP opcode! ${opCode}`);
-                break;
         }
 
         if(this.isNegative(this._regA.get() - operand)) {
@@ -1556,9 +1171,6 @@ export class Cpu {
                 }
                 this._regPC.add(1);
                 this._currentCycles += 3;
-                break;
-            default:
-                console.error(`ERROR: Unhandled CPX opcode! ${opCode}`);
                 break;
         }
 
@@ -1623,9 +1235,6 @@ export class Cpu {
                 }
                 this._regPC.add(1);
                 this._currentCycles += 3;
-                break;
-            default:
-                console.error(`ERROR: Unhandled CPY opcode! ${opCode}`);
                 break;
         }
 
@@ -1821,9 +1430,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            default:
-                console.error(`ERROR: Unhandled DEC opcode! ${opCode}`);
-                break;
         }
 
         if(this.isNegative(this._memory.get(address))) {
@@ -1843,12 +1449,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xCA:
-                
                 this._regX.set(this._regX.get() - 1);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled DEX opcode! ${opCode}`);
                 break;
         }
 
@@ -1869,12 +1471,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x88:
-                
                 this._regY.set(this._regY.get() - 1);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled DEY opcode! ${opCode}`);
                 break;
         }
 
@@ -1979,9 +1577,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += (5 + pageBoundaryCycle);
                 break;
-            default:
-                console.error(`ERROR: Unhandled EOR opcode! ${opCode}`);
-                break;
         }
 
         if(this.isNegative(result)) {
@@ -2035,9 +1630,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            default:
-                console.error(`ERROR: Unhandled INC opcode! ${opCode}`);
-                break;
         }
 
         if(this.isNegative(this._memory.get(address))) {
@@ -2057,12 +1649,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xE8:
-                
                 this._regX.set(this._regX.get() + 1);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled INX opcode! ${opCode}`);
                 break;
         }
 
@@ -2083,12 +1671,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xC8:
-                
                 this._regY.set(this._regY.get() + 1);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled INY opcode! ${opCode}`);
                 break;
         }
 
@@ -2108,7 +1692,6 @@ export class Cpu {
     public isb(opcode: number) {
         let address = 0;
         let operand = 0;
-        let pageBoundaryCycle = 0;
         let result = 0;
         let oldA = this._regA.get();
         // Subtract 1 more if carry is clear!
@@ -2235,24 +1818,17 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x4C:
-                address = this._addressingHelper.atAbsolute(this._regPC);
-                
-                //this._regPC.add(2);
+                address = this._addressingHelper.atAbsolute(this._regPC);                
                 this._regPC.set(address);
                 this._currentCycles += 3;
                 break;
             case 0x6C:
                 address = this._addressingHelper.atAbsoluteIndirect(this._regPC);
-                
                 if((this._regPC.get() & 0x00FF) === 0x00FF) {
                     this._currentCycles += 1;
                 }
                 this._regPC.set(address);
-                //this._regPC.add(2);
                 this._currentCycles += 5;
-                break;
-            default:
-                console.error(`ERROR: Unhandled JMP opcode! ${opCode}`);
                 break;
         }
     }
@@ -2263,15 +1839,11 @@ export class Cpu {
         switch(opCode) {
             case 0x20: // Absolute
                 let address = this._addressingHelper.atAbsolute(this._regPC);
-                
                 this._regPC.add(1);
                 this.stackPush((this._regPC.get() & 0xFF00) >> 8);
                 this.stackPush((this._regPC.get() & 0x00FF));
                 this._regPC.set(address);
                 this._currentCycles += 6;
-                break;
-            default:
-                console.error(`ERROR: Unhandled JSR opcode! ${opCode}`);
                 break;
         }
     }
@@ -2336,9 +1908,6 @@ export class Cpu {
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;            
-            default:
-                console.error(`ERROR: Unhandled LAX opcode! ${opcode}`);
-                break;
         }
 
         if(this.isNegative(this._regX.get())) {
@@ -2434,9 +2003,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += (5 + pageBoundaryCycle);
                 break;
-            default:
-                console.error(`ERROR: Unhandled LDA opcode! ${opCode}`);
-                break;
         }
 
         if(this.isNegative(this._regA.get())) {
@@ -2501,9 +2067,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
-            default:
-                console.error(`ERROR: Unhandled LDX opcode! ${opCode}`);
-                break;
         }
 
         if(this.isNegative(this._regX.get())) {
@@ -2567,9 +2130,6 @@ export class Cpu {
                 this._regY.set(operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
-                break;
-            default:
-                console.error(`ERROR: Unhandled LDY opcode! ${opcode}`);
                 break;
         }
 
@@ -2643,9 +2203,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;            
-            default:
-                console.error(`ERROR: Unhandled LSR opcode! ${opcode}`);
-                break;
         }
 
         if(this.isNegative(result & 0xFF)) {
@@ -2677,11 +2234,7 @@ export class Cpu {
             case 0xDA:
             case 0xFA:
             case 0xEA:
-                
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled NOP opcode! ${opcode}`);
                 break;
         }
     }
@@ -2694,12 +2247,8 @@ export class Cpu {
             case 0x89:
             case 0xC2:
             case 0xE2:
-                
                 this._regPC.add(1);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled SKB opcode! ${opcode}`);
                 break;
         }
     }
@@ -2708,7 +2257,6 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0x0C:
-                
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
@@ -2729,7 +2277,6 @@ export class Cpu {
             case 0x04:
             case 0x44:
             case 0x64:
-                
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
@@ -2739,12 +2286,8 @@ export class Cpu {
             case 0x74:
             case 0xD4:
             case 0xF4:
-                
                 this._regPC.add(1);
                 this._currentCycles += 4;
-                break;
-            default:
-                console.error(`ERROR: Unhandled IGN opcode! ${opcode}`);
                 break;
         }
     }
@@ -2837,8 +2380,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += (5 + pageBoundaryCycle);
                 break;
-            default:
-                break;
         }
 
         if(this.isNegative(result)) {
@@ -2858,12 +2399,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) { 
             case 0x48:
-                
                 this.stackPush(this._regA.get());
                 this._currentCycles += 3;
-                break;
-            default:
-                console.error(`ERROR: Unhandled PHA opcode! ${opcode}`);
                 break;
         }
     }
@@ -2872,15 +2409,9 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0x08:
-                
-                
                 let pStatus = this._regP.get() | 0x10;
-
                 this.stackPush(pStatus);
                 this._currentCycles += 3;
-                break;
-            default:
-                console.error(`ERROR: Unhandled PHP opcode! ${opcode}`);
                 break;
         }
     }
@@ -2890,12 +2421,8 @@ export class Cpu {
 
         switch(opcode) {
             case 0x68:
-                
                 this._regA.set(this.stackPull());
                 this._currentCycles += 4;
-                break;
-            default:
-                console.error(`ERROR: Unhandled PLA opcode! ${opcode}`);
                 break;
         }
 
@@ -2918,14 +2445,9 @@ export class Cpu {
             case 0x28:
                 let pStatus = this.stackPull();
                 pStatus = pStatus | 0x20;
-
-                
                 this._regP.set(pStatus);
                 this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
                 this._currentCycles += 4;
-                break;
-            default:
-                console.error(`ERROR: Unhandled PLP opcode! ${opcode}`);
                 break;
         }
     }
@@ -3098,9 +2620,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
-            default:
-                console.error(`ERROR: Unhandled ROL opcode! ${opcode}`);
-                break;
         }
 
         if(this.isNegative(result & 0xFF)) {
@@ -3178,9 +2697,6 @@ export class Cpu {
                 this._memory.set(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 6;
-                break;
-            default:
-                console.error(`ERROR: Unhandled ROR opcode! ${opcode}`);
                 break;
         }
 
@@ -3405,7 +2921,6 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0x40:
-                
                 const newP = this.stackPull();
                 const pcLow = this.stackPull();
                 const pcHigh = this.stackPull();
@@ -3417,9 +2932,6 @@ export class Cpu {
                 this.setStatusBit(StatusBitPositions.Bit5);
 
                 this._currentCycles += 6;
-                break;
-            default:
-                console.error(`ERROR: Unhandled RTI opcode! ${opcode}`);
                 break;
         }
     }
@@ -3434,9 +2946,6 @@ export class Cpu {
                 this._regPC.set((newHighPC << 8) | newLowPC);
                 this._regPC.add(1);
                 this._currentCycles += 6;
-                break;
-            default:
-                console.error(`ERROR: Unhandled RTS opcode! ${opcode}`);
                 break;
         }
     }
@@ -3469,9 +2978,6 @@ export class Cpu {
                 this._memory.set(address, this._regA.get() & this._regX.get());
                 this._regPC.add(1);
                 this._currentCycles += 4;
-                break;
-            default:
-                console.error()
                 break;
         }
     }
@@ -3569,9 +3075,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += (5 + pageBoundaryCycle);
                 break;
-            default:
-                console.error(`ERROR: Unhandled SBC opcode! ${opcode}`);
-                break;
         }
 
         if(this.isNegative(result)) {
@@ -3603,12 +3106,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0x38:
-                
                 this.setStatusBit(StatusBitPositions.Carry);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled SEC opcode! ${opcode}`);
                 break;
         }
     }
@@ -3617,12 +3116,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0xF8:
-                
                 this.setStatusBit(StatusBitPositions.DecimalMode);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled SED opcode! ${opcode}`);
                 break;
         }
     }
@@ -3631,12 +3126,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0x78:
-                
                 this.setStatusBit(StatusBitPositions.InterruptDisable);
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled SEI opcode! ${opcode}`);
                 break;
         }
     }
@@ -3647,7 +3138,6 @@ export class Cpu {
 
         this._regPC.add(1);
 
-        //ASL value then ORA value
         switch(opcode) {
             case 0x03:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
@@ -3795,7 +3285,6 @@ export class Cpu {
         let operand = 0;
         let carry = 0;
 
-        // LSR then EOR
         this._regPC.add(1);
 
         switch(opcode) {
@@ -3920,7 +3409,6 @@ export class Cpu {
             case 0x8D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regA.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
@@ -3928,7 +3416,6 @@ export class Cpu {
             case 0x85: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regA.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
@@ -3936,7 +3423,6 @@ export class Cpu {
             case 0x9D: // Absolute Indexed X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._regA.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 5;
@@ -3944,7 +3430,6 @@ export class Cpu {
             case 0x99: // Absolute Indexed Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 operand = this._regA.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 5;
@@ -3952,7 +3437,6 @@ export class Cpu {
             case 0x95: // Direct Page Indexed X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._regA.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
@@ -3960,7 +3444,6 @@ export class Cpu {
             case 0x81: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._regA.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 6;
@@ -3968,13 +3451,9 @@ export class Cpu {
             case 0x91: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 operand = this._regA.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 6;
-                break;
-            default:
-                console.error(`ERROR: Unhandled STA opcode! ${opcode}`);
                 break;
         }
     }
@@ -3988,7 +3467,6 @@ export class Cpu {
             case 0x8E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regX.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
@@ -3996,7 +3474,6 @@ export class Cpu {
             case 0x86: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regX.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
@@ -4004,13 +3481,9 @@ export class Cpu {
             case 0x96: // Direct Page Indexed, Y
                 address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
                 operand = this._regX.get();
-                
                 this._memory.set(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
-                break;
-            default:
-                console.error(`ERROR: Unhandled STX opcode! ${opcode}`);
                 break;
         }
     }
@@ -4045,9 +3518,6 @@ export class Cpu {
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
-            default:
-                console.error(`ERROR: Unhandled STY opcode! ${opcode}`);
-                break;
         }
     }
 
@@ -4055,12 +3525,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0xAA:
-                
                 this._regX.set(this._regA.get());
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled TAX opcode! ${opcode}`);
                 break;
         }
 
@@ -4081,12 +3547,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0xA8:
-                
                 this._regY.set(this._regA.get());
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled TAY opcode! ${opcode}`);
                 break;
         }
 
@@ -4107,12 +3569,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0xBA:
-                
                 this._regX.set(this._regSP.get());
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled TSX opcode! ${opcode}`);
                 break;
         }
 
@@ -4133,12 +3591,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0x8A:
-                
                 this._regA.set(this._regX.get());
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled TXA opcode! ${opcode}`);
                 break;
         }
 
@@ -4159,12 +3613,8 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0x9A:
-                
                 this._regSP.set(this._regX.get());
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled TXS opcode! ${opcode}`);
                 break;
         }
     }
@@ -4176,9 +3626,6 @@ export class Cpu {
                 
                 this._regA.set(this._regY.get());
                 this._currentCycles += 2;
-                break;
-            default:
-                console.error(`ERROR: Unhandled TYA opcode! ${opcode}`);
                 break;
         }
 
@@ -4196,9 +3643,12 @@ export class Cpu {
     }
 
     public handleOp(opCode: number) {
-        let prevCycles = this._currentCycles;
+        const logEntry = this.getLogEntry(opCode);
 
-        this.pushLog(opCode);
+        this._log.push(logEntry);
+
+        console.log(logEntry);
+
         switch(opCode) {
             case 0x00:
                 this.brk(opCode);
@@ -4565,19 +4015,6 @@ export class Cpu {
                 break;
             default: 
                 break;
-        }
-
-        let newCycles = this._currentCycles;
-
-        let cyclesAdded = newCycles - prevCycles;
-
-        this._currentPpuScanlineCycles += (cyclesAdded * 3);
-
-        if(this._currentPpuScanlineCycles > 341) {
-            this._currentScanlines++;
-            
-            let remaining = this._currentPpuScanlineCycles - 341;
-            this._currentPpuScanlineCycles = remaining;
         }
     }
 }
