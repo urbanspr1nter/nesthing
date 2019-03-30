@@ -4,23 +4,9 @@ var byte_register_1 = require("./byte-register");
 var double_byte_register_1 = require("./double-byte-register");
 var cpu_interface_1 = require("./cpu.interface");
 var cpu_addressing_helper_1 = require("./cpu-addressing-helper");
-var StatusBitPositions;
-(function (StatusBitPositions) {
-    StatusBitPositions[StatusBitPositions["Carry"] = 0] = "Carry";
-    StatusBitPositions[StatusBitPositions["Zero"] = 1] = "Zero";
-    StatusBitPositions[StatusBitPositions["InterruptDisable"] = 2] = "InterruptDisable";
-    StatusBitPositions[StatusBitPositions["DecimalMode"] = 3] = "DecimalMode";
-    StatusBitPositions[StatusBitPositions["BrkCausedInterrupt"] = 4] = "BrkCausedInterrupt";
-    StatusBitPositions[StatusBitPositions["Bit5"] = 5] = "Bit5";
-    StatusBitPositions[StatusBitPositions["Overflow"] = 6] = "Overflow";
-    StatusBitPositions[StatusBitPositions["Negative"] = 7] = "Negative";
-})(StatusBitPositions || (StatusBitPositions = {}));
-;
 var Cpu = /** @class */ (function () {
     function Cpu(memory, log) {
         this._currentCycles = 0;
-        this._currentPpuScanlineCycles = 0;
-        this._currentScanlines = 0;
         this._log = log;
         this._memory = memory;
         this._addressingHelper = new cpu_addressing_helper_1.CpuAddressingHelper(this._memory);
@@ -48,7 +34,7 @@ var Cpu = /** @class */ (function () {
             output += " ";
         }
         output += " ";
-        output += this.getRegisterLog() + " " + this.getPpuLog() + " " + this.getCpuCycleLog();
+        output += this.getRegisterLog() + " " + '' + " " + this.getCpuCycleLog();
         return output;
     };
     Cpu.prototype.getAddressString = function (addressingMode) {
@@ -147,21 +133,26 @@ var Cpu = /** @class */ (function () {
                 return "";
         }
     };
-    Cpu.prototype.getPpuLog = function () {
-        var scanlineCycles = this._currentPpuScanlineCycles;
-        var scanlineCyclesString = scanlineCycles.toString();
-        var formattedScanlineCyclesString = scanlineCyclesString;
-        for (var i = 0; i < (3 - scanlineCyclesString.length); i++) {
+    /*
+    public getPpuLog() {
+        const scanlineCycles = this._currentPpuScanlineCycles;
+        const scanlineCyclesString = scanlineCycles.toString();
+
+        let formattedScanlineCyclesString = scanlineCyclesString;
+        for(let i = 0; i < (3 - scanlineCyclesString.length); i++) {
             formattedScanlineCyclesString = ' ' + formattedScanlineCyclesString;
         }
-        var scanlines = this._currentScanlines;
-        var scanlinesString = scanlines.toString();
-        var formattedScanlinesString = scanlinesString;
-        for (var i = 0; i < (3 - scanlinesString.length); i++) {
+
+        const scanlines = this._currentScanlines;
+        const scanlinesString = scanlines.toString();
+
+        let formattedScanlinesString = scanlinesString;
+        for(let i = 0; i < (3 - scanlinesString.length); i++) {
             formattedScanlinesString = ' ' + formattedScanlinesString;
         }
-        return "PPU:" + formattedScanlineCyclesString + "," + formattedScanlinesString;
-    };
+
+        return `PPU:${formattedScanlineCyclesString},${formattedScanlinesString}`;
+    }*/
     Cpu.prototype.getCpuCycleLog = function () {
         return "CYC:" + this._currentCycles;
     };
@@ -195,24 +186,31 @@ var Cpu = /** @class */ (function () {
         return regString;
     };
     Cpu.prototype.powerUp = function () {
-        this._regP.set(0x24);
+        // Need to set to 0x24 if using nestest ROM.
+        // this._regP.set(0x24);
+        this._regP.set(0x34);
         this._regA.set(0);
         this._regX.set(0);
         this._regY.set(0);
         this._regSP.set(0x01FD);
+        // Frame IRQ Enabled
         this._memory.set(0x4015, 0);
+        // All cannels disabled
         this._memory.set(0x4017, 0);
         for (var i = 0x4000; i <= 0x400F; i++) {
             this._memory.set(i, 0x0);
         }
+        // Initialize RAM (0x0000->0x07FFF) values to 0xFF
         for (var i = 0x0000; i <= 0x07FF; i++) {
             this._memory.set(i, 0xFF);
         }
-        // The PC is set from the bytes found in 0xFFFC, 0xFFFD
-        var lowByte = this._memory.get(0xFFFC);
-        var highByte = this._memory.get(0xFFFD);
-        this._regPC.set((highByte << 8) | lowByte);
+        // If using nestest ROM, actually set the PC to 0xC000.
         // this._regPC.set(0xC000);
+        // The PC is set from the bytes found in 0xFFFC, 0xFFFD
+        var lowByte = this._memory.get(cpu_interface_1.ResetVectorLocation.Low);
+        var highByte = this._memory.get(cpu_interface_1.ResetVectorLocation.High);
+        this._regPC.set((highByte << 8) | lowByte);
+        // Perform an IRQ Operation
         this._currentCycles = 7;
     };
     Cpu.prototype.stackPush = function (data) {
@@ -303,7 +301,7 @@ var Cpu = /** @class */ (function () {
     };
     Cpu.prototype.adc = function (opCode) {
         var oldA = this._regA.get();
-        var carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var carry = this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry) ? 1 : 0;
         var operand = 0;
         var address = 0;
         var pageBoundaryCycle = 0;
@@ -376,28 +374,28 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isOverflow(oldA, operand, this._regA.get(), true)) {
-            this.setStatusBit(StatusBitPositions.Overflow);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Overflow);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         if (this._regA.get() === 0) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (this.isCarry(oldA, operand, carry, true)) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.and = function (opCode) {
@@ -470,16 +468,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.asl = function (opCode) {
@@ -528,22 +526,22 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if ((oldVal & 0x80) === 0x80) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         if (this.isNegative(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.bcc = function (opCode) {
@@ -554,7 +552,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
+                if (!this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -579,7 +577,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (this.getStatusBitFlag(StatusBitPositions.Carry)) {
+                if (this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -603,7 +601,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
+                if (this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Zero)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -628,22 +626,22 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
                 if ((operand & 0x80) > 0) {
-                    this.setStatusBit(StatusBitPositions.Negative);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Negative);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
                 }
                 if ((operand & 0x40) > 0) {
-                    this.setStatusBit(StatusBitPositions.Overflow);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Overflow);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
                 }
                 if ((operand & this._regA.get()) === 0) {
-                    this.setStatusBit(StatusBitPositions.Zero);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Zero);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
                 }
                 this._currentCycles += 4;
                 this._regPC.add(2);
@@ -652,22 +650,22 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
                 if (this.isNegative(operand)) {
-                    this.setStatusBit(StatusBitPositions.Negative);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Negative);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
                 }
                 if ((operand & 0x40) > 0) {
-                    this.setStatusBit(StatusBitPositions.Overflow);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Overflow);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
                 }
                 if ((operand & this._regA.get()) === 0) {
-                    this.setStatusBit(StatusBitPositions.Zero);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Zero);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
                 }
                 this._currentCycles += 3;
                 this._regPC.add(1);
@@ -682,7 +680,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
+                if (this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Negative)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -706,7 +704,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
+                if (!this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Zero)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -730,7 +728,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
+                if (!this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Negative)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -752,11 +750,11 @@ var Cpu = /** @class */ (function () {
             case 0x00:
                 this.stackPush((this._regPC.get() | 0xFF00) >> 8);
                 this.stackPush((this._regPC.get() | 0x00FF));
-                this.setStatusBit(StatusBitPositions.BrkCausedInterrupt);
+                this.setStatusBit(cpu_interface_1.StatusBitPositions.BrkCausedInterrupt);
                 this.stackPush(this._regP.get() | 0x10);
-                this.setStatusBit(StatusBitPositions.InterruptDisable);
-                var interruptVectorLow = this._memory.get(0xFFFE);
-                var interruptVectorHigh = this._memory.get(0xFFFF);
+                this.setStatusBit(cpu_interface_1.StatusBitPositions.InterruptDisable);
+                var interruptVectorLow = this._memory.get(cpu_interface_1.IrqVectorLocation.Low);
+                var interruptVectorHigh = this._memory.get(cpu_interface_1.IrqVectorLocation.High);
                 this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
                 this._currentCycles += 7;
                 break;
@@ -773,7 +771,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
+                if (!this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Overflow)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -797,7 +795,7 @@ var Cpu = /** @class */ (function () {
                 if (displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
-                if (this.getStatusBitFlag(StatusBitPositions.Overflow)) {
+                if (this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Overflow)) {
                     var pcPageBoundaryByte = ((this._regPC.get() + 1) & 0xFF00);
                     this._regPC.add(displacement + 1);
                     // Page boundary crossed?
@@ -817,7 +815,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0x18:
-                this.clearStatusBit(StatusBitPositions.Carry);
+                this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 this._currentCycles += 2;
                 break;
         }
@@ -826,7 +824,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0xD8:
-                this.clearStatusBit(StatusBitPositions.DecimalMode);
+                this.clearStatusBit(cpu_interface_1.StatusBitPositions.DecimalMode);
                 this._currentCycles += 2;
                 break;
         }
@@ -835,7 +833,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0x58:
-                this.clearStatusBit(StatusBitPositions.InterruptDisable);
+                this.clearStatusBit(cpu_interface_1.StatusBitPositions.InterruptDisable);
                 this._currentCycles += 2;
                 break;
         }
@@ -844,7 +842,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opCode) {
             case 0xB8:
-                this.clearStatusBit(StatusBitPositions.Overflow);
+                this.clearStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
                 this._currentCycles += 2;
                 break;
         }
@@ -962,22 +960,22 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get() - operand)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get() - operand)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (carry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.cpx = function (opCode) {
@@ -1023,22 +1021,22 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regX.get() - operand)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regX.get() - operand)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (carry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.cpy = function (opCode) {
@@ -1084,22 +1082,22 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regY.get() - operand)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regY.get() - operand)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (carry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.dcp = function (opcode) {
@@ -1209,22 +1207,22 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get() - this._memory.get(address))) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get() - this._memory.get(address))) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (carry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.dec = function (opCode) {
@@ -1262,16 +1260,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._memory.get(address))) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._memory.get(address))) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.dex = function (opCode) {
@@ -1283,16 +1281,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.dey = function (opCode) {
@@ -1304,16 +1302,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.eor = function (opCode) {
@@ -1397,16 +1395,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(result)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(result)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.inc = function (opCode) {
@@ -1444,16 +1442,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._memory.get(address))) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._memory.get(address))) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.inx = function (opCode) {
@@ -1465,16 +1463,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.iny = function (opCode) {
@@ -1486,16 +1484,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.isb = function (opcode) {
@@ -1504,7 +1502,7 @@ var Cpu = /** @class */ (function () {
         var result = 0;
         var oldA = this._regA.get();
         // Subtract 1 more if carry is clear!
-        var currentCarry = !this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var currentCarry = !this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry) ? 1 : 0;
         this._regPC.add(1);
         // INC then SBC
         switch (opcode) {
@@ -1580,28 +1578,28 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isOverflow(oldA, this._memory.get(address), this._regA.get(), false)) {
-            this.setStatusBit(StatusBitPositions.Overflow);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Overflow);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         if (this.isZero(result)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (this.isCarry(oldA, this._memory.get(address), currentCarry, false)) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.jmp = function (opCode) {
@@ -1697,16 +1695,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.lda = function (opCode) {
@@ -1781,16 +1779,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.ldx = function (opCode) {
@@ -1838,16 +1836,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.ldy = function (opcode) {
@@ -1895,16 +1893,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.lsr = function (opcode) {
@@ -1959,22 +1957,22 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (carry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.nop = function (opcode) {
@@ -2122,16 +2120,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(result)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(result)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.pha = function (opcode) {
@@ -2162,16 +2160,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.plp = function (opcode) {
@@ -2181,7 +2179,7 @@ var Cpu = /** @class */ (function () {
                 var pStatus = this.stackPull();
                 pStatus = pStatus | 0x20;
                 this._regP.set(pStatus);
-                this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
+                this.clearStatusBit(cpu_interface_1.StatusBitPositions.BrkCausedInterrupt);
                 this._currentCycles += 4;
                 break;
         }
@@ -2190,7 +2188,7 @@ var Cpu = /** @class */ (function () {
         var address = 0;
         var operand = 0;
         var newCarry = 0;
-        var oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var oldCarry = this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry) ? 1 : 0;
         this._regPC.add(1);
         // ROL and AND
         switch (opcode) {
@@ -2259,29 +2257,29 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (newCarry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.rol = function (opcode) {
         var operand = 0;
         var address = 0;
         var result = 0;
-        var oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var oldCarry = this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry) ? 1 : 0;
         var newCarry = 0;
         this._regPC.add(1);
         switch (opcode) {
@@ -2330,29 +2328,29 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (newCarry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.ror = function (opcode) {
         var operand = 0;
         var address = 0;
         var result = 0;
-        var oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var oldCarry = this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry) ? 1 : 0;
         var newCarry = 0;
         this._regPC.add(1);
         switch (opcode) {
@@ -2401,28 +2399,28 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(result & 0xFF)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (newCarry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.rra = function (opcode) {
         var address = 0;
         var operand = 0;
-        var oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var oldCarry = this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry) ? 1 : 0;
         var newCarry = 0;
         var oldA = 0;
         // ROR and then ADC
@@ -2435,10 +2433,10 @@ var Cpu = /** @class */ (function () {
                 operand = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, operand);
                 if (newCarry === 1) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 // adc time
                 oldA = this._regA.get();
@@ -2453,10 +2451,10 @@ var Cpu = /** @class */ (function () {
                 operand = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, operand);
                 if (newCarry === 1) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 // adc time
                 oldA = this._regA.get();
@@ -2471,10 +2469,10 @@ var Cpu = /** @class */ (function () {
                 operand = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, operand);
                 if (newCarry === 1) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 // adc time
                 oldA = this._regA.get();
@@ -2489,10 +2487,10 @@ var Cpu = /** @class */ (function () {
                 operand = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, operand);
                 if (newCarry === 1) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 // adc time
                 oldA = this._regA.get();
@@ -2507,10 +2505,10 @@ var Cpu = /** @class */ (function () {
                 operand = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, operand);
                 if (newCarry === 1) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 // adc time
                 oldA = this._regA.get();
@@ -2525,10 +2523,10 @@ var Cpu = /** @class */ (function () {
                 operand = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, operand);
                 if (newCarry === 1) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 // adc time
                 oldA = this._regA.get();
@@ -2543,10 +2541,10 @@ var Cpu = /** @class */ (function () {
                 operand = ((operand >> 1) | (oldCarry << 7));
                 this._memory.set(address, operand);
                 if (newCarry === 1) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 // adc time
                 oldA = this._regA.get();
@@ -2556,28 +2554,28 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isOverflow(oldA, this._memory.get(address), this._regA.get(), true)) {
-            this.setStatusBit(StatusBitPositions.Overflow);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Overflow);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         if (this._regA.get() === 0) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (this.isCarry(oldA, this._memory.get(address), newCarry, true)) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.rti = function (opcode) {
@@ -2589,8 +2587,8 @@ var Cpu = /** @class */ (function () {
                 var pcHigh = this.stackPull();
                 this._regPC.set((pcHigh << 8) | pcLow);
                 this._regP.set(newP);
-                this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
-                this.setStatusBit(StatusBitPositions.Bit5);
+                this.clearStatusBit(cpu_interface_1.StatusBitPositions.BrkCausedInterrupt);
+                this.setStatusBit(cpu_interface_1.StatusBitPositions.Bit5);
                 this._currentCycles += 6;
                 break;
         }
@@ -2644,7 +2642,7 @@ var Cpu = /** @class */ (function () {
         var pageBoundaryCycle = 0;
         var oldA = this._regA.get();
         // Subtract 1 more if carry is clear!
-        var currentCarry = !this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+        var currentCarry = !this.getStatusBitFlag(cpu_interface_1.StatusBitPositions.Carry) ? 1 : 0;
         this._regPC.add(1);
         switch (opcode) {
             case 0xEB:
@@ -2723,35 +2721,35 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(result)) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isOverflow(oldA, operand, result, false)) {
-            this.setStatusBit(StatusBitPositions.Overflow);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Overflow);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Overflow);
         }
         if (this.isZero(result)) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         if (this.isCarry(oldA, operand, currentCarry, false)) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
     };
     Cpu.prototype.sec = function (opcode) {
         this._regPC.add(1);
         switch (opcode) {
             case 0x38:
-                this.setStatusBit(StatusBitPositions.Carry);
+                this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 this._currentCycles += 2;
                 break;
         }
@@ -2760,7 +2758,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0xF8:
-                this.setStatusBit(StatusBitPositions.DecimalMode);
+                this.setStatusBit(cpu_interface_1.StatusBitPositions.DecimalMode);
                 this._currentCycles += 2;
                 break;
         }
@@ -2769,7 +2767,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(1);
         switch (opcode) {
             case 0x78:
-                this.setStatusBit(StatusBitPositions.InterruptDisable);
+                this.setStatusBit(cpu_interface_1.StatusBitPositions.InterruptDisable);
                 this._currentCycles += 2;
                 break;
         }
@@ -2783,10 +2781,10 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 if ((this._memory.get(address) & 0x80) === 0x80) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 operand <<= 1;
                 this._memory.set(address, operand);
@@ -2798,10 +2796,10 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._memory.get(address);
                 if ((this._memory.get(address) & 0x80) === 0x80) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 operand <<= 1;
                 this._memory.set(address, operand);
@@ -2813,10 +2811,10 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._memory.get(address);
                 if ((this._memory.get(address) & 0x80) === 0x80) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 operand <<= 1;
                 this._memory.set(address, operand);
@@ -2828,10 +2826,10 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
                 if ((this._memory.get(address) & 0x80) === 0x80) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 operand <<= 1;
                 this._memory.set(address, operand);
@@ -2843,10 +2841,10 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 if ((this._memory.get(address) & 0x80) === 0x80) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 operand <<= 1;
                 this._memory.set(address, operand);
@@ -2858,10 +2856,10 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 operand = this._memory.get(address);
                 if ((this._memory.get(address) & 0x80) === 0x80) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 operand <<= 1;
                 this._memory.set(address, operand);
@@ -2873,10 +2871,10 @@ var Cpu = /** @class */ (function () {
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._memory.get(address);
                 if ((this._memory.get(address) & 0x80) === 0x80) {
-                    this.setStatusBit(StatusBitPositions.Carry);
+                    this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 else {
-                    this.clearStatusBit(StatusBitPositions.Carry);
+                    this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
                 }
                 operand <<= 1;
                 this._memory.set(address, operand);
@@ -2886,16 +2884,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.sre = function (opcode) {
@@ -2976,22 +2974,22 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (carry === 1) {
-            this.setStatusBit(StatusBitPositions.Carry);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Carry);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Carry);
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.sta = function (opcode) {
@@ -3115,16 +3113,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.tay = function (opcode) {
@@ -3136,16 +3134,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regY.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.tsx = function (opcode) {
@@ -3157,16 +3155,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regX.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.txa = function (opcode) {
@@ -3178,16 +3176,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.txs = function (opcode) {
@@ -3208,16 +3206,16 @@ var Cpu = /** @class */ (function () {
                 break;
         }
         if (this.isNegative(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Negative);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Negative);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Negative);
         }
         if (this.isZero(this._regA.get())) {
-            this.setStatusBit(StatusBitPositions.Zero);
+            this.setStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
         else {
-            this.clearStatusBit(StatusBitPositions.Zero);
+            this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
     Cpu.prototype.handleOp = function (opCode) {

@@ -15,43 +15,33 @@ export class Nes {
         this._memory = new Memory();
         this._ppu = new Ppu(this._memory);
         this._cpu = new Cpu(this._memory, this._log);
+
+        this._initialize();
     }
 
-    run() {
-        let romContents = fs.readFileSync('./DK.nes');
+    public loadRom(romFilename: string) {
+        // For now, we can only load Donkey Kong
+        const romBytes: number[] = [];
 
-        let address = 0xC000;
+        let romContents = fs.readFileSync(romFilename);
         romContents.forEach((value) => {
-            if(address > 0xFFFF) {
-                return;
-            }
-            this._memory.set(address, value);
-            address++;
+            romBytes.push(value);
         });
 
-        romContents = fs.readFileSync('./DK.nes');
-        address = 0x8000;
-        romContents.forEach((value) => {
-            if(address > 0xC000) {
-                return;
-            }
-            this._memory.set(address, value);
-            address++;
-        });
+        let currentAddress = 0x8000;
+        // Load PRG ROM from 0x8000 -> 0xBFFF
+        for(let i = 0; i < romBytes.length && currentAddress < 0xC000; i++, currentAddress++) {
+            this._memory.set(currentAddress, romBytes[i]);
+        }
 
-        // CHR_ROM
-        romContents = fs.readFileSync('./DK.nes');
-        address = 0x0000;
-        romContents.forEach((value) => {
-            if(address > 0x1FFF) {
-                return;
-            }
-            this._memory.set(address, value);
-            address++;
-        });
+        // Load PRG ROM from 0xC000 -> 0xFFFF (Mirror of 0x8000->0xBFFF)
+        currentAddress = 0xC000;
+        for(let i = 0; i< romBytes.length && currentAddress <= 0xFFFF; i++, currentAddress++) {
+            this._memory.set(currentAddress, romBytes[i]);
+        }
+    }
 
-        this._cpu.powerUp();
-
+    public run() {
         while(this._cpu.getCurrentCycles() <= 100) {
             // fetch
             const beginCpuCycles = this._cpu.getCurrentCycles();
@@ -59,12 +49,20 @@ export class Nes {
 
             // decode, execute, wb
             this._cpu.handleOp(opCode);
-            this._ppu.addCycles(this._cpu.getCurrentCycles() - beginCpuCycles);
+
+            const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
+
+            this._ppu.addCycles(cpuCyclesRan);
         }
 
-        console.log(this._ppu.getScanlines(), this._ppu.getCycles());
-        console.log(this._memory.get(0x02).toString(16).toUpperCase());
-        console.log(this._memory.get(0x03).toString(16).toUpperCase());
+        // console.log(this._ppu.getScanlines(), this._ppu.getCycles());
+        // console.log(this._memory.get(0x02).toString(16).toUpperCase());
+        // console.log(this._memory.get(0x03).toString(16).toUpperCase());
 
+    }
+
+    private _initialize() {
+        this.loadRom('./DK.nes');
+        this._cpu.powerUp();
     }
 }

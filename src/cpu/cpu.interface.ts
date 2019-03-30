@@ -1,3 +1,29 @@
+export enum StatusBitPositions {
+    Carry = 0,
+    Zero = 1,
+    InterruptDisable = 2,
+    DecimalMode = 3,
+    BrkCausedInterrupt = 4,
+    Bit5 = 5,
+    Overflow = 6,
+    Negative = 7
+};
+
+export const ResetVectorLocation = {
+    Low: 0xFFFC,
+    High: 0xFFFD
+}
+
+export const IrqVectorLocation = {
+    Low: 0xFFFE,
+    High: 0xFFFF
+}
+
+export const NmiVectorLocation = {
+    Low: 0xFFFA,
+    High: 0xFFFB
+}
+
 export enum AddressingModes {
     Immediate,
     Absolute,

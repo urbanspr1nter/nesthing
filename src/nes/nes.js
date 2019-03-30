@@ -11,36 +11,25 @@ var Nes = /** @class */ (function () {
         this._ppu = new ppu_1.Ppu(this._memory);
         this._cpu = new cpu_1.Cpu(this._memory, this._log);
     }
-    Nes.prototype.run = function () {
-        var _this = this;
+    Nes.prototype.loadRom = function (romFilename) {
         var romContents = fs.readFileSync('./DK.nes');
-        var address = 0xC000;
+        var romBytes = [];
         romContents.forEach(function (value) {
-            if (address > 0xFFFF) {
-                return;
-            }
-            _this._memory.set(address, value);
-            address++;
+            romBytes.push(value);
         });
-        romContents = fs.readFileSync('./DK.nes');
-        address = 0x8000;
-        romContents.forEach(function (value) {
-            if (address > 0xC000) {
-                return;
-            }
-            _this._memory.set(address, value);
-            address++;
-        });
-        // CHR_ROM
-        romContents = fs.readFileSync('./DK.nes');
-        address = 0x0000;
-        romContents.forEach(function (value) {
-            if (address > 0x1FFF) {
-                return;
-            }
-            _this._memory.set(address, value);
-            address++;
-        });
+        var currentAddress = 0x8000;
+        // Load PRG ROM from 0x8000 -> 0xBFFF
+        for (var i = 0; i < romBytes.length && currentAddress < 0xC000; i++, currentAddress++) {
+            this._memory.set(currentAddress, romBytes[i]);
+        }
+        // Load PRG ROM from 0xC000 -> 0xFFFF
+        currentAddress = 0xC000;
+        for (var i = 0; i < romBytes.length && currentAddress <= 0xFFFF; i++, currentAddress++) {
+            this._memory.set(currentAddress, romBytes[i]);
+        }
+    };
+    Nes.prototype.run = function () {
+        this.loadRom('./DK.nes');
         this._cpu.powerUp();
         while (this._cpu.getCurrentCycles() <= 100) {
             // fetch

@@ -1,5 +1,29 @@
 "use strict";
 exports.__esModule = true;
+var StatusBitPositions;
+(function (StatusBitPositions) {
+    StatusBitPositions[StatusBitPositions["Carry"] = 0] = "Carry";
+    StatusBitPositions[StatusBitPositions["Zero"] = 1] = "Zero";
+    StatusBitPositions[StatusBitPositions["InterruptDisable"] = 2] = "InterruptDisable";
+    StatusBitPositions[StatusBitPositions["DecimalMode"] = 3] = "DecimalMode";
+    StatusBitPositions[StatusBitPositions["BrkCausedInterrupt"] = 4] = "BrkCausedInterrupt";
+    StatusBitPositions[StatusBitPositions["Bit5"] = 5] = "Bit5";
+    StatusBitPositions[StatusBitPositions["Overflow"] = 6] = "Overflow";
+    StatusBitPositions[StatusBitPositions["Negative"] = 7] = "Negative";
+})(StatusBitPositions = exports.StatusBitPositions || (exports.StatusBitPositions = {}));
+;
+exports.ResetVectorLocation = {
+    Low: 0xFFFC,
+    High: 0xFFFD
+};
+exports.IrqVectorLocation = {
+    Low: 0xFFFE,
+    High: 0xFFFF
+};
+exports.NmiVectorLocation = {
+    Low: 0xFFFA,
+    High: 0xFFFB
+};
 var AddressingModes;
 (function (AddressingModes) {
     AddressingModes[AddressingModes["Immediate"] = 0] = "Immediate";

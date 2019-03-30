@@ -1,52 +1,35 @@
 import { ByteRegister } from './byte-register';
 import { DoubleByteRegister } from './double-byte-register';
 import { Memory } from '../memory/memory';
-import { AddressingModes, OpAddressingMode, OpLabel } from './cpu.interface';
+import { 
+    AddressingModes, 
+    IrqVectorLocation, 
+    NmiVectorLocation, 
+    OpAddressingMode, 
+    OpLabel, 
+    ResetVectorLocation, 
+    StatusBitPositions 
+} from './cpu.interface';
 import { CpuAddressingHelper } from './cpu-addressing-helper';
-
-enum StatusBitPositions {
-    Carry = 0,
-    Zero = 1,
-    InterruptDisable = 2,
-    DecimalMode = 3,
-    BrkCausedInterrupt = 4,
-    Bit5 = 5,
-    Overflow = 6,
-    Negative = 7
-};
 
 export class Cpu {
     private _memory: Memory;
     private _addressingHelper: CpuAddressingHelper;
 
     private _currentCycles: number;
-    private _currentPpuScanlineCycles: number;
-    private _currentScanlines: number;
 
-    // A register is 1 byte wide (max: 255)
     private _regA: ByteRegister;
-
-    // X register is 1 byte wide (max: 255)
     private _regX: ByteRegister;
-
-    // Y register is 1 byte wide (max: 255)
     private _regY: ByteRegister;
 
-    // PC register is 2 bytes wide (max: 65535)
     private _regPC: DoubleByteRegister;
-
-    // SP register is 1 byte wide (max 255)
     private _regSP: ByteRegister;
-
-    // P register is 1 byte wide (max 255)
     private _regP: ByteRegister;
 
     private _log: string[];
 
     constructor(memory: Memory, log: string[]) {
         this._currentCycles = 0;
-        this._currentPpuScanlineCycles = 0;
-        this._currentScanlines = 0;
 
         this._log = log;
         this._memory = memory;
@@ -83,7 +66,7 @@ export class Cpu {
         }
         output += ` `;
 
-        output += `${this.getRegisterLog()} ${this.getPpuLog()} ${this.getCpuCycleLog()}`;
+        output += `${this.getRegisterLog()} ${/*this.getPpuLog()*/''} ${this.getCpuCycleLog()}`;
 
         return output;
     }
@@ -193,6 +176,7 @@ export class Cpu {
         }
     }
 
+    /*
     public getPpuLog() {
         const scanlineCycles = this._currentPpuScanlineCycles;
         const scanlineCyclesString = scanlineCycles.toString();
@@ -211,7 +195,7 @@ export class Cpu {
         }
 
         return `PPU:${formattedScanlineCyclesString},${formattedScanlinesString}`;
-    }
+    }*/
 
     public getCpuCycleLog() {
         return `CYC:${this._currentCycles}`;
@@ -254,29 +238,40 @@ export class Cpu {
     }
 
     public powerUp(): void {
-        this._regP.set(0x24);
+        // Need to set to 0x24 if using nestest ROM.
+        // this._regP.set(0x24);
+        this._regP.set(0x34);
+
         this._regA.set(0);
         this._regX.set(0);
         this._regY.set(0);
         this._regSP.set(0x01FD);
 
+        // Frame IRQ Enabled
         this._memory.set(0x4015, 0);
+        
+        // All cannels disabled
         this._memory.set(0x4017, 0);
 
         for(let i = 0x4000; i <= 0x400F; i++) {
             this._memory.set(i, 0x0);
         }
 
+        // Initialize RAM (0x0000->0x07FFF) values to 0xFF
         for(let i = 0x0000; i <= 0x07FF; i++) {
             this._memory.set(i, 0xFF);
         }
 
+        // If using nestest ROM, actually set the PC to 0xC000.
+        // this._regPC.set(0xC000);
+
         // The PC is set from the bytes found in 0xFFFC, 0xFFFD
-        const lowByte = this._memory.get(0xFFFC);
-        const highByte = this._memory.get(0xFFFD);
+        const lowByte = this._memory.get(ResetVectorLocation.Low);
+        const highByte = this._memory.get(ResetVectorLocation.High);
 
         this._regPC.set((highByte << 8) | lowByte);
-        // this._regPC.set(0xC000);
+
+        // Perform an IRQ Operation
         this._currentCycles = 7;
     }
 
@@ -888,8 +883,8 @@ export class Cpu {
                 this.stackPush(this._regP.get() | 0x10);
                 this.setStatusBit(StatusBitPositions.InterruptDisable);
                 
-                let interruptVectorLow = this._memory.get(0xFFFE);
-                let interruptVectorHigh = this._memory.get(0xFFFF);
+                let interruptVectorLow = this._memory.get(IrqVectorLocation.Low);
+                let interruptVectorHigh = this._memory.get(IrqVectorLocation.High);
 
                 this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
 
