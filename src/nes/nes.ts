@@ -1,12 +1,14 @@
 import { Memory } from '../memory/memory';
 import { Ppu } from '../ppu/ppu';
 import { Cpu } from '../cpu/cpu';
+import { PpuActionQueue } from '../ppu/ppu-action-queue';
 import * as fs from 'fs';
 
 export class Nes {
     private _memory: Memory;
     private _ppu: Ppu;
     private _cpu: Cpu;
+    private _ppuActionQueue: PpuActionQueue;
 
     private _log: string[];
 
@@ -15,8 +17,9 @@ export class Nes {
     constructor() {
         this._log = [];
         this._memory = new Memory();
-        this._ppu = new Ppu(this._memory);
-        this._cpu = new Cpu(this._memory, this._log);
+        this._ppuActionQueue = new PpuActionQueue();
+        this._ppu = new Ppu(this._memory, this._ppuActionQueue);
+        this._cpu = new Cpu(this._memory, this._ppuActionQueue, this._log);
 
         this._initialize();
     }
@@ -49,7 +52,7 @@ export class Nes {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while(this._cpu.getCurrentCycles() <= 100) {
+        while(this._cpu.getCurrentCycles() <= 24) {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!
@@ -75,11 +78,31 @@ export class Nes {
                 // this._screen.doSOMETHING!
             }
         }
+
+        /*
+        console.log("====== START CPU MEMORY ======")
+        this._memory.printView();
+        console.log("====== END CPU MEMORY ======")
+
+
+        console.log("====== START OAM MEMORY ======")
+        this._ppu.viewOamMemory();
+        console.log("====== END OAM MEMORY ======")
+
+        console.log("====== START PPU MEMORY ======")
+        this._ppu.viewPpuMemory();
+        console.log("====== END PPU MEMORY ======")
+
+
+        while(!this._ppuActionQueue.empty()) {
+            
+        }*/
     }
 
     private _initialize() {
+        this._screen = [];
         for(let i = 0; i < 256; i++) {
-            this._screen.push([]);
+            this._screen[i] = [];
             for(let j = 0; j < 240; j++) {
                 this._screen[i].push(0x00);
             }

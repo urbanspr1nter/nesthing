@@ -223,6 +223,9 @@ var Cpu = /** @class */ (function () {
         this._regSP.set(address);
         return this._memory.get(address);
     };
+    Cpu.prototype.setPC = function (address) {
+        this._regPC.set(address);
+    };
     Cpu.prototype.getA = function () {
         return this._regA.get();
     };
@@ -298,6 +301,16 @@ var Cpu = /** @class */ (function () {
             // return (first + second + carry) >= 0x0 && (first + second) <= 0xFF;
             return !(first < second);
         }
+    };
+    Cpu.prototype.handleNmiIrq = function () {
+        var currPcLow = this._regPC.get() & 0xFF;
+        var currPcHigh = (this._regPC.get() >> 8) & 0xFF;
+        this.stackPush(currPcHigh);
+        this.stackPush(currPcLow);
+        this.stackPush(this._regP.get());
+        this.setStatusBit(cpu_interface_1.StatusBitPositions.InterruptDisable);
+        this._regPC.set((cpu_interface_1.NmiVectorLocation.High << 8) | cpu_interface_1.NmiVectorLocation.Low);
+        this._currentCycles += 7;
     };
     Cpu.prototype.adc = function (opCode) {
         var oldA = this._regA.get();

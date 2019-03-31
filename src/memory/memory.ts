@@ -45,15 +45,24 @@ export class Memory {
         return this._memory[address & 0xFFFF] & 0xFF;
     }
 
-    public printDebug(startAddress: number, endAddress: number) {
-        let output = '';
-        for(let i = startAddress; i <= endAddress; i++) {
-            if((i - startAddress) % 16 === 0) {
-                output += '\n';
+    public printView() {
+        let output = "";
+        for(let i = 0; i <= 0xFFFF; i++) {
+            if(i % 0x10 === 0) {
+                let label = i.toString(16).toUpperCase();
+                let padding = 4 - label.length;
+                for(let j = 0; j < padding; j++) {
+                    label = '0' + label;
+                }
+                output += `\n${label}:\t\t`;
             }
-            output += (this.get(i).toString(16) + ' ');
+            let val = `${this.get(i).toString(16).toUpperCase()}`;
+            if(val.length < 2) {
+                val = `0${val}`;
+            }
+            output += `0x${val}` + "\t";
         }
 
-        console.log(output);
+        console.log(output); 
     }
 }

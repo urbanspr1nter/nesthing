@@ -45,13 +45,22 @@ var Memory = /** @class */ (function () {
         }
         return this._memory[address & 0xFFFF] & 0xFF;
     };
-    Memory.prototype.printDebug = function (startAddress, endAddress) {
-        var output = '';
-        for (var i = startAddress; i <= endAddress; i++) {
-            if ((i - startAddress) % 16 === 0) {
-                output += '\n';
+    Memory.prototype.printView = function () {
+        var output = "";
+        for (var i = 0; i <= 0xFFFF; i++) {
+            if (i % 0x10 === 0) {
+                var label = i.toString(16).toUpperCase();
+                var padding = 4 - label.length;
+                for (var j = 0; j < padding; j++) {
+                    label = '0' + label;
+                }
+                output += "\n" + label + ":\t\t";
             }
-            output += (this.get(i).toString(16) + ' ');
+            var val = "" + this.get(i).toString(16).toUpperCase();
+            if (val.length < 2) {
+                val = "0" + val;
+            }
+            output += "0x" + val + "\t";
         }
         console.log(output);
     };

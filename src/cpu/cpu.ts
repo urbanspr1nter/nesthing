@@ -11,8 +11,11 @@ import {
     StatusBitPositions 
 } from './cpu.interface';
 import { CpuAddressingHelper } from './cpu-addressing-helper';
+import { PpuActionQueue } from '../ppu/ppu-action-queue';
+import { IPpuMemoryOperation, IPpuMemoryType } from '../ppu/ppu.interface';
 
 export class Cpu {
+    private _ppuActionQueue: PpuActionQueue;
     private _memory: Memory;
     private _addressingHelper: CpuAddressingHelper;
 
@@ -28,7 +31,7 @@ export class Cpu {
 
     private _log: string[];
 
-    constructor(memory: Memory, log: string[]) {
+    constructor(memory: Memory, ppuActionQueue: PpuActionQueue, log: string[]) {
         this._currentCycles = 0;
 
         this._log = log;
@@ -41,6 +44,38 @@ export class Cpu {
         this._regPC = new DoubleByteRegister(0x00);
         this._regSP = new ByteRegister(0x00);
         this._regP = new ByteRegister(0x00);
+
+        this._ppuActionQueue = ppuActionQueue;
+    }
+
+    private _memWrite(address: number, data: number) {
+        const isPpuAddress = address >= 0x2000 && address <= 0x3FFF ? true : false;
+
+        if(isPpuAddress) {
+            this._ppuActionQueue.enqueue({
+                operation: IPpuMemoryOperation.Write,
+                address: (0X20 << 8) | (address & 0x0007),
+                data: data,
+                type: IPpuMemoryType.Ppu
+            });
+        } else {
+            this._memory.set(address, data);
+        }
+    }
+
+    private _memRead(address: number): number {
+        const isPpuAddress = address >= 0x2000 && address <= 0x3FFF ? true : false;
+
+        if(isPpuAddress) {
+            this._ppuActionQueue.enqueue({
+                operation: IPpuMemoryOperation.Read,
+                address: (0X20 << 8) | (address & 0x0007),
+                data: undefined,
+                type: IPpuMemoryType.Ppu
+            });
+        }
+
+        return this._memory.get(address);
     }
 
     public getLogEntry(
@@ -76,14 +111,14 @@ export class Cpu {
         let byteString = ``;
         switch(addressingMode) {
             case AddressingModes.Immediate:
-                let data = this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase();
+                let data = this._memRead(this._regPC.get() + 1).toString(16).toUpperCase();
                 if(data.length < 2) {
                     data = '0' + data;
                 }
                 byteString = `#$${data}`;
                 break;
             case AddressingModes.DirectPage:
-                byteString = `${this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase()}`;
+                byteString = `${this._memRead(this._regPC.get() + 1).toString(16).toUpperCase()}`;
                 if(byteString.length < 2) {
                     byteString = `0${byteString}`;
                 }
@@ -94,10 +129,10 @@ export class Cpu {
                 break;
             case AddressingModes.Absolute:
             case AddressingModes.AbsoluteIndirect:
-                byteString  = `$${(this._memory.get(this._regPC.get() + 2)).toString(16).toUpperCase()}${this._memory.get(this._regPC.get() + 1).toString(16).toUpperCase()}`;
+                byteString  = `$${(this._memRead(this._regPC.get() + 2)).toString(16).toUpperCase()}${this._memRead(this._regPC.get() + 1).toString(16).toUpperCase()}`;
                 break;
             case AddressingModes.Relative:
-                let displacement = this._memory.get(this._regPC.get() + 1);
+                let displacement = this._memRead(this._regPC.get() + 1);
                 if(displacement >= 0x80) {
                     displacement = -((0xFF - displacement) + 1);
                 }
@@ -139,7 +174,7 @@ export class Cpu {
             case AddressingModes.DirectPageIndirectIndexedY:
             case AddressingModes.Relative:
                 let byte = '';
-                let val = this._memory.get(this._regPC.get() + 1);
+                let val = this._memRead(this._regPC.get() + 1);
                 if(val < 0x10) {
                     byte = `0${val.toString(16).toUpperCase()}`;
                 } else {
@@ -154,8 +189,8 @@ export class Cpu {
             case AddressingModes.AbsoluteIndirect:
                 let highByte = ``;
                 let lowByte = ``;
-                let highVal = this._memory.get(this._regPC.get() + 2);
-                let lowVal = this._memory.get(this._regPC.get() + 1);
+                let highVal = this._memRead(this._regPC.get() + 2);
+                let lowVal = this._memRead(this._regPC.get() + 1);
 
                 if(highVal < 0x10) {
                     highByte = `0${highVal.toString(16).toUpperCase()}`;
@@ -248,26 +283,26 @@ export class Cpu {
         this._regSP.set(0x01FD);
 
         // Frame IRQ Enabled
-        this._memory.set(0x4015, 0);
+        this._memWrite(0x4015, 0);
         
         // All cannels disabled
-        this._memory.set(0x4017, 0);
+        this._memWrite(0x4017, 0);
 
         for(let i = 0x4000; i <= 0x400F; i++) {
-            this._memory.set(i, 0x0);
+            this._memWrite(i, 0x0);
         }
 
         // Initialize RAM (0x0000->0x07FFF) values to 0xFF
         for(let i = 0x0000; i <= 0x07FF; i++) {
-            this._memory.set(i, 0xFF);
+            this._memWrite(i, 0xFF);
         }
 
         // If using nestest ROM, actually set the PC to 0xC000.
         // this._regPC.set(0xC000);
 
         // The PC is set from the bytes found in 0xFFFC, 0xFFFD
-        const lowByte = this._memory.get(ResetVectorLocation.Low);
-        const highByte = this._memory.get(ResetVectorLocation.High);
+        const lowByte = this._memRead(ResetVectorLocation.Low);
+        const highByte = this._memRead(ResetVectorLocation.High);
 
         this._regPC.set((highByte << 8) | lowByte);
 
@@ -277,14 +312,14 @@ export class Cpu {
 
     public stackPush(data: number): void {
         const address = 0x100 | (this._regSP.get());
-        this._memory.set(address, data);
+        this._memWrite(address, data);
         this._regSP.set(address - 1);
     }
 
     public stackPull(): number {
         const address = 0x100 | (this._regSP.get() + 1);
         this._regSP.set(address);
-        return this._memory.get(address);
+        return this._memRead(address);
     }
 
     public setPC(address: number) {
@@ -399,7 +434,7 @@ export class Cpu {
         switch(opCode) {
             case 0x69: // Immediate
                 address = this._addressingHelper.atImmediate(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._regPC.add(1);
@@ -407,7 +442,7 @@ export class Cpu {
                 break;
             case 0x6D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 4;
@@ -415,7 +450,7 @@ export class Cpu {
                 break;
             case 0x65: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 3;
@@ -426,7 +461,7 @@ export class Cpu {
                     pageBoundaryCycle = 1;
                 }
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += (4 + pageBoundaryCycle);
@@ -437,7 +472,7 @@ export class Cpu {
                     pageBoundaryCycle = 1;
                 }
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += (4 + pageBoundaryCycle);
@@ -445,7 +480,7 @@ export class Cpu {
                 break;
             case 0x75: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 4;
@@ -453,7 +488,7 @@ export class Cpu {
                 break;
             case 0x61: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles += 6;
@@ -464,7 +499,7 @@ export class Cpu {
                     pageBoundaryCycle = 1;
                 }
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(oldA + operand + carry);
                 this._currentCycles+= (5 + pageBoundaryCycle);
@@ -505,7 +540,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x29:
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 2;
@@ -513,7 +548,7 @@ export class Cpu {
                 break;
             case 0x2D:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 4;
@@ -521,7 +556,7 @@ export class Cpu {
                 break;
             case 0x25:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 3;
@@ -532,7 +567,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += (4 + pageBoundaryCycle);
@@ -543,7 +578,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += (4 + pageBoundaryCycle);
@@ -551,7 +586,7 @@ export class Cpu {
                 break;
             case 0x35:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 4;
@@ -559,7 +594,7 @@ export class Cpu {
                 break;
             case 0x21:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += 6;
@@ -568,7 +603,7 @@ export class Cpu {
             case 0x31:
                 pageBoundaryCycle = this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY) ? 1 : 0;
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(this._regA.get() & operand);
                 this._currentCycles += (5 + pageBoundaryCycle);
@@ -605,37 +640,37 @@ export class Cpu {
                 break;
             case 0x0E:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                oldVal = this._memory.get(address);
+                oldVal = this._memRead(address);
                 
                 result = oldVal << 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._currentCycles += 6;
                 this._regPC.add(2);
                 break;
             case 0x06:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                oldVal = this._memory.get(address);
+                oldVal = this._memRead(address);
                 
                 result = oldVal << 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._currentCycles += 5;
                 this._regPC.add(1);
                 break;
             case 0x1E:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                oldVal = this._memory.get(address);
+                oldVal = this._memRead(address);
                 
                 result = oldVal << 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._currentCycles += 7;
                 this._regPC.add(2);
                 break;
             case 0x16:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                oldVal = this._memory.get(address);
+                oldVal = this._memRead(address);
                 
                 result = oldVal << 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._currentCycles += 6;
                 this._regPC.add(1);
                 break;
@@ -664,7 +699,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x90:
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -694,7 +729,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xB0:
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -723,7 +758,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xF0:
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -755,7 +790,7 @@ export class Cpu {
         switch(opCode) {
             case 0x2C: // Absolute Addressing
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
                 if((operand & 0x80) > 0) {
                     this.setStatusBit(StatusBitPositions.Negative);
@@ -780,7 +815,7 @@ export class Cpu {
                 break;
             case 0x24: // Direct Page Addressing
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
                 if(this.isNegative(operand)) {
                     this.setStatusBit(StatusBitPositions.Negative);
@@ -810,7 +845,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x30:
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -839,7 +874,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xD0:
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -867,7 +902,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x10: 
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -903,8 +938,8 @@ export class Cpu {
                 this.stackPush(this._regP.get() | 0x10);
                 this.setStatusBit(StatusBitPositions.InterruptDisable);
                 
-                let interruptVectorLow = this._memory.get(IrqVectorLocation.Low);
-                let interruptVectorHigh = this._memory.get(IrqVectorLocation.High);
+                let interruptVectorLow = this._memRead(IrqVectorLocation.Low);
+                let interruptVectorHigh = this._memRead(IrqVectorLocation.High);
 
                 this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
 
@@ -920,7 +955,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x50:
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -948,7 +983,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x70:
-                let displacement = this._memory.get(this._regPC.get()) & 0xFF;
+                let displacement = this._memRead(this._regPC.get()) & 0xFF;
                 if(displacement >= 0x80) {
                     displacement = -(0xFF - displacement + 0x1);
                 }
@@ -1021,7 +1056,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xC9: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1033,7 +1068,7 @@ export class Cpu {
                 break;
             case 0xCD: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1045,7 +1080,7 @@ export class Cpu {
                 break;
             case 0xC5: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1060,7 +1095,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1075,7 +1110,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1087,7 +1122,7 @@ export class Cpu {
                 break;
             case 0xD5: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1099,7 +1134,7 @@ export class Cpu {
                 break;
             case 0xC1: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1114,7 +1149,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 } 
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regA.get() >= operand) {
                     carry = 1;
@@ -1153,7 +1188,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xE0: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 if(this._regX.get() >= operand) {
                     carry = 1;
@@ -1165,7 +1200,7 @@ export class Cpu {
                 break;
             case 0xEC: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regX.get() >= operand) {
                     carry = 1;
@@ -1177,7 +1212,7 @@ export class Cpu {
                 break;
             case 0xE4: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regX.get() >= operand) {
                     carry = 1;
@@ -1217,7 +1252,7 @@ export class Cpu {
 
         switch(opCode) {
             case 0xC0: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 if(this._regY.get() >= operand) {
                     carry = 1;
@@ -1229,7 +1264,7 @@ export class Cpu {
                 break;
             case 0xCC: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regY.get() >= operand) {
                     carry = 1;
@@ -1241,7 +1276,7 @@ export class Cpu {
                 break;
             case 0xC4: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 if(this._regY.get() >= operand) {
                     carry = 1;
@@ -1283,12 +1318,12 @@ export class Cpu {
         switch(opcode) {
             case 0xC3:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand--;
 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                if(this._regA.get() >= this._memory.get(address)) {
+                if(this._regA.get() >= this._memRead(address)) {
                     carry = 1;
                 } else {
                     carry = 0;
@@ -1298,12 +1333,12 @@ export class Cpu {
                 break;
             case 0xC7:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand--;
 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                if(this._regA.get() >= this._memory.get(address)) {
+                if(this._regA.get() >= this._memRead(address)) {
                     carry = 1;
                 } else {
                     carry = 0;
@@ -1313,12 +1348,12 @@ export class Cpu {
                 break;            
             case 0xCF:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand--;
 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                if(this._regA.get() >= this._memory.get(address)) {
+                if(this._regA.get() >= this._memRead(address)) {
                     carry = 1;
                 } else {
                     carry = 0;
@@ -1328,12 +1363,12 @@ export class Cpu {
                 break;
             case 0xD3:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand--;
 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                if(this._regA.get() >= this._memory.get(address)) {
+                if(this._regA.get() >= this._memRead(address)) {
                     carry = 1;
                 } else {
                     carry = 0;
@@ -1343,12 +1378,12 @@ export class Cpu {
                 break;
             case 0xD7:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand--;
 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                if(this._regA.get() >= this._memory.get(address)) {
+                if(this._regA.get() >= this._memRead(address)) {
                     carry = 1;
                 } else {
                     carry = 0;
@@ -1358,12 +1393,12 @@ export class Cpu {
                 break;
             case 0xDB:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand--;
 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                if(this._regA.get() >= this._memory.get(address)) {
+                if(this._regA.get() >= this._memRead(address)) {
                     carry = 1;
                 } else {
                     carry = 0;
@@ -1373,12 +1408,12 @@ export class Cpu {
                 break;
             case 0xDF:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand--;
 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                if(this._regA.get() >= this._memory.get(address)) {
+                if(this._regA.get() >= this._memRead(address)) {
                     carry = 1;
                 } else {
                     carry = 0;
@@ -1388,13 +1423,13 @@ export class Cpu {
                 break;
         }
 
-        if(this.isNegative(this._regA.get() - this._memory.get(address))) {
+        if(this.isNegative(this._regA.get() - this._memRead(address))) {
             this.setStatusBit(StatusBitPositions.Negative);
         } else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isZero(this._regA.get() - this._memory.get(address))) {
+        if(this.isZero(this._regA.get() - this._memRead(address))) {
             this.setStatusBit(StatusBitPositions.Zero);
         } else {
             this.clearStatusBit(StatusBitPositions.Zero);
@@ -1415,45 +1450,45 @@ export class Cpu {
         switch(opCode) {
             case 0xCE: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand - 1);
+                this._memWrite(address, operand - 1);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0xC6: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand - 1);
+                this._memWrite(address, operand - 1);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0xDE: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand - 1);
+                this._memWrite(address, operand - 1);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0xD6: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand - 1);
+                this._memWrite(address, operand - 1);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
         }
 
-        if(this.isNegative(this._memory.get(address))) {
+        if(this.isNegative(this._memRead(address))) {
             this.setStatusBit(StatusBitPositions.Negative);
         } else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isZero(this._memory.get(address))) {
+        if(this.isZero(this._memRead(address))) {
             this.setStatusBit(StatusBitPositions.Zero);
         } else {
             this.clearStatusBit(StatusBitPositions.Zero);
@@ -1513,7 +1548,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0x49: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1522,7 +1557,7 @@ export class Cpu {
                 break;
             case 0x4D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1531,7 +1566,7 @@ export class Cpu {
                 break;
             case 0x45: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1543,7 +1578,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1555,7 +1590,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1564,7 +1599,7 @@ export class Cpu {
                 break;
             case 0x55: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1573,7 +1608,7 @@ export class Cpu {
                 break;
             case 0x41: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1585,7 +1620,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() ^ operand;
                 this._regA.set(result);
@@ -1615,45 +1650,45 @@ export class Cpu {
         switch(opCode) {
             case 0xEE: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand + 1);
+                this._memWrite(address, operand + 1);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0xE6: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand + 1);
+                this._memWrite(address, operand + 1);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0xFE: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand + 1);
+                this._memWrite(address, operand + 1);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0xF6: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
-                this._memory.set(address, operand + 1);
+                this._memWrite(address, operand + 1);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
         }
 
-        if(this.isNegative(this._memory.get(address))) {
+        if(this.isNegative(this._memRead(address))) {
             this.setStatusBit(StatusBitPositions.Negative);
         } else {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isZero(this._memory.get(address))) {
+        if(this.isZero(this._memRead(address))) {
             this.setStatusBit(StatusBitPositions.Zero);
         } else {
             this.clearStatusBit(StatusBitPositions.Zero);
@@ -1718,11 +1753,11 @@ export class Cpu {
         switch(opcode) {
             case 0xE3:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand++;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                result = oldA - this._memory.get(address) - currentCarry;
+                result = oldA - this._memRead(address) - currentCarry;
                 this._regA.set(result);
 
                 this._regPC.add(1);
@@ -1730,11 +1765,11 @@ export class Cpu {
                 break;
             case 0xE7:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand++;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                result = oldA - this._memory.get(address) - currentCarry;
+                result = oldA - this._memRead(address) - currentCarry;
                 this._regA.set(result);
 
                 this._regPC.add(1);
@@ -1742,11 +1777,11 @@ export class Cpu {
                 break;  
             case 0xEF:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand++;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                result = oldA - this._memory.get(address) - currentCarry;
+                result = oldA - this._memRead(address) - currentCarry;
                 this._regA.set(result);
 
                 this._regPC.add(2);
@@ -1754,11 +1789,11 @@ export class Cpu {
                 break;  
             case 0xF3:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand++;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                result = oldA - this._memory.get(address) - currentCarry;
+                result = oldA - this._memRead(address) - currentCarry;
                 this._regA.set(result);
 
                 this._regPC.add(1);
@@ -1766,11 +1801,11 @@ export class Cpu {
                 break;             
             case 0xF7:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand++;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                result = oldA - this._memory.get(address) - currentCarry;
+                result = oldA - this._memRead(address) - currentCarry;
                 this._regA.set(result);
 
                 this._regPC.add(1);
@@ -1778,11 +1813,11 @@ export class Cpu {
                 break;         
             case 0xFB:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand++;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                result = oldA - this._memory.get(address) - currentCarry;
+                result = oldA - this._memRead(address) - currentCarry;
                 this._regA.set(result);
 
                 this._regPC.add(2);
@@ -1790,11 +1825,11 @@ export class Cpu {
                 break;               
             case 0xFF:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 operand++;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                result = oldA - this._memory.get(address) - currentCarry;
+                result = oldA - this._memRead(address) - currentCarry;
                 this._regA.set(result);
 
                 this._regPC.add(2);
@@ -1808,7 +1843,7 @@ export class Cpu {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isOverflow(oldA, this._memory.get(address), this._regA.get(), false)) {
+        if(this.isOverflow(oldA, this._memRead(address), this._regA.get(), false)) {
             this.setStatusBit(StatusBitPositions.Overflow);
         } else {
             this.clearStatusBit(StatusBitPositions.Overflow);
@@ -1820,7 +1855,7 @@ export class Cpu {
             this.clearStatusBit(StatusBitPositions.Zero);
         }
 
-        if(this.isCarry(oldA, this._memory.get(address), currentCarry, false)) {
+        if(this.isCarry(oldA, this._memRead(address), currentCarry, false)) {
             this.setStatusBit(StatusBitPositions.Carry);
         } else {
             this.clearStatusBit(StatusBitPositions.Carry);
@@ -1871,7 +1906,7 @@ export class Cpu {
         switch(opcode) {
             case 0xA3: // Direct Indirect X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
                 this._regPC.add(1);
@@ -1879,7 +1914,7 @@ export class Cpu {
                 break;
             case 0xA7:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
                 this._regPC.add(1);
@@ -1887,7 +1922,7 @@ export class Cpu {
                 break;
             case 0xAF:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
                 this._regPC.add(2);
@@ -1898,7 +1933,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     this._currentCycles++;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
                 this._regPC.add(1);
@@ -1906,7 +1941,7 @@ export class Cpu {
                 break;
             case 0xB7:
                 address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
                 this._regPC.add(1);
@@ -1917,7 +1952,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     this._currentCycles++;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 this._regA.set(operand);
                 this._regX.set(this._regA.get());
                 this._regPC.add(2);
@@ -1947,7 +1982,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xA9: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 this._currentCycles += 2;
                 this._regA.set(operand);
@@ -1955,7 +1990,7 @@ export class Cpu {
                 break;
             case 0xAD: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(operand);
                 this._regPC.add(2);
@@ -1963,7 +1998,7 @@ export class Cpu {
                 break;
             case 0xA5: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(operand);
                 this._regPC.add(1);
@@ -1974,7 +2009,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(operand);
                 this._regPC.add(2);
@@ -1985,7 +2020,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(operand);
                 this._regPC.add(2);
@@ -1993,7 +2028,7 @@ export class Cpu {
                 break;
             case 0xB5: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(operand);
                 this._regPC.add(1);
@@ -2001,7 +2036,7 @@ export class Cpu {
                 break;
             case 0xA1: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(operand);
                 this._regPC.add(1);
@@ -2012,7 +2047,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regA.set(operand);
                 this._regPC.add(1);
@@ -2041,7 +2076,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opCode) {
             case 0xA2: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 this._regX.set(operand);
                 this._regPC.add(1);
@@ -2049,7 +2084,7 @@ export class Cpu {
                 break;
             case 0xAE: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regX.set(operand);
                 this._regPC.add(2);
@@ -2057,7 +2092,7 @@ export class Cpu {
                 break;
             case 0xA6: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regX.set(operand);
                 this._regPC.add(1);
@@ -2068,7 +2103,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regX.set(operand);
                 this._regPC.add(2);
@@ -2076,7 +2111,7 @@ export class Cpu {
                 break;
             case 0xB6: // Direct Page Indexed, Y
                 address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regX.set(operand);
                 this._regPC.add(1);
@@ -2105,7 +2140,7 @@ export class Cpu {
         this._regPC.add(1);
         switch(opcode) {
             case 0xA0: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 this._regY.set(operand);
                 this._regPC.add(1);
@@ -2113,7 +2148,7 @@ export class Cpu {
                 break;
             case 0xAC: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regY.set(operand);
                 this._regPC.add(2);
@@ -2121,7 +2156,7 @@ export class Cpu {
                 break;
             case 0xA4: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regY.set(operand);
                 this._regPC.add(1);
@@ -2132,7 +2167,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regY.set(operand);
                 this._regPC.add(2);
@@ -2140,7 +2175,7 @@ export class Cpu {
                 break;
             case 0xB4: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 this._regY.set(operand);
                 this._regPC.add(1);
@@ -2180,41 +2215,41 @@ export class Cpu {
                 break;
             case 0x4E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0x46: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0x5E: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x56: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
                 result = operand >> 1;
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;            
@@ -2316,7 +2351,7 @@ export class Cpu {
         this._regPC.add(1)
         switch(opcode) {
             case 0x09: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2325,7 +2360,7 @@ export class Cpu {
                 break;
             case 0x0D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2334,7 +2369,7 @@ export class Cpu {
                 break;
             case 0x05: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2346,7 +2381,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2358,7 +2393,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2367,7 +2402,7 @@ export class Cpu {
                 break;
             case 0x15: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2376,7 +2411,7 @@ export class Cpu {
                 break;
             case 0x01: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2388,7 +2423,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = this._regA.get() | operand;
                 this._regA.set(result);
@@ -2481,79 +2516,79 @@ export class Cpu {
             case 0x23:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
 
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
 
-                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._memWrite(address, ((operand << 1) | oldCarry));
 
-                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regA.set(this._regA.get() & this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x27:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
 
-                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._memWrite(address, ((operand << 1) | oldCarry));
 
-                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regA.set(this._regA.get() & this._memRead(address));
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0x2F:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
 
-                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._memWrite(address, ((operand << 1) | oldCarry));
 
-                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regA.set(this._regA.get() & this._memRead(address));
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0x33:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
 
-                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._memWrite(address, ((operand << 1) | oldCarry));
 
-                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regA.set(this._regA.get() & this._memRead(address));
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x37:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
 
-                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._memWrite(address, ((operand << 1) | oldCarry));
 
-                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regA.set(this._regA.get() & this._memRead(address));
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             case 0x3B:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
 
-                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._memWrite(address, ((operand << 1) | oldCarry));
 
-                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regA.set(this._regA.get() & this._memRead(address));
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x3F:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
 
-                this._memory.set(address, ((operand << 1) | oldCarry));
+                this._memWrite(address, ((operand << 1) | oldCarry));
 
-                this._regA.set(this._regA.get() & this._memory.get(address));
+                this._regA.set(this._regA.get() & this._memRead(address));
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
@@ -2597,41 +2632,41 @@ export class Cpu {
                 break;
             case 0x2E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0x26: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0x3E: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x36: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x80) > 0) ? 1 : 0;
                 result = ((operand << 1) | oldCarry);
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
@@ -2675,41 +2710,41 @@ export class Cpu {
                 break;
             case 0x6E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0x66: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0x7E: // Absolute Indexed, X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x76: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
                 result = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, result);
+                this._memWrite(address, result);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
@@ -2746,12 +2781,12 @@ export class Cpu {
         switch(opcode) {
             case 0x63:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
 
                 operand = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
                 if(newCarry === 1) {
                     this.setStatusBit(StatusBitPositions.Carry);
@@ -2762,19 +2797,19 @@ export class Cpu {
                 // adc time
                 oldA = this._regA.get();
 
-                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x67:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
 
 
                 operand = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
                 if(newCarry === 1) {
                     this.setStatusBit(StatusBitPositions.Carry);
@@ -2785,19 +2820,19 @@ export class Cpu {
                 // adc time
                 oldA = this._regA.get();
 
-                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0x6F:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
 
 
                 operand = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
                 if(newCarry === 1) {
                     this.setStatusBit(StatusBitPositions.Carry);
@@ -2808,19 +2843,19 @@ export class Cpu {
                 // adc time
                 oldA = this._regA.get();
 
-                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0x73:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
 
 
                 operand = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
                 if(newCarry === 1) {
                     this.setStatusBit(StatusBitPositions.Carry);
@@ -2831,19 +2866,19 @@ export class Cpu {
                 // adc time
                 oldA = this._regA.get();
 
-                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x77:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
 
 
                 operand = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
                 if(newCarry === 1) {
                     this.setStatusBit(StatusBitPositions.Carry);
@@ -2854,19 +2889,19 @@ export class Cpu {
                 // adc time
                 oldA = this._regA.get();
 
-                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             case 0x7B:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
 
 
                 operand = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
                 if(newCarry === 1) {
                     this.setStatusBit(StatusBitPositions.Carry);
@@ -2877,19 +2912,19 @@ export class Cpu {
                 // adc time
                 oldA = this._regA.get();
 
-                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x7F:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 newCarry = ((operand & 0x0001) > 0) ? 1 : 0;
 
 
                 operand = ((operand >> 1) | (oldCarry << 7));
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
                 if(newCarry === 1) {
                     this.setStatusBit(StatusBitPositions.Carry);
@@ -2900,7 +2935,7 @@ export class Cpu {
                 // adc time
                 oldA = this._regA.get();
 
-                this._regA.set(this._regA.get() + this._memory.get(address) + newCarry);
+                this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
                 this._regPC.add(2);
                 this._currentCycles += 7;
@@ -2913,7 +2948,7 @@ export class Cpu {
             this.clearStatusBit(StatusBitPositions.Negative);
         }
 
-        if(this.isOverflow(oldA, this._memory.get(address), this._regA.get(), true)) {
+        if(this.isOverflow(oldA, this._memRead(address), this._regA.get(), true)) {
             this.setStatusBit(StatusBitPositions.Overflow);
         } else {
             this.clearStatusBit(StatusBitPositions.Overflow);
@@ -2925,7 +2960,7 @@ export class Cpu {
             this.clearStatusBit(StatusBitPositions.Zero);
         }
 
-        if(this.isCarry(oldA, this._memory.get(address), newCarry, true)) {
+        if(this.isCarry(oldA, this._memRead(address), newCarry, true)) {
             this.setStatusBit(StatusBitPositions.Carry);
         } else {
             this.clearStatusBit(StatusBitPositions.Carry);
@@ -2972,25 +3007,25 @@ export class Cpu {
         switch(opcode) {
             case 0x83:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._memWrite(address, this._regA.get() & this._regX.get());
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             case 0x87:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._memWrite(address, this._regA.get() & this._regX.get());
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
             case 0x8F:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._memWrite(address, this._regA.get() & this._regX.get());
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
             case 0x97:
                 address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
-                this._memory.set(address, this._regA.get() & this._regX.get());
+                this._memWrite(address, this._regA.get() & this._regX.get());
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
@@ -3011,7 +3046,7 @@ export class Cpu {
         switch(opcode) {
             case 0xEB:
             case 0xE9: // Immediate
-                operand = this._memory.get(this._regPC.get());
+                operand = this._memRead(this._regPC.get());
                 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3020,7 +3055,7 @@ export class Cpu {
                 break;
             case 0xED: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3029,7 +3064,7 @@ export class Cpu {
                 break;
             case 0xE5: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3041,7 +3076,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(this._regPC, this._regX)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3053,7 +3088,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3062,7 +3097,7 @@ export class Cpu {
                 break;
             case 0xF5: // Direct Page Indexed, X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3071,7 +3106,7 @@ export class Cpu {
                 break;
             case 0xE1: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 // 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3083,7 +3118,7 @@ export class Cpu {
                 if(this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(this._regPC, this._regY)) {
                     pageBoundaryCycle = 1;
                 }
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 
                 result = oldA - operand - currentCarry;
                 this._regA.set(result);
@@ -3156,126 +3191,126 @@ export class Cpu {
         switch(opcode) {
             case 0x03:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
-                if((this._memory.get(address) & 0x80) === 0x80) {
+                if((this._memRead(address) & 0x80) === 0x80) {
                     this.setStatusBit(StatusBitPositions.Carry);
                 } else {
                     this.clearStatusBit(StatusBitPositions.Carry);
                 }
 
                 operand <<= 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regA.set(this._regA.get() | this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x07:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
-                if((this._memory.get(address) & 0x80) === 0x80) {
+                if((this._memRead(address) & 0x80) === 0x80) {
                     this.setStatusBit(StatusBitPositions.Carry);
                 } else {
                     this.clearStatusBit(StatusBitPositions.Carry);
                 }
 
                 operand <<= 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regA.set(this._regA.get() | this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0x0F:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
-                if((this._memory.get(address) & 0x80) === 0x80) {
+                if((this._memRead(address) & 0x80) === 0x80) {
                     this.setStatusBit(StatusBitPositions.Carry);
                 } else {
                     this.clearStatusBit(StatusBitPositions.Carry);
                 }
 
                 operand <<= 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regA.set(this._regA.get() | this._memRead(address));
 
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0x13:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
-                if((this._memory.get(address) & 0x80) === 0x80) {
+                if((this._memRead(address) & 0x80) === 0x80) {
                     this.setStatusBit(StatusBitPositions.Carry);
                 } else {
                     this.clearStatusBit(StatusBitPositions.Carry);
                 }
 
                 operand <<= 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regA.set(this._regA.get() | this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x17:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
-                if((this._memory.get(address) & 0x80) === 0x80) {
+                if((this._memRead(address) & 0x80) === 0x80) {
                     this.setStatusBit(StatusBitPositions.Carry);
                 } else {
                     this.clearStatusBit(StatusBitPositions.Carry);
                 }
 
                 operand <<= 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regA.set(this._regA.get() | this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             case 0x1B:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
-                if((this._memory.get(address) & 0x80) === 0x80) {
+                if((this._memRead(address) & 0x80) === 0x80) {
                     this.setStatusBit(StatusBitPositions.Carry);
                 } else {
                     this.clearStatusBit(StatusBitPositions.Carry);
                 }
 
                 operand <<= 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regA.set(this._regA.get() | this._memRead(address));
 
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x1F:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
 
-                if((this._memory.get(address) & 0x80) === 0x80) {
+                if((this._memRead(address) & 0x80) === 0x80) {
                     this.setStatusBit(StatusBitPositions.Carry);
                 } else {
                     this.clearStatusBit(StatusBitPositions.Carry);
                 }
 
                 operand <<= 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() | this._memory.get(address));
+                this._regA.set(this._regA.get() | this._memRead(address));
 
                 this._regPC.add(2);
                 this._currentCycles += 7;
@@ -3305,91 +3340,91 @@ export class Cpu {
         switch(opcode) {
             case 0x43:
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
 
                 operand = operand >> 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regA.set(this._regA.get() ^ this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x47:
                 address = this._addressingHelper.atDirectPage(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
 
                 operand = operand >> 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regA.set(this._regA.get() ^ this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 5;
                 break;
             case 0x4F:
                 address = this._addressingHelper.atAbsolute(this._regPC);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
 
                 operand = operand >> 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regA.set(this._regA.get() ^ this._memRead(address));
 
                 this._regPC.add(2);
                 this._currentCycles += 6;
                 break;
             case 0x53:
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
 
                 operand = operand >> 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regA.set(this._regA.get() ^ this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 8;
                 break;
             case 0x57:
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
 
                 operand = operand >> 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regA.set(this._regA.get() ^ this._memRead(address));
 
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             case 0x5B:
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
 
                 operand = operand >> 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regA.set(this._regA.get() ^ this._memRead(address));
 
                 this._regPC.add(2);
                 this._currentCycles += 7;
                 break;
             case 0x5F:
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
-                operand = this._memory.get(address);
+                operand = this._memRead(address);
                 carry = (operand & 0x0001) === 1 ? 1 : 0;
 
                 operand = operand >> 1;
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
 
-                this._regA.set(this._regA.get() ^ this._memory.get(address));
+                this._regA.set(this._regA.get() ^ this._memRead(address));
 
                 this._regPC.add(2);
                 this._currentCycles += 7;
@@ -3424,49 +3459,49 @@ export class Cpu {
             case 0x8D: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regA.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
             case 0x85: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regA.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
             case 0x9D: // Absolute Indexed X
                 address = this._addressingHelper.atAbsoluteIndexedX(this._regPC, this._regX);
                 operand = this._regA.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 5;
                 break;
             case 0x99: // Absolute Indexed Y
                 address = this._addressingHelper.atAbsoluteIndexedY(this._regPC, this._regY);
                 operand = this._regA.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 5;
                 break;
             case 0x95: // Direct Page Indexed X
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._regA.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
             case 0x81: // Direct Page Indexed Indirect, X
                 address = this._addressingHelper.atDirectPageIndexedIndirectX(this._regPC, this._regX);
                 operand = this._regA.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
             case 0x91: // Direct Page Indirect Indexed, Y
                 address = this._addressingHelper.atDirectPageIndirectIndexedY(this._regPC, this._regY);
                 operand = this._regA.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 6;
                 break;
@@ -3482,21 +3517,21 @@ export class Cpu {
             case 0x8E: // Absolute
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regX.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
             case 0x86: // Direct Page
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regX.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
             case 0x96: // Direct Page Indexed, Y
                 address = this._addressingHelper.atDirectPageIndexedY(this._regPC, this._regY);
                 operand = this._regX.get();
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;
@@ -3513,7 +3548,7 @@ export class Cpu {
                 address = this._addressingHelper.atAbsolute(this._regPC);
                 operand = this._regY.get();
                 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(2);
                 this._currentCycles += 4;
                 break;
@@ -3521,7 +3556,7 @@ export class Cpu {
                 address = this._addressingHelper.atDirectPage(this._regPC);
                 operand = this._regY.get();
                 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 3;
                 break;
@@ -3529,7 +3564,7 @@ export class Cpu {
                 address = this._addressingHelper.atDirectPageIndexedX(this._regPC, this._regX);
                 operand = this._regY.get();
                 
-                this._memory.set(address, operand);
+                this._memWrite(address, operand);
                 this._regPC.add(1);
                 this._currentCycles += 4;
                 break;

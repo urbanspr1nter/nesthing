@@ -1,6 +1,15 @@
 import { PpuMemory } from '../memory/ppumemory';
+import { PpuGenLatch } from './ppubus';
 import { OamMemory } from '../memory/oammemory';
 import { Memory } from '../memory/memory';
+import { PpuActionQueue } from './ppu-action-queue';
+
+export const BaseNametableAddresses = {
+    0x00: 0x2000,
+    0x01: 0x2400,
+    0x02: 0x2800,
+    0x03: 0x2C00
+};
 
 export enum PpuRegister {
     PPUCTRL = 0x2000,
@@ -14,12 +23,7 @@ export enum PpuRegister {
     OAMDMA = 0x4014
 };
 
-export enum PpuStatusBits {
-    SpriteOverflow = 5,
-    SpriteZeroHit = 6,
-    VblankStarted = 7
-}
-
+// PPUCTRL (0x2000)
 export enum PpuCtrlBits {
     NametableSelectLsb = 0,
     NametableSelectMsb = 1,
@@ -31,6 +35,7 @@ export enum PpuCtrlBits {
     Vblank = 7,
 };
 
+// PPUMASK (0x2001)
 export enum PpuMaskBits {
     Greyscale = 0,
     ShowBackgroundInLeftmost = 1,
@@ -42,18 +47,31 @@ export enum PpuMaskBits {
     EmphasizeBlue = 7
 }
 
+// PPUSTATUS (0x2002)
+export enum PpuStatusBits {
+    SpriteOverflow = 5,
+    SpriteZeroHit = 6,
+    VblankStarted = 7
+}
+
+export const IgnoredWritesBeforeWarmedUp = [
+    PpuRegister.PPUCTRL, 
+    PpuRegister.PPUMASK, 
+    PpuRegister.PPUSCROLL, 
+    PpuRegister.PPUADDR
+];
+
 // PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR registers are not functional
 // --> PPUSCROLL and PPLUADDR Latches will not toggle.
 const cpuCyclesToWarmUp = 29658;
 
 export class Ppu {
+    private _ppuActionQueue: PpuActionQueue;
     private _memory: Memory;
     private _ppuMemory: PpuMemory;
     private _oamMemory: OamMemory;
 
-    private _ppuAddrLatch: number;
-    private _ppuScrollLatch: number;
-
+    private _currentNametableBaseAddress: number;
     private _currentVramReadAddress: number;
 
     private _cycles: number;
@@ -61,8 +79,9 @@ export class Ppu {
     private _currentCyclesInRun: number;
     private _scanlines: number;
 
-    constructor(memory: Memory) {
+    constructor(memory: Memory, ppuActionQueue: PpuActionQueue) {
         this._memory = memory;
+        this._ppuActionQueue = ppuActionQueue;
         this._ppuMemory = new PpuMemory();
         this._oamMemory = new OamMemory();
 
@@ -79,6 +98,14 @@ export class Ppu {
         this._memory.set(PpuRegister.PPUSCROLL, 0x00);
         this._memory.set(PpuRegister.PPUADDR, 0x00);
         this._memory.set(PpuRegister.PPUDATA, 0x00);
+    }
+
+    public viewPpuMemory() {
+        this._ppuMemory.printView();
+    }
+
+    public viewOamMemory() {
+        this._oamMemory.printView();
     }
 
     public addPpuCyclesInRun(ppuCycles: number) {
@@ -126,26 +153,56 @@ export class Ppu {
     }
 
     private _readPpuStatus(): number {
-        this._ppuAddrLatch = undefined;
-        this._ppuScrollLatch = undefined;
+        PpuGenLatch.value = undefined;
 
         return this._memory.get(PpuRegister.PPUSTATUS);
     }
 
+    private _writeOamData() {
+        const oamAddr = this._memory.get(PpuRegister.OAMADDR);
+        const oamData = this._memory.get(PpuRegister.OAMDATA);
+
+        this._oamMemory.set(oamAddr, oamData);
+
+        // Increment OAMADDR after the write!
+        this._memory.set(PpuRegister.OAMADDR, oamAddr + 1);
+    }
+
+    private _readOamData(): number {
+        const oamAddr = this._memory.get(PpuRegister.OAMADDR);
+
+        return this._oamMemory.get(oamAddr);
+    }
+
+    private _writePpuScroll() {
+        if(PpuGenLatch.value === undefined) {
+            PpuGenLatch.value = this._memory.get(PpuRegister.PPUSCROLL);
+        } else {
+            this._currentNametableBaseAddress = (PpuGenLatch.value << 8) | this._memory.get(PpuRegister.PPUSCROLL);
+        }
+    }
+
     public run(): number {
         this._currentCyclesInRun = 0;
-        
+
         // Pre-Render Scanline
         if(this._scanlines === -1) {
             if(this._cycles === 1) {
                 this._clearVblankNmi();
             }
+
+            if(this._cycles >= 257 && this._cycles <= 320) {
+                this._memory.set(PpuRegister.OAMADDR, 0x00);
+            }
+
+            this.addPpuCyclesInRun(2);
         }
 
-        // The other scanlines???
+        // All other visible scanlines.
         if(this._scanlines >= 0 && this._scanlines <= 239) {
             if(this._cycles === 0) {
-                // Idle cycle
+                // Idle cycle: 
+                this.addPpuCyclesInRun(1);
             } else if(this._cycles >= 1 && this._cycles <= 256) {
                 // The data for each tile is fetched. (2 PPU cycles)
                 // 1. Nametable byte
@@ -158,23 +215,32 @@ export class Ppu {
                 /// shifters are reloaded during ticks 9, 17, 25...,257
 
                 // THEN ALSO DO SPRITE EVALUATION FOR NEXT SCANLINE ... see below
+                this.addPpuCyclesInRun(2);
             } else if(this._cycles >= 257 && this._cycles <= 320) {
                 // Tile data for the next scanline are fetched. (2 PPU cycles)
                 // 1. Garbage nametable byte
                 // 2. Garbage nametable bytes
                 // 3. Tile bitmap low
                 // 4. tilel bitmap high (+8)
+                this.addPpuCyclesInRun(2);
             } else if(this._cycles >= 321 && this._cycles <= 336) {
                 // FIRST TWO TILES OF NEXT SCANLINE ARE FETCHED!
+                this.addPpuCyclesInRun(2);
             } else if(this._cycles >= 337 && this._cycles <= 340) {
-                // two bytes are fetched. Dunno why, but 2 PPU cycles each
+                // Fetch two bytes, and add 2 PPU cycles.
+                
+                // Fetch first unused nametable byte
+                this.addPpuCyclesInRun(2);
+
+                // Fetch second unused nametable byte
+                this.addPpuCyclesInRun(2);
             }
 
         }
 
         // POST-RENDER SCANLINE
         if(this._scanlines === 240) {
-        
+            this.addPpuCyclesInRun(2);
         }
 
         // VBLANK!
@@ -195,16 +261,30 @@ export class Ppu {
         return this._currentCyclesInRun;
     }
 
+    private _isPpuWarmedUp(currentTotalCpuCycles: number): boolean {
+        return currentTotalCpuCycles > cpuCyclesToWarmUp;
+    }
+
     private _setVramAddress() {
-        if(this._ppuAddrLatch === undefined) {
-            this._ppuAddrLatch = this._memory.get(PpuRegister.PPUADDR);;
+        if(PpuGenLatch.value === undefined) {
+            PpuGenLatch.value = this._memory.get(PpuRegister.PPUADDR);;
         } else {
-            this._currentVramReadAddress = this._ppuAddrLatch << 8 | this._memory.get(PpuRegister.PPUADDR);
+            this._currentVramReadAddress = PpuGenLatch.value << 8 | this._memory.get(PpuRegister.PPUADDR);
         }
     }
 
     private _writePpuData() {
         this._ppuMemory.set(this._currentVramReadAddress, this._memory.get(PpuRegister.PPUDATA));
+        
+        const vramIncrement = ((this._memory.get(PpuRegister.PPUCTRL)) & (0x1 << PpuCtrlBits.Increment)) > 0x0 
+            ? 32 
+            : 8;
+
+        this._currentVramReadAddress += vramIncrement;
+    }
+
+    private _readPpuData() {
+
     }
 
     private _isPreRenderScanline(): boolean {
