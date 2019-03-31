@@ -1,9 +1,6 @@
 import { Memory } from '../memory/memory';
 import { Ppu } from '../ppu/ppu';
 import { Cpu } from '../cpu/cpu';
-import { 
-    NmiVectorLocation
-} from '../cpu/cpu.interface';
 import * as fs from 'fs';
 
 export class Nes {
@@ -71,8 +68,8 @@ export class Nes {
             // Run the PPU for the appropriate amount of cycles.
             let ppuCyclesToRun = cpuCyclesRan * 3;
             while(ppuCyclesToRun > 0) {
-                this._ppu.run();                
-                ppuCyclesToRun--;
+                const ppuCyclesRan = this._ppu.run();                
+                ppuCyclesToRun -= ppuCyclesRan;
 
                 // Fire a dot into the screen
                 // this._screen.doSOMETHING!
@@ -90,5 +87,6 @@ export class Nes {
 
         this.loadRom('./DK.nes');
         this._cpu.powerUp();
+        this._ppu.powerOn();
     }
 }

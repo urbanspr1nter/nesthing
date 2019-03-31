@@ -42,17 +42,23 @@ export enum PpuMaskBits {
     EmphasizeBlue = 7
 }
 
+// PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR registers are not functional
+// --> PPUSCROLL and PPLUADDR Latches will not toggle.
+const cpuCyclesToWarmUp = 29658;
+
 export class Ppu {
     private _memory: Memory;
     private _ppuMemory: PpuMemory;
     private _oamMemory: OamMemory;
 
-    private _currentVramWriteAddress: number;
-    private _currentVramWriteAddresShiftCount: number;
+    private _ppuAddrLatch: number;
+    private _ppuScrollLatch: number;
+
     private _currentVramReadAddress: number;
-    private _currentVramReadAddressShiftCount: number;
 
     private _cycles: number;
+
+    private _currentCyclesInRun: number;
     private _scanlines: number;
 
     constructor(memory: Memory) {
@@ -60,12 +66,29 @@ export class Ppu {
         this._ppuMemory = new PpuMemory();
         this._oamMemory = new OamMemory();
 
-        this._scanlines = 0;
+        this._currentCyclesInRun = 0;
+        this._scanlines = -1;
         this._cycles = 0;
     }
 
-    public addCycles(cpuCycles: number) {
-        this._cycles = this._cycles + (cpuCycles * 3);
+    public powerOn(): void {
+        this._memory.set(PpuRegister.PPUCTRL, 0x00);
+        this._memory.set(PpuRegister.PPUMASK, 0x00);
+        this._memory.set(PpuRegister.PPUSTATUS, this._memory.get(PpuRegister.PPUSTATUS) & 0x60);
+        this._memory.set(PpuRegister.OAMADDR, 0x00);
+        this._memory.set(PpuRegister.PPUSCROLL, 0x00);
+        this._memory.set(PpuRegister.PPUADDR, 0x00);
+        this._memory.set(PpuRegister.PPUDATA, 0x00);
+    }
+
+    public addPpuCyclesInRun(ppuCycles: number) {
+        this._currentCyclesInRun += ppuCycles;
+        this.addPpuCycles(ppuCycles);
+    }
+
+    public addPpuCycles(cycles: number) {
+        this._cycles += cycles;
+
         if(this._cycles > 341) {
             this._scanlines++;
 
@@ -96,7 +119,22 @@ export class Ppu {
         const ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
         this._memory.set(PpuRegister.PPUSTATUS, ppuStatus & ~(0x1 << PpuStatusBits.VblankStarted));  
     }
-    public run() {
+
+    private _clearSpriteZeroHit() {
+        const ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
+        this._memory.set(PpuRegister.PPUSTATUS, ppuStatus & ~(0x1 << PpuStatusBits.SpriteZeroHit));
+    }
+
+    private _readPpuStatus(): number {
+        this._ppuAddrLatch = undefined;
+        this._ppuScrollLatch = undefined;
+
+        return this._memory.get(PpuRegister.PPUSTATUS);
+    }
+
+    public run(): number {
+        this._currentCyclesInRun = 0;
+        
         // Pre-Render Scanline
         if(this._scanlines === -1) {
             if(this._cycles === 1) {
@@ -147,52 +185,26 @@ export class Ppu {
             } else {
 
             }
-            
+
             // TICK!
-            this.addCycles(1);
+            this.addPpuCyclesInRun(1);
         }
 
         // Programmer make PPU Memory accesses if we are in the VBLANk range.
-        this._readFromVram();
-        this._writeToVram();
+
+        return this._currentCyclesInRun;
     }
 
-    private _writeToVram(): boolean {
-        if(this._currentVramWriteAddresShiftCount === 0) {
-            this._currentVramWriteAddress = this._memory.get(PpuRegister.PPUADDR);
-            this._currentVramWriteAddresShiftCount++;
-
-            return false;
-        } else if(this._currentVramWriteAddresShiftCount === 1) {
-            this._currentVramWriteAddress = (this._memory.get(PpuRegister.PPUADDR) << 8) | this._currentVramWriteAddress;
-            this._currentVramWriteAddresShiftCount++;
-
-            return false;
+    private _setVramAddress() {
+        if(this._ppuAddrLatch === undefined) {
+            this._ppuAddrLatch = this._memory.get(PpuRegister.PPUADDR);;
         } else {
-            this._currentVramWriteAddresShiftCount = 0;
-            this._ppuMemory.set(this._currentVramWriteAddress, this._memory.get(PpuRegister.PPUDATA));
-
-            return true;
+            this._currentVramReadAddress = this._ppuAddrLatch << 8 | this._memory.get(PpuRegister.PPUADDR);
         }
     }
 
-    private _readFromVram(): boolean {
-        if(this._currentVramReadAddressShiftCount === 0) {
-            this._currentVramReadAddress = this._memory.get(PpuRegister.PPUADDR);
-            this._currentVramReadAddressShiftCount++;
-            return false;
-
-        } else if(this._currentVramReadAddressShiftCount === 1) {
-            this._currentVramReadAddress = (this._memory.get(PpuRegister.PPUADDR) << 8) | this._currentVramReadAddress;
-            this._currentVramReadAddressShiftCount++;
-
-            return false;
-        } else {
-            this._currentVramReadAddressShiftCount = 0;
-            this._memory.set(PpuRegister.PPUDATA, this._ppuMemory.get(this._currentVramReadAddress));
-
-            return true;
-        }
+    private _writePpuData() {
+        this._ppuMemory.set(this._currentVramReadAddress, this._memory.get(PpuRegister.PPUDATA));
     }
 
     private _isPreRenderScanline(): boolean {
