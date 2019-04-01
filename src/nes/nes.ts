@@ -3,9 +3,11 @@ import { Ppu } from '../ppu/ppu';
 import { Cpu } from '../cpu/cpu';
 import { PpuActionQueue } from '../ppu/ppu-action-queue';
 import * as fs from 'fs';
+import { PpuMemory } from '../memory/ppumemory';
 
 export class Nes {
     private _memory: Memory;
+    private _ppuMemory: PpuMemory;
     private _ppu: Ppu;
     private _cpu: Cpu;
     private _ppuActionQueue: PpuActionQueue;
@@ -16,9 +18,11 @@ export class Nes {
 
     constructor() {
         this._log = [];
-        this._memory = new Memory();
+        this._ppuMemory = new PpuMemory();
+
         this._ppuActionQueue = new PpuActionQueue();
-        this._ppu = new Ppu(this._memory, this._ppuActionQueue);
+        this._ppu = new Ppu(this._ppuMemory, this._ppuActionQueue);
+        this._memory = new Memory(this._ppu);
         this._cpu = new Cpu(this._memory, this._ppuActionQueue, this._log);
 
         this._initialize();
@@ -44,6 +48,13 @@ export class Nes {
         for(let i = 0; i< romBytes.length && currentAddress <= 0xFFFF; i++, currentAddress++) {
             this._memory.set(currentAddress, romBytes[i]);
         }
+
+        // Load the CHR ROM
+        let chrRomAddress = 0x4000 + 1;
+        for(let i = 0x0000; i <= 0x1FFF; i++) {
+            this._ppuMemory.set(i, romBytes[chrRomAddress]);
+            chrRomAddress++;
+        }
     }
 
     public run() {
@@ -56,30 +67,23 @@ export class Nes {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!
-            if(this._ppu.getScanlines() === 242 
-                && this._ppu.getCycles() === 2 
-                && this._ppu.isVblankNmi()
-            ) {
-                this._cpu.handleNmiIrq();
-            } else {
-                const opCode = this._memory.get(this._cpu.getPC());
-                this._cpu.handleOp(opCode);
-            }
+            // this._cpu.handleNmiIrq();
+
+            const opCode = this._memory.get(this._cpu.getPC());
+            this._cpu.handleOp(opCode);
 
             const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
 
             // Run the PPU for the appropriate amount of cycles.
-            let ppuCyclesToRun = cpuCyclesRan * 3;
-            while(ppuCyclesToRun > 0) {
-                const ppuCyclesRan = this._ppu.run();                
-                ppuCyclesToRun -= ppuCyclesRan;
-
-                // Fire a dot into the screen
-                // this._screen.doSOMETHING!
-            }
+            // let ppuCyclesToRun = cpuCyclesRan * 3;
+            // while(ppuCyclesToRun > 0) {
+                // const ppuCyclesRan = this._ppu.run(ppuCyclesToRun);                
+                // ppuCyclesToRun -= ppuCyclesRan;
+            //}
+        
         }
 
-        /*
+        
         console.log("====== START CPU MEMORY ======")
         this._memory.printView();
         console.log("====== END CPU MEMORY ======")
@@ -92,11 +96,6 @@ export class Nes {
         console.log("====== START PPU MEMORY ======")
         this._ppu.viewPpuMemory();
         console.log("====== END PPU MEMORY ======")
-
-
-        while(!this._ppuActionQueue.empty()) {
-            
-        }*/
     }
 
     private _initialize() {
@@ -110,6 +109,5 @@ export class Nes {
 
         this.loadRom('./DK.nes');
         this._cpu.powerUp();
-        this._ppu.powerOn();
     }
 }

@@ -1,8 +1,9 @@
 "use strict";
 exports.__esModule = true;
 var Memory = /** @class */ (function () {
-    function Memory() {
+    function Memory(ppu) {
         this._memory = [];
+        this._ppu = ppu;
         // Blank out the memory
         for (var i = 0; i <= 0xFFFF; i++) {
             this.set(i, 0xFF);
@@ -30,9 +31,14 @@ var Memory = /** @class */ (function () {
             this._memory[address & 0xFFFF] = value;
         }
         else if (address >= 0x2000 && address <= 0x3FFF) {
-            // PPU registers: 0x2000-0x2007
-            // -> Mirrored: 0x2008-0x3FFF
-            //  -> (Every 8 bytes)   
+            // PPU registers
+            var decodedAddress = (0x20 << 8) | (address & 0x0007);
+            if (decodedAddress === 0x2006) {
+                this._ppu.write$2006(value);
+            }
+            else if (decodedAddress === 0x2007) {
+                this._ppu.write$2007(value);
+            }
             this._memory[(0x20 << 8) | (address & 0x0007)] = value;
         }
         else {
@@ -41,7 +47,16 @@ var Memory = /** @class */ (function () {
     };
     Memory.prototype.get = function (address) {
         if (address >= 0x2000 && address <= 0x3FFF) {
-            return this._memory[(0x20 << 8) | (address & 0x0007)];
+            var decodedAddress = (0x20 << 8) | (address & 0x0007);
+            if (decodedAddress === 0x2006) {
+                // Not available for reading!
+            }
+            if (decodedAddress === 0x2007) {
+                return this._ppu.read$2007();
+            }
+            else {
+                return this._memory[(0x20 << 8) | (address & 0x0007)];
+            }
         }
         return this._memory[address & 0xFFFF] & 0xFF;
     };
@@ -56,7 +71,7 @@ var Memory = /** @class */ (function () {
                 }
                 output += "\n" + label + ":\t\t";
             }
-            var val = "" + this.get(i).toString(16).toUpperCase();
+            var val = "" + (this.get(i) ? this.get(i).toString(16).toUpperCase() : 'FF');
             if (val.length < 2) {
                 val = "0" + val;
             }

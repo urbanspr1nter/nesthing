@@ -49,6 +49,7 @@ export class Cpu {
     }
 
     private _memWrite(address: number, data: number) {
+        /*
         const isPpuAddress = address >= 0x2000 && address <= 0x3FFF ? true : false;
 
         if(isPpuAddress) {
@@ -60,10 +61,13 @@ export class Cpu {
             });
         } else {
             this._memory.set(address, data);
-        }
+        }*/
+
+        this._memory.set(address, data);
     }
 
     private _memRead(address: number): number {
+       /*
         const isPpuAddress = address >= 0x2000 && address <= 0x3FFF ? true : false;
 
         if(isPpuAddress) {
@@ -73,7 +77,7 @@ export class Cpu {
                 data: undefined,
                 type: IPpuMemoryType.Ppu
             });
-        }
+        }*/
 
         return this._memory.get(address);
     }

@@ -19,7 +19,12 @@ var PpuMemory = /** @class */ (function () {
         var output = "";
         for (var i = 0; i <= MaxMemoryAddress; i++) {
             if (i % 0x10 === 0) {
-                output += "\n";
+                var label = i.toString(16).toUpperCase();
+                var padding = 4 - label.length;
+                for (var j = 0; j < padding; j++) {
+                    label = '0' + label;
+                }
+                output += "\n" + label + ":\t\t";
             }
             var val = "" + this._memory[i].toString(16).toUpperCase();
             if (val.length < 2) {

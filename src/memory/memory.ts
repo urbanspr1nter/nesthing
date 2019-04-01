@@ -1,8 +1,13 @@
+import { Ppu } from "../ppu/ppu";
+
 export class Memory {
     private _memory: number[];
+
+    private _ppu: Ppu;
     
-    constructor() {
+    constructor(ppu: Ppu) {
         this._memory = [];
+        this._ppu = ppu;
 
         // Blank out the memory
         for(let i = 0; i <= 0xFFFF; i++) {
@@ -29,10 +34,15 @@ export class Memory {
             this._memory[(address - 1*0x800) & 0xFFFF] = value;
             this._memory[address & 0xFFFF] = value;
         } else if(address >= 0x2000 && address <= 0x3FFF) {
-            // PPU registers: 0x2000-0x2007
-            // -> Mirrored: 0x2008-0x3FFF
-            //  -> (Every 8 bytes)   
-            this._memory[(0x20 << 8) | (address & 0x0007)] = value;         
+            // PPU registers
+            const decodedAddress = (0x20 << 8) | (address & 0x0007);
+            if(decodedAddress === 0x2006) {
+                this._ppu.write$2006(value);
+            } else if(decodedAddress === 0x2007) {
+                this._ppu.write$2007(value);
+            } else {
+                this._memory[decodedAddress] = value;         
+            }
         } else {
             this._memory[address & 0xFFFF] = value;
         }
@@ -40,7 +50,15 @@ export class Memory {
 
     public get(address: number): number {
         if(address >= 0x2000 && address <= 0x3FFF) {
-            return this._memory[(0x20 << 8) | (address & 0x0007)];
+            const decodedAddress = (0x20 << 8) | (address & 0x0007);
+            if(decodedAddress === 0x2006) {
+                // Not available for reading!
+            }
+            if(decodedAddress === 0x2007) {
+                return this._ppu.read$2007();
+            } else {
+                return this._memory[decodedAddress];
+            }
         }
         return this._memory[address & 0xFFFF] & 0xFF;
     }
@@ -56,7 +74,8 @@ export class Memory {
                 }
                 output += `\n${label}:\t\t`;
             }
-            let val = `${this.get(i).toString(16).toUpperCase()}`;
+
+            let val = `${this.get(i) ? this.get(i).toString(16).toUpperCase(): 'FF'}`;
             if(val.length < 2) {
                 val = `0${val}`;
             }

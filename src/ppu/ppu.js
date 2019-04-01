@@ -1,8 +1,24 @@
 "use strict";
 exports.__esModule = true;
-var ppumemory_1 = require("../memory/ppumemory");
-var ppubus_1 = require("./ppubus");
 var oammemory_1 = require("../memory/oammemory");
+// Background Shift Registers
+exports.TileShiftRegister1 = {
+    HighByte: 0,
+    LowByte: 0
+};
+exports.TileShiftRegister2 = {
+    HighByte: 0,
+    LowByte: 0
+};
+exports.PaletteShiftRegister1 = {
+    Value: 0
+};
+exports.PaletteShiftRegister2 = {
+    Value: 0
+};
+;
+// 8 pairs
+exports.SpritShiftRegisters = [];
 exports.BaseNametableAddresses = {
     0x00: 0x2000,
     0x01: 0x2400,
@@ -64,23 +80,19 @@ exports.IgnoredWritesBeforeWarmedUp = [
 // --> PPUSCROLL and PPLUADDR Latches will not toggle.
 var cpuCyclesToWarmUp = 29658;
 var Ppu = /** @class */ (function () {
-    function Ppu(memory) {
-        this._memory = memory;
-        this._ppuMemory = new ppumemory_1.PpuMemory();
+    function Ppu(ppuMemory, ppuActionQueue) {
+        this._ppuActionQueue = ppuActionQueue;
+        this._ppuMemory = ppuMemory;
         this._oamMemory = new oammemory_1.OamMemory();
         this._currentCyclesInRun = 0;
         this._scanlines = -1;
         this._cycles = 0;
+        this._vramAddress = 0;
+        this._tVramAddress = 0;
+        this._isSecondWrite = false;
+        // PPUCTRL
+        this._regPPUCTRL = 0;
     }
-    Ppu.prototype.powerOn = function () {
-        this._memory.set(PpuRegister.PPUCTRL, 0x00);
-        this._memory.set(PpuRegister.PPUMASK, 0x00);
-        this._memory.set(PpuRegister.PPUSTATUS, this._memory.get(PpuRegister.PPUSTATUS) & 0x60);
-        this._memory.set(PpuRegister.OAMADDR, 0x00);
-        this._memory.set(PpuRegister.PPUSCROLL, 0x00);
-        this._memory.set(PpuRegister.PPUADDR, 0x00);
-        this._memory.set(PpuRegister.PPUDATA, 0x00);
-    };
     Ppu.prototype.viewPpuMemory = function () {
         this._ppuMemory.printView();
     };
@@ -105,142 +117,39 @@ var Ppu = /** @class */ (function () {
     Ppu.prototype.getScanlines = function () {
         return this._scanlines;
     };
-    Ppu.prototype.isVblankNmi = function () {
-        var ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
-        return (ppuStatus & (0x1 << PpuStatusBits.VblankStarted)) > 0x0;
-    };
-    Ppu.prototype._startVblankNmi = function () {
-        var ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
-        this._memory.set(PpuRegister.PPUSTATUS, ppuStatus | (0x1 << PpuStatusBits.VblankStarted));
-    };
-    Ppu.prototype._clearVblankNmi = function () {
-        var ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
-        this._memory.set(PpuRegister.PPUSTATUS, ppuStatus & ~(0x1 << PpuStatusBits.VblankStarted));
-    };
-    Ppu.prototype._clearSpriteZeroHit = function () {
-        var ppuStatus = this._memory.get(PpuRegister.PPUSTATUS);
-        this._memory.set(PpuRegister.PPUSTATUS, ppuStatus & ~(0x1 << PpuStatusBits.SpriteZeroHit));
-    };
-    Ppu.prototype._readPpuStatus = function () {
-        ppubus_1.PpuGenLatch.value = undefined;
-        return this._memory.get(PpuRegister.PPUSTATUS);
-    };
-    Ppu.prototype._writeOamData = function () {
-        var oamAddr = this._memory.get(PpuRegister.OAMADDR);
-        var oamData = this._memory.get(PpuRegister.OAMDATA);
-        this._oamMemory.set(oamAddr, oamData);
-        // Increment OAMADDR after the write!
-        this._memory.set(PpuRegister.OAMADDR, oamAddr + 1);
-    };
-    Ppu.prototype._readOamData = function () {
-        var oamAddr = this._memory.get(PpuRegister.OAMADDR);
-        return this._oamMemory.get(oamAddr);
-    };
-    Ppu.prototype._writePpuScroll = function () {
-        if (ppubus_1.PpuGenLatch.value === undefined) {
-            ppubus_1.PpuGenLatch.value = this._memory.get(PpuRegister.PPUSCROLL);
+    Ppu.prototype.write$2006 = function (dataByte) {
+        if (!this._isSecondWrite) {
+            this._tVramAddress = dataByte;
+            this._isSecondWrite = true;
         }
         else {
-            this._currentNametableBaseAddress = (ppubus_1.PpuGenLatch.value << 8) | this._memory.get(PpuRegister.PPUSCROLL);
+            this._vramAddress = ((this._tVramAddress << 8) | dataByte) & 0x3FFF;
         }
     };
-    Ppu.prototype.run = function () {
-        this._currentCyclesInRun = 0;
-        // Pre-Render Scanline
-        if (this._scanlines === -1) {
-            if (this._cycles === 1) {
-                this._clearVblankNmi();
-            }
-            if (this._cycles >= 257 && this._cycles <= 320) {
-                this._memory.set(PpuRegister.OAMADDR, 0x00);
-            }
-            this.addPpuCyclesInRun(2);
-        }
-        // All other visible scanlines.
-        if (this._scanlines >= 0 && this._scanlines <= 239) {
-            if (this._cycles === 0) {
-                // Idle cycle: 
-                this.addPpuCyclesInRun(1);
-            }
-            else if (this._cycles >= 1 && this._cycles <= 256) {
-                // The data for each tile is fetched. (2 PPU cycles)
-                // 1. Nametable byte
-                // 2. Attribute table byte
-                // 3. Tile bitmap low byte
-                // 4. Tile bitmap high byte (+8, or maybe +32.. depends?)
-                // 
-                // placed into internal latches, then fed to the appropriate shift 
-                // registers when it is time... (EVERY 8 CYCLES) ... 
-                /// shifters are reloaded during ticks 9, 17, 25...,257
-                // THEN ALSO DO SPRITE EVALUATION FOR NEXT SCANLINE ... see below
-                this.addPpuCyclesInRun(2);
-            }
-            else if (this._cycles >= 257 && this._cycles <= 320) {
-                // Tile data for the next scanline are fetched. (2 PPU cycles)
-                // 1. Garbage nametable byte
-                // 2. Garbage nametable bytes
-                // 3. Tile bitmap low
-                // 4. tilel bitmap high (+8)
-                this.addPpuCyclesInRun(2);
-            }
-            else if (this._cycles >= 321 && this._cycles <= 336) {
-                // FIRST TWO TILES OF NEXT SCANLINE ARE FETCHED!
-                this.addPpuCyclesInRun(2);
-            }
-            else if (this._cycles >= 337 && this._cycles <= 340) {
-                // Fetch two bytes, and add 2 PPU cycles.
-                // Fetch first unused nametable byte
-                this.addPpuCyclesInRun(2);
-                // Fetch second unused nametable byte
-                this.addPpuCyclesInRun(2);
-            }
-        }
-        // POST-RENDER SCANLINE
-        if (this._scanlines === 240) {
-            this.addPpuCyclesInRun(2);
-        }
-        // VBLANK!
-        if (this._scanlines >= 241 && this._scanlines <= 260) {
-            // VBLANK START
-            if (this._scanlines === 241 && this._cycles === 1) {
-                this._startVblankNmi();
-            }
-            else {
-            }
-            // TICK!
-            this.addPpuCyclesInRun(1);
-        }
-        // Programmer make PPU Memory accesses if we are in the VBLANk range.
-        return this._currentCyclesInRun;
-    };
-    Ppu.prototype._isPpuWarmedUp = function (currentTotalCpuCycles) {
-        return currentTotalCpuCycles > cpuCyclesToWarmUp;
-    };
-    Ppu.prototype._setVramAddress = function () {
-        if (ppubus_1.PpuGenLatch.value === undefined) {
-            ppubus_1.PpuGenLatch.value = this._memory.get(PpuRegister.PPUADDR);
-            ;
-        }
-        else {
-            this._currentVramReadAddress = ppubus_1.PpuGenLatch.value << 8 | this._memory.get(PpuRegister.PPUADDR);
-        }
-    };
-    Ppu.prototype._writePpuData = function () {
-        this._ppuMemory.set(this._currentVramReadAddress, this._memory.get(PpuRegister.PPUDATA));
-        var vramIncrement = ((this._memory.get(PpuRegister.PPUCTRL)) & (0x1 << PpuCtrlBits.Increment)) > 0x0
+    Ppu.prototype.write$2007 = function (dataByte) {
+        this._ppuMemory.set(this._vramAddress, dataByte);
+        var vramIncrement = (this._regPPUCTRL & (0x1 << PpuCtrlBits.Increment)) > 0x0
             ? 32
-            : 8;
-        this._currentVramReadAddress += vramIncrement;
+            : 1;
+        this._vramAddress += vramIncrement;
     };
-    Ppu.prototype._readPpuData = function () {
+    Ppu.prototype.read$2007 = function () {
+        var result = this._ppuDataReadBuffer;
+        this._ppuDataReadBuffer = this._ppuMemory.get(this._vramAddress);
+        var vramIncrement = (this._regPPUCTRL & (0x1 << PpuCtrlBits.Increment)) > 0x0
+            ? 32
+            : 1;
+        this._vramAddress += vramIncrement;
+        return result;
     };
-    Ppu.prototype._isPreRenderScanline = function () {
-        return this._scanlines === 262
-            ? true : false;
-    };
-    Ppu.prototype._isInVblankScanline = function () {
-        return this._scanlines >= 242 && this._scanlines <= 261
-            ? true : false;
+    Ppu.prototype.run = function (maxCycles) {
+        this._currentCyclesInRun = 0;
+        // We need to process the memory accesses and get it to a state where it is in 
+        // sync with the CPU in terms of time. We have kept a queue of memory operations 
+        // here to do just that. 
+        while (!this._ppuActionQueue.empty()) {
+        }
+        return this._currentCyclesInRun;
     };
     return Ppu;
 }());

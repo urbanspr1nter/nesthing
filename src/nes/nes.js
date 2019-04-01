@@ -3,13 +3,17 @@ exports.__esModule = true;
 var memory_1 = require("../memory/memory");
 var ppu_1 = require("../ppu/ppu");
 var cpu_1 = require("../cpu/cpu");
+var ppu_action_queue_1 = require("../ppu/ppu-action-queue");
 var fs = require("fs");
+var ppumemory_1 = require("../memory/ppumemory");
 var Nes = /** @class */ (function () {
     function Nes() {
         this._log = [];
-        this._memory = new memory_1.Memory();
-        this._ppu = new ppu_1.Ppu(this._memory);
-        this._cpu = new cpu_1.Cpu(this._memory, this._log);
+        this._ppuMemory = new ppumemory_1.PpuMemory();
+        this._ppuActionQueue = new ppu_action_queue_1.PpuActionQueue();
+        this._ppu = new ppu_1.Ppu(this._ppuMemory, this._ppuActionQueue);
+        this._memory = new memory_1.Memory(this._ppu);
+        this._cpu = new cpu_1.Cpu(this._memory, this._ppuActionQueue, this._log);
         this._initialize();
     }
     Nes.prototype.loadRom = function (romFilename) {
@@ -29,6 +33,12 @@ var Nes = /** @class */ (function () {
         for (var i = 0; i < romBytes.length && currentAddress <= 0xFFFF; i++, currentAddress++) {
             this._memory.set(currentAddress, romBytes[i]);
         }
+        // Load the CHR ROM
+        var chrRomAddress = 0x4000 + 1;
+        for (var i = 0x0000; i <= 0x1FFF; i++) {
+            this._ppuMemory.set(i, romBytes[chrRomAddress]);
+            chrRomAddress++;
+        }
     };
     Nes.prototype.run = function () {
         /**
@@ -39,24 +49,16 @@ var Nes = /** @class */ (function () {
         while (this._cpu.getCurrentCycles() <= 24) {
             var beginCpuCycles = this._cpu.getCurrentCycles();
             // If we are entering in VBLANK, Enter NMI handling routine!
-            if (this._ppu.getScanlines() === 242
-                && this._ppu.getCycles() === 2
-                && this._ppu.isVblankNmi()) {
-                this._cpu.handleNmiIrq();
-            }
-            else {
-                var opCode = this._memory.get(this._cpu.getPC());
-                this._cpu.handleOp(opCode);
-            }
+            // this._cpu.handleNmiIrq();
+            var opCode = this._memory.get(this._cpu.getPC());
+            this._cpu.handleOp(opCode);
             var cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
             // Run the PPU for the appropriate amount of cycles.
-            var ppuCyclesToRun = cpuCyclesRan * 3;
-            while (ppuCyclesToRun > 0) {
-                var ppuCyclesRan = this._ppu.run();
-                ppuCyclesToRun -= ppuCyclesRan;
-                // Fire a dot into the screen
-                // this._screen.doSOMETHING!
-            }
+            // let ppuCyclesToRun = cpuCyclesRan * 3;
+            // while(ppuCyclesToRun > 0) {
+            // const ppuCyclesRan = this._ppu.run(ppuCyclesToRun);                
+            // ppuCyclesToRun -= ppuCyclesRan;
+            //}
         }
         console.log("====== START CPU MEMORY ======");
         this._memory.printView();
@@ -78,7 +80,6 @@ var Nes = /** @class */ (function () {
         }
         this.loadRom('./DK.nes');
         this._cpu.powerUp();
-        this._ppu.powerOn();
     };
     return Nes;
 }());
