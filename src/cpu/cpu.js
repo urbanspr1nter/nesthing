@@ -90,7 +90,15 @@ var Cpu = /** @class */ (function () {
                 break;
             case cpu_interface_1.AddressingModes.Absolute:
             case cpu_interface_1.AddressingModes.AbsoluteIndirect:
-                byteString = "$" + (this._memRead(this._regPC.get() + 2)).toString(16).toUpperCase() + this._memRead(this._regPC.get() + 1).toString(16).toUpperCase();
+                var lowByte = this._memRead(this._regPC.get() + 1).toString(16).toUpperCase();
+                if (lowByte.length < 2) {
+                    lowByte = "0" + lowByte;
+                }
+                var highByte = this._memRead(this._regPC.get() + 2).toString(16).toUpperCase();
+                if (highByte.length < 2) {
+                    highByte = "0" + highByte + ";";
+                }
+                byteString = "$" + highByte + lowByte;
                 break;
             case cpu_interface_1.AddressingModes.Relative:
                 var displacement = this._memRead(this._regPC.get() + 1);
@@ -339,9 +347,9 @@ var Cpu = /** @class */ (function () {
         this.stackPush(currPcHigh);
         this.stackPush(currPcLow);
         this.stackPush(this._regP.get());
-        this.setStatusBit(cpu_interface_1.StatusBitPositions.InterruptDisable);
-        this._regPC.set((cpu_interface_1.NmiVectorLocation.High << 8) | cpu_interface_1.NmiVectorLocation.Low);
-        this._currentCycles += 7;
+        // this.setStatusBit(StatusBitPositions.InterruptDisable);
+        this._regPC.set((this._memRead(cpu_interface_1.NmiVectorLocation.High) << 8) | this._memRead(cpu_interface_1.NmiVectorLocation.Low));
+        // this._currentCycles += 7;
     };
     Cpu.prototype.adc = function (opCode) {
         var oldA = this._regA.get();

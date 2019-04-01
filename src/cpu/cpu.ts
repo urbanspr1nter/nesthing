@@ -12,7 +12,6 @@ import {
 } from './cpu.interface';
 import { CpuAddressingHelper } from './cpu-addressing-helper';
 import { PpuActionQueue } from '../ppu/ppu-action-queue';
-import { IPpuMemoryOperation, IPpuMemoryType } from '../ppu/ppu.interface';
 
 export class Cpu {
     private _ppuActionQueue: PpuActionQueue;
@@ -133,7 +132,16 @@ export class Cpu {
                 break;
             case AddressingModes.Absolute:
             case AddressingModes.AbsoluteIndirect:
-                byteString  = `$${(this._memRead(this._regPC.get() + 2)).toString(16).toUpperCase()}${this._memRead(this._regPC.get() + 1).toString(16).toUpperCase()}`;
+                let lowByte = this._memRead(this._regPC.get() + 1).toString(16).toUpperCase();
+                if(lowByte.length < 2) {
+                    lowByte = `0${lowByte}`;
+                }
+                let highByte = this._memRead(this._regPC.get() + 2).toString(16).toUpperCase();
+                if(highByte.length < 2) {
+                    highByte = `0${highByte};`
+                }
+
+                byteString  = `$${highByte}${lowByte}`;
                 break;
             case AddressingModes.Relative:
                 let displacement = this._memRead(this._regPC.get() + 1);
@@ -419,11 +427,11 @@ export class Cpu {
 
         this.stackPush(this._regP.get());
 
-        this.setStatusBit(StatusBitPositions.InterruptDisable);
+        // this.setStatusBit(StatusBitPositions.InterruptDisable);
 
-        this._regPC.set((NmiVectorLocation.High << 8) | NmiVectorLocation.Low);
+        this._regPC.set((this._memRead(NmiVectorLocation.High) << 8) | this._memRead(NmiVectorLocation.Low));
         
-        this._currentCycles += 7;
+        // this._currentCycles += 7;
     }
 
     public adc(opCode: number) {

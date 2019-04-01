@@ -94,9 +94,10 @@ export const IgnoredWritesBeforeWarmedUp = [
 const cpuCyclesToWarmUp = 29658;
 
 export class Ppu {
-    private _ppuActionQueue: PpuActionQueue;
+    private _cpuNmiIrq: boolean;
     private _ppuMemory: PpuMemory;
     private _oamMemory: OamMemory;
+
 
     private _ppuDataReadBuffer: number;
     private _tVramAddress: number;
@@ -108,10 +109,12 @@ export class Ppu {
     private _currentCyclesInRun: number;
     private _scanlines: number;
 
+    
     private _regPPUCTRL: number;
+    private _regPPUSTATUS: number;
 
     constructor(ppuMemory: PpuMemory, ppuActionQueue: PpuActionQueue) {
-        this._ppuActionQueue = ppuActionQueue;
+        this._cpuNmiIrq = false;
         this._ppuMemory = ppuMemory;
         this._oamMemory = new OamMemory();
 
@@ -125,6 +128,9 @@ export class Ppu {
 
         // PPUCTRL
         this._regPPUCTRL = 0;
+
+        // PPUSTATUS
+        this._regPPUSTATUS = 0;
     }
 
     public viewPpuMemory() {
@@ -145,6 +151,9 @@ export class Ppu {
 
         if(this._cycles > 341) {
             this._scanlines++;
+            if(this._scanlines === 261) {
+                this._scanlines = -1;
+            }
 
             const remaining = this._cycles - 341;
             this._cycles = remaining;
@@ -157,6 +166,14 @@ export class Ppu {
 
     public getScanlines() {
         return this._scanlines;
+    }
+
+    public write$2000(dataByte: number) {
+        this._regPPUCTRL = dataByte & 0xFF;
+    }
+
+    public write$2002(dataByte: number) {
+        this._regPPUSTATUS = dataByte & 0xFF;
     }
 
     public write$2006(dataByte: number) {
@@ -178,6 +195,14 @@ export class Ppu {
         this._vramAddress += vramIncrement;
     }
 
+    public read$2002() {
+        const currentStatus = this._regPPUSTATUS;
+        this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
+        this._isSecondWrite = false;
+
+        return currentStatus;
+    }
+
     public read$2007() {
         const result = this._ppuDataReadBuffer;
 
@@ -192,14 +217,53 @@ export class Ppu {
         return result;
     }
 
-    public run(maxCycles: number): number {
+    public cpuNmiIrqStatus(): boolean {
+        if(this._cpuNmiIrq) {
+            this._cpuNmiIrq = false;
+            return true;
+        }
+
+        return false;
+    }
+
+    public run(): number {
         this._currentCyclesInRun = 0;
         
-        // We need to process the memory accesses and get it to a state where it is in 
-        // sync with the CPU in terms of time. We have kept a queue of memory operations 
-        // here to do just that. 
-        while(!this._ppuActionQueue.empty()) {
+        if(this._scanlines === -1) {
+            console.log(`Pre-Render Scanline! ${this._scanlines}.`);
+            if(this._cycles === 0) {
+                // Idle Cycle
+                this.addPpuCyclesInRun(1);
+            } else if(this._cycles === 1) {
+                this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
+                this.addPpuCyclesInRun(1);
+            } else {
+                this.addPpuCyclesInRun(1);
+            }
+        } else if(this._scanlines >= 0 && this._scanlines <= 239) {
+            console.log(`Visible Scanlines! ${this._scanlines}.`);
+            this.addPpuCyclesInRun(1);
+        } else if(this._scanlines === 240) {
+            console.log(`Post-Render Scanline! ${this._scanlines}.`);
+            this.addPpuCyclesInRun(1);
+        } else if(this._scanlines >= 241 && this._scanlines <= 260) {
+            console.log(`VBLANK! ${this._scanlines}.`);
+
+            if(this._scanlines === 241 && this._cycles === 0) {
+                // Idle cycle.
+                this.addPpuCyclesInRun(1);
+            } else if(this._scanlines === 241 && this._cycles === 1) {
+                this._regPPUSTATUS = this._regPPUSTATUS | (0x1 << PpuStatusBits.VblankStarted);
+                // Request an interrupt
+                this._cpuNmiIrq = true;
+                this.addPpuCyclesInRun(1);
+            } else {
+                this.addPpuCyclesInRun(1);
+            }
         }
+
+        let debugOutput = `--> PPU Cycles ${this._currentCyclesInRun}. Total: ${this._cycles}, Scanline: ${this._scanlines}`;
+        console.log(debugOutput);
 
         return this._currentCyclesInRun;
     }

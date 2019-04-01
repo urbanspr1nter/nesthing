@@ -36,7 +36,9 @@ export class Memory {
         } else if(address >= 0x2000 && address <= 0x3FFF) {
             // PPU registers
             const decodedAddress = (0x20 << 8) | (address & 0x0007);
-            if(decodedAddress === 0x2006) {
+            if(decodedAddress === 0x2000) {
+                this._ppu.write$2000(value);
+            } else if(decodedAddress === 0x2006) {
                 this._ppu.write$2006(value);
             } else if(decodedAddress === 0x2007) {
                 this._ppu.write$2007(value);
@@ -51,10 +53,11 @@ export class Memory {
     public get(address: number): number {
         if(address >= 0x2000 && address <= 0x3FFF) {
             const decodedAddress = (0x20 << 8) | (address & 0x0007);
-            if(decodedAddress === 0x2006) {
+            if(decodedAddress === 0x2002) {
+                return this._ppu.read$2002();
+            } else if(decodedAddress === 0x2006) {
                 // Not available for reading!
-            }
-            if(decodedAddress === 0x2007) {
+            } else if(decodedAddress === 0x2007) {
                 return this._ppu.read$2007();
             } else {
                 return this._memory[decodedAddress];

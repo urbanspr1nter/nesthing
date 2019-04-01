@@ -46,19 +46,21 @@ var Nes = /** @class */ (function () {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while (this._cpu.getCurrentCycles() <= 24) {
+        while (this._cpu.getCurrentCycles() <= 30000) {
             var beginCpuCycles = this._cpu.getCurrentCycles();
             // If we are entering in VBLANK, Enter NMI handling routine!
-            // this._cpu.handleNmiIrq();
+            if (this._ppu.cpuNmiIrqStatus()) {
+                this._cpu.handleNmiIrq();
+            }
             var opCode = this._memory.get(this._cpu.getPC());
             this._cpu.handleOp(opCode);
             var cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
             // Run the PPU for the appropriate amount of cycles.
-            // let ppuCyclesToRun = cpuCyclesRan * 3;
-            // while(ppuCyclesToRun > 0) {
-            // const ppuCyclesRan = this._ppu.run(ppuCyclesToRun);                
-            // ppuCyclesToRun -= ppuCyclesRan;
-            //}
+            var ppuCyclesToRun = cpuCyclesRan * 3;
+            while (ppuCyclesToRun > 0) {
+                var ppuCyclesRan = this._ppu.run();
+                ppuCyclesToRun -= ppuCyclesRan;
+            }
         }
         console.log("====== START CPU MEMORY ======");
         this._memory.printView();
