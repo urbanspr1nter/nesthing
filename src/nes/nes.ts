@@ -67,7 +67,7 @@ export class Nes {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!
-            if(this._ppu.cpuNmiIrqStatus()) {
+            if(this._ppu.cpuNmiIrqStatus() && ((this._ppu.read$2000() & 0x80) > 0x0)) {
                 this._cpu.handleNmiIrq();
             }
 

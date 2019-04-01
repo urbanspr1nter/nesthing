@@ -53,7 +53,10 @@ var Memory = /** @class */ (function () {
     Memory.prototype.get = function (address) {
         if (address >= 0x2000 && address <= 0x3FFF) {
             var decodedAddress = (0x20 << 8) | (address & 0x0007);
-            if (decodedAddress === 0x2002) {
+            if (decodedAddress === 0x2000) {
+                return this._ppu.read$2000();
+            }
+            else if (decodedAddress === 0x2002) {
                 return this._ppu.read$2002();
             }
             else if (decodedAddress === 0x2006) {

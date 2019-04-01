@@ -195,6 +195,10 @@ export class Ppu {
         this._vramAddress += vramIncrement;
     }
 
+    public read$2000() {
+        return this._regPPUCTRL;
+    }
+
     public read$2002() {
         const currentStatus = this._regPPUSTATUS;
         this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
@@ -230,7 +234,6 @@ export class Ppu {
         this._currentCyclesInRun = 0;
         
         if(this._scanlines === -1) {
-            console.log(`Pre-Render Scanline! ${this._scanlines}.`);
             if(this._cycles === 0) {
                 // Idle Cycle
                 this.addPpuCyclesInRun(1);
@@ -241,8 +244,19 @@ export class Ppu {
                 this.addPpuCyclesInRun(1);
             }
         } else if(this._scanlines >= 0 && this._scanlines <= 239) {
-            console.log(`Visible Scanlines! ${this._scanlines}.`);
-            this.addPpuCyclesInRun(1);
+            if(this._cycles == 0) {
+                this.addPpuCyclesInRun(1);
+            } else if(this._cycles >= 1 && this._cycles <= 256) {
+                // Memory fetch cycles.
+                this.addPpuCyclesInRun(1);
+            } else if(this._cycles >= 257 && this._cycles <= 320) {
+                // Garbage fetch
+                this.addPpuCyclesInRun(1);
+            } else if(this._cycles >= 321 && this._cycles <= 336) {
+                this.addPpuCyclesInRun(1);
+            } else if(this._cycles >= 337 && this._cycles <= 340) {
+                this.addPpuCyclesInRun(1);
+            }
         } else if(this._scanlines === 240) {
             console.log(`Post-Render Scanline! ${this._scanlines}.`);
             this.addPpuCyclesInRun(1);

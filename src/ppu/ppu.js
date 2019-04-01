@@ -144,6 +144,9 @@ var Ppu = /** @class */ (function () {
             : 1;
         this._vramAddress += vramIncrement;
     };
+    Ppu.prototype.read$2000 = function () {
+        return this._regPPUCTRL;
+    };
     Ppu.prototype.read$2002 = function () {
         var currentStatus = this._regPPUSTATUS;
         this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
