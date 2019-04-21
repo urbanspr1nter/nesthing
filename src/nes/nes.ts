@@ -50,10 +50,16 @@ export class Nes {
         }
 
         // Load the CHR ROM
-        let chrRomAddress = 0x4000 + 1;
+        let chrRomAddress = 0x4000;
         for(let i = 0x0000; i <= 0x1FFF; i++) {
             this._ppuMemory.set(i, romBytes[chrRomAddress]);
             chrRomAddress++;
+        }
+
+        // Initialize the nametables to $00
+        let ntStartAddress = 0x2000;
+        for(let i = ntStartAddress; i < 0x3F00; i++) {
+            this._ppuMemory.set(i, 0x00);
         }
     }
 

@@ -34,10 +34,15 @@ var Nes = /** @class */ (function () {
             this._memory.set(currentAddress, romBytes[i]);
         }
         // Load the CHR ROM
-        var chrRomAddress = 0x4000 + 1;
+        var chrRomAddress = 0x4000;
         for (var i = 0x0000; i <= 0x1FFF; i++) {
             this._ppuMemory.set(i, romBytes[chrRomAddress]);
             chrRomAddress++;
+        }
+        // Initialize the nametables to $00
+        var ntStartAddress = 0x2000;
+        for (var i = ntStartAddress; i < 0x3F00; i++) {
+            this._ppuMemory.set(i, 0x00);
         }
     };
     Nes.prototype.run = function () {
