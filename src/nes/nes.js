@@ -51,7 +51,7 @@ var Nes = /** @class */ (function () {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while (this._cpu.getCurrentCycles() <= 30000) {
+        while (this._cpu.getCurrentCycles() <= 1161800) {
             var beginCpuCycles = this._cpu.getCurrentCycles();
             // If we are entering in VBLANK, Enter NMI handling routine!
             if (this._ppu.cpuNmiIrqStatus() && ((this._ppu.read$2000() & 0x80) > 0x0)) {

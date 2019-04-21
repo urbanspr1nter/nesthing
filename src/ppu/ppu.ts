@@ -203,6 +203,7 @@ export class Ppu {
             this._isSecondWrite = true;
         } else {
             this._vramAddress = ((this._tVramAddress << 8) | dataByte) & 0x3FFF;
+            this._isSecondWrite = false;
         }
     }
 
@@ -226,7 +227,6 @@ export class Ppu {
 
     public read$2007() {
         const result = this._ppuDataReadBuffer;
-
         this._ppuDataReadBuffer = this._ppuMemory.get(this._vramAddress);
 
         this.incrementVramAddress(); 
@@ -381,7 +381,7 @@ export class Ppu {
                 
                 // Fetch NT Byte
                 const ntByteIndex = (this._vramAddress & 0xFFF) + this._getBaseNametableAddress();
-                console.log(`NT BYTE INDEX: ${ntByteIndex.toString(16).toUpperCase()}`);
+                // console.log(`NT BYTE INDEX: ${ntByteIndex.toString(16).toUpperCase()}`);
                 this.incrementVramAddress();
 
                 this.addPpuCyclesInRun(2);
@@ -410,7 +410,7 @@ export class Ppu {
         }
 
         let debugOutput = `--> PPU Cycles ${this._currentCyclesInRun}. Total: ${this._cycles}, Scanline: ${this._scanlines}`;
-        console.log(debugOutput);
+        // console.log(debugOutput);
 
         return this._currentCyclesInRun;
     }

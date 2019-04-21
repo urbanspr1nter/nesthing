@@ -69,7 +69,7 @@ export class Nes {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while(this._cpu.getCurrentCycles() <= 30000) {
+        while(this._cpu.getCurrentCycles() <= 1161800) {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!

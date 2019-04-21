@@ -19,33 +19,9 @@ var Cpu = /** @class */ (function () {
         this._ppuActionQueue = ppuActionQueue;
     }
     Cpu.prototype._memWrite = function (address, data) {
-        /*
-        const isPpuAddress = address >= 0x2000 && address <= 0x3FFF ? true : false;
-
-        if(isPpuAddress) {
-            this._ppuActionQueue.enqueue({
-                operation: IPpuMemoryOperation.Write,
-                address: (0X20 << 8) | (address & 0x0007),
-                data: data,
-                type: IPpuMemoryType.Ppu
-            });
-        } else {
-            this._memory.set(address, data);
-        }*/
         this._memory.set(address, data);
     };
     Cpu.prototype._memRead = function (address) {
-        /*
-         const isPpuAddress = address >= 0x2000 && address <= 0x3FFF ? true : false;
- 
-         if(isPpuAddress) {
-             this._ppuActionQueue.enqueue({
-                 operation: IPpuMemoryOperation.Read,
-                 address: (0X20 << 8) | (address & 0x0007),
-                 data: undefined,
-                 type: IPpuMemoryType.Ppu
-             });
-         }*/
         return this._memory.get(address);
     };
     Cpu.prototype.getLogEntry = function (opcode) {
@@ -172,26 +148,6 @@ var Cpu = /** @class */ (function () {
                 return "";
         }
     };
-    /*
-    public getPpuLog() {
-        const scanlineCycles = this._currentPpuScanlineCycles;
-        const scanlineCyclesString = scanlineCycles.toString();
-
-        let formattedScanlineCyclesString = scanlineCyclesString;
-        for(let i = 0; i < (3 - scanlineCyclesString.length); i++) {
-            formattedScanlineCyclesString = ' ' + formattedScanlineCyclesString;
-        }
-
-        const scanlines = this._currentScanlines;
-        const scanlinesString = scanlines.toString();
-
-        let formattedScanlinesString = scanlinesString;
-        for(let i = 0; i < (3 - scanlinesString.length); i++) {
-            formattedScanlinesString = ' ' + formattedScanlinesString;
-        }
-
-        return `PPU:${formattedScanlineCyclesString},${formattedScanlinesString}`;
-    }*/
     Cpu.prototype.getCpuCycleLog = function () {
         return "CYC:" + this._currentCycles;
     };
@@ -226,8 +182,8 @@ var Cpu = /** @class */ (function () {
     };
     Cpu.prototype.powerUp = function () {
         // Need to set to 0x24 if using nestest ROM.
-        // this._regP.set(0x24);
-        this._regP.set(0x34);
+        this._regP.set(0x24);
+        // this._regP.set(0x34);
         this._regA.set(0);
         this._regX.set(0);
         this._regY.set(0);
@@ -250,7 +206,7 @@ var Cpu = /** @class */ (function () {
         var highByte = this._memRead(cpu_interface_1.ResetVectorLocation.High);
         this._regPC.set((highByte << 8) | lowByte);
         // Perform an IRQ Operation
-        this._currentCycles = 7;
+        // this._currentCycles = 7;
     };
     Cpu.prototype.stackPush = function (data) {
         var address = 0x100 | (this._regSP.get());
@@ -347,9 +303,9 @@ var Cpu = /** @class */ (function () {
         this.stackPush(currPcHigh);
         this.stackPush(currPcLow);
         this.stackPush(this._regP.get());
-        // this.setStatusBit(StatusBitPositions.InterruptDisable);
+        this.setStatusBit(cpu_interface_1.StatusBitPositions.InterruptDisable);
         this._regPC.set((this._memRead(cpu_interface_1.NmiVectorLocation.High) << 8) | this._memRead(cpu_interface_1.NmiVectorLocation.Low));
-        // this._currentCycles += 7;
+        this._currentCycles += 7;
     };
     Cpu.prototype.adc = function (opCode) {
         var oldA = this._regA.get();

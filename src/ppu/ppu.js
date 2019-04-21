@@ -160,6 +160,7 @@ var Ppu = /** @class */ (function () {
         }
         else {
             this._vramAddress = ((this._tVramAddress << 8) | dataByte) & 0x3FFF;
+            this._isSecondWrite = false;
         }
     };
     Ppu.prototype.write$2007 = function (dataByte) {
@@ -312,7 +313,7 @@ var Ppu = /** @class */ (function () {
                  */
                 // Fetch NT Byte
                 var ntByteIndex = (this._vramAddress & 0xFFF) + this._getBaseNametableAddress();
-                console.log("NT BYTE INDEX: " + ntByteIndex.toString(16).toUpperCase());
+                // console.log(`NT BYTE INDEX: ${ntByteIndex.toString(16).toUpperCase()}`);
                 this.incrementVramAddress();
                 this.addPpuCyclesInRun(2);
             }
@@ -346,7 +347,7 @@ var Ppu = /** @class */ (function () {
             }
         }
         var debugOutput = "--> PPU Cycles " + this._currentCyclesInRun + ". Total: " + this._cycles + ", Scanline: " + this._scanlines;
-        console.log(debugOutput);
+        // console.log(debugOutput);
         return this._currentCyclesInRun;
     };
     return Ppu;
