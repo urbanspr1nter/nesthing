@@ -23,7 +23,7 @@ export class PpuMemory {
     public printView() {
         let output = "";
         for(let i = 0; i <= MaxMemoryAddress; i++) {
-            if(i % 0x10 === 0) {
+            if(i % 0x20 === 0) {
                 let label = i.toString(16).toUpperCase();
                 let padding = 4 - label.length;
                 for(let j = 0; j < padding; j++) {

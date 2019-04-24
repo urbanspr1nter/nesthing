@@ -18,7 +18,7 @@ var PpuMemory = /** @class */ (function () {
     PpuMemory.prototype.printView = function () {
         var output = "";
         for (var i = 0; i <= MaxMemoryAddress; i++) {
-            if (i % 0x10 === 0) {
+            if (i % 0x20 === 0) {
                 var label = i.toString(16).toUpperCase();
                 var padding = 4 - label.length;
                 for (var j = 0; j < padding; j++) {

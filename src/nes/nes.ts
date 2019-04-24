@@ -1,7 +1,6 @@
 import { Memory } from '../memory/memory';
 import { Ppu } from '../ppu/ppu';
 import { Cpu } from '../cpu/cpu';
-import { PpuActionQueue } from '../ppu/ppu-action-queue';
 import * as fs from 'fs';
 import { PpuMemory } from '../memory/ppumemory';
 
@@ -10,7 +9,6 @@ export class Nes {
     private _ppuMemory: PpuMemory;
     private _ppu: Ppu;
     private _cpu: Cpu;
-    private _ppuActionQueue: PpuActionQueue;
 
     private _log: string[];
 
@@ -20,12 +18,13 @@ export class Nes {
         this._log = [];
         this._ppuMemory = new PpuMemory();
 
-        this._ppuActionQueue = new PpuActionQueue();
-        this._ppu = new Ppu(this._ppuMemory, this._ppuActionQueue);
+        this._ppu = new Ppu(this._ppuMemory);
         this._memory = new Memory(this._ppu);
-        this._cpu = new Cpu(this._memory, this._ppuActionQueue, this._log);
+        this._cpu = new Cpu(this._memory, this._log);
 
         this._initialize();
+
+        this._cpu.debugMode(false);
     }
 
     public loadRom(romFilename: string) {
@@ -69,7 +68,7 @@ export class Nes {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while(this._cpu.getCurrentCycles() <= 1161800) {
+        while(this._cpu.getCurrentCycles() <= 10000000) {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!
@@ -92,18 +91,35 @@ export class Nes {
         }
 
         
-        console.log("====== START CPU MEMORY ======")
-        this._memory.printView();
-        console.log("====== END CPU MEMORY ======")
+        //console.log("====== START CPU MEMORY ======")
+        //this._memory.printView();
+        //console.log("====== END CPU MEMORY ======")
 
 
-        console.log("====== START OAM MEMORY ======")
-        this._ppu.viewOamMemory();
-        console.log("====== END OAM MEMORY ======")
+        //console.log("====== START OAM MEMORY ======")
+        //this._ppu.viewOamMemory();
+        //console.log("====== END OAM MEMORY ======")
 
-        console.log("====== START PPU MEMORY ======")
-        this._ppu.viewPpuMemory();
-        console.log("====== END PPU MEMORY ======")
+        //console.log("====== START PPU MEMORY ======")
+        //this._ppu.viewPpuMemory();
+        //console.log("====== END PPU MEMORY ======")
+
+        for(let i = 0x2000; i < 0x23BF; i++) {
+            this._ppu.fetchPatternTileBytes(this._ppuMemory.get(i), i);
+        }
+        const fb = this._ppu.frameBuffer();
+
+        let output = '';
+        for(let i = 0; i < 240; i++) {
+            for(let j = 0; j < 256; j++) {
+                output += (fb[i][j] ? '□' : '■') + ' ';
+            }
+            output += '\n';
+        }
+
+        console.log(`<div style="font-size: 0.01em"><pre>`)
+        console.log(output);
+        console.log(`</pre></div>`);
     }
 
     private _initialize() {

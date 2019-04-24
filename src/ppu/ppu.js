@@ -77,7 +77,7 @@ exports.IgnoredWritesBeforeWarmedUp = [
 // --> PPUSCROLL and PPLUADDR Latches will not toggle.
 var cpuCyclesToWarmUp = 29658;
 var Ppu = /** @class */ (function () {
-    function Ppu(ppuMemory, ppuActionQueue) {
+    function Ppu(ppuMemory) {
         this._initializeFrameBuffer();
         this._cpuNmiIrq = false;
         this._ppuMemory = ppuMemory;
@@ -92,6 +92,9 @@ var Ppu = /** @class */ (function () {
         this._regPPUMASK = 0;
         this._regPPUSTATUS = 0;
     }
+    Ppu.prototype.vramAddress = function () {
+        return this._vramAddress;
+    };
     /**
      * Initializes the frame buffer.
      *
@@ -209,7 +212,39 @@ var Ppu = /** @class */ (function () {
         }
         return 0x2000;
     };
-    Ppu.prototype._fetchPatternTileByte = function (patternIndex) {
+    Ppu.prototype.fetchPatternTileBytes = function (patternIndex, nametableAddress) {
+        var baseAddress = (this._regPPUCTRL & (0x1 << PpuCtrlBits.BackgroundTileSelect)) === 0
+            ? 0x0000 : 0x1000;
+        var patternStartAddress = baseAddress + (0x10 * patternIndex);
+        var fbTileRow = parseInt(((nametableAddress % 0x2000) / 0x20).toString());
+        var fbTileCol = parseInt(((nametableAddress % 0x2000) % 0x20).toString());
+        for (var i = patternStartAddress; i < patternStartAddress + 8; i++) {
+            var currPatternLow = this._ppuMemory.get(i);
+            var currPatternHigh = this._ppuMemory.get(i + 8);
+            var merged = 0x0;
+            var mask = 0x1;
+            for (var j = 0; j < 8; j++) {
+                var lowBit = (currPatternLow & (mask << j)) > 0 ? 1 : 0;
+                var highBit = (currPatternHigh & (mask << j)) > 0 ? 1 : 0;
+                var mergedBits = (highBit << 1) | lowBit;
+                merged = merged | (mergedBits << j);
+            }
+            // NOW we have a ROW BYTE. 
+            //  1. Get the current row in the frame buffer. We know row for the current tile being processed.
+            //  2. Translate the tile ROW to the startin row coordinate in the frame buffer
+            var fbRow = (fbTileRow * 8) + (i - patternStartAddress);
+            //  3. Find the column to begin dropping the bits.
+            var fbCol = fbTileCol * 8;
+            //  4. Start shift at 0;
+            var shift = 0;
+            for (var k = fbCol; k < fbCol + 8; k++) {
+                if (!this._frameBuffer[fbRow]) {
+                    break;
+                }
+                this._frameBuffer[fbRow][k] = (merged & (0x80 >> shift)) > 0 ? 1 : 0;
+                shift++;
+            }
+        }
     };
     /**
      * Converts an address from the name table to an attribute table address.
@@ -314,7 +349,7 @@ var Ppu = /** @class */ (function () {
                 // Fetch NT Byte
                 var ntByteIndex = (this._vramAddress & 0xFFF) + this._getBaseNametableAddress();
                 // console.log(`NT BYTE INDEX: ${ntByteIndex.toString(16).toUpperCase()}`);
-                this.incrementVramAddress();
+                //this.incrementVramAddress();
                 this.addPpuCyclesInRun(2);
             }
             else if (this._cycles >= 257 && this._cycles <= 320) {

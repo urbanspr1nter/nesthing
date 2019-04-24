@@ -5,7 +5,8 @@ var double_byte_register_1 = require("./double-byte-register");
 var cpu_interface_1 = require("./cpu.interface");
 var cpu_addressing_helper_1 = require("./cpu-addressing-helper");
 var Cpu = /** @class */ (function () {
-    function Cpu(memory, ppuActionQueue, log) {
+    function Cpu(memory, log) {
+        this._dbg = false;
         this._currentCycles = 0;
         this._log = log;
         this._memory = memory;
@@ -16,8 +17,10 @@ var Cpu = /** @class */ (function () {
         this._regPC = new double_byte_register_1.DoubleByteRegister(0x00);
         this._regSP = new byte_register_1.ByteRegister(0x00);
         this._regP = new byte_register_1.ByteRegister(0x00);
-        this._ppuActionQueue = ppuActionQueue;
     }
+    Cpu.prototype.debugMode = function (value) {
+        this._dbg = value;
+    };
     Cpu.prototype._memWrite = function (address, data) {
         this._memory.set(address, data);
     };
@@ -3227,9 +3230,11 @@ var Cpu = /** @class */ (function () {
         }
     };
     Cpu.prototype.handleOp = function (opCode) {
-        var logEntry = this.getLogEntry(opCode);
-        this._log.push(logEntry);
-        console.log(logEntry);
+        if (this._dbg) {
+            var logEntry = this.getLogEntry(opCode);
+            this._log.push(logEntry);
+            console.log(logEntry);
+        }
         switch (opCode) {
             case 0x00:
                 this.brk(opCode);

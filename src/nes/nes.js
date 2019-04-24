@@ -3,18 +3,17 @@ exports.__esModule = true;
 var memory_1 = require("../memory/memory");
 var ppu_1 = require("../ppu/ppu");
 var cpu_1 = require("../cpu/cpu");
-var ppu_action_queue_1 = require("../ppu/ppu-action-queue");
 var fs = require("fs");
 var ppumemory_1 = require("../memory/ppumemory");
 var Nes = /** @class */ (function () {
     function Nes() {
         this._log = [];
         this._ppuMemory = new ppumemory_1.PpuMemory();
-        this._ppuActionQueue = new ppu_action_queue_1.PpuActionQueue();
-        this._ppu = new ppu_1.Ppu(this._ppuMemory, this._ppuActionQueue);
+        this._ppu = new ppu_1.Ppu(this._ppuMemory);
         this._memory = new memory_1.Memory(this._ppu);
-        this._cpu = new cpu_1.Cpu(this._memory, this._ppuActionQueue, this._log);
+        this._cpu = new cpu_1.Cpu(this._memory, this._log);
         this._initialize();
+        this._cpu.debugMode(false);
     }
     Nes.prototype.loadRom = function (romFilename) {
         // For now, we can only load Donkey Kong
@@ -51,7 +50,7 @@ var Nes = /** @class */ (function () {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while (this._cpu.getCurrentCycles() <= 1161800) {
+        while (this._cpu.getCurrentCycles() <= 10000000) {
             var beginCpuCycles = this._cpu.getCurrentCycles();
             // If we are entering in VBLANK, Enter NMI handling routine!
             if (this._ppu.cpuNmiIrqStatus() && ((this._ppu.read$2000() & 0x80) > 0x0)) {
@@ -67,15 +66,29 @@ var Nes = /** @class */ (function () {
                 ppuCyclesToRun -= ppuCyclesRan;
             }
         }
-        console.log("====== START CPU MEMORY ======");
-        this._memory.printView();
-        console.log("====== END CPU MEMORY ======");
-        console.log("====== START OAM MEMORY ======");
-        this._ppu.viewOamMemory();
-        console.log("====== END OAM MEMORY ======");
-        console.log("====== START PPU MEMORY ======");
-        this._ppu.viewPpuMemory();
-        console.log("====== END PPU MEMORY ======");
+        //console.log("====== START CPU MEMORY ======")
+        //this._memory.printView();
+        //console.log("====== END CPU MEMORY ======")
+        //console.log("====== START OAM MEMORY ======")
+        //this._ppu.viewOamMemory();
+        //console.log("====== END OAM MEMORY ======")
+        //console.log("====== START PPU MEMORY ======")
+        //this._ppu.viewPpuMemory();
+        //console.log("====== END PPU MEMORY ======")
+        for (var i = 0x2000; i < 0x23BF; i++) {
+            this._ppu.fetchPatternTileBytes(this._ppuMemory.get(i), i);
+        }
+        var fb = this._ppu.frameBuffer();
+        var output = '';
+        for (var i = 0; i < 240; i++) {
+            for (var j = 0; j < 256; j++) {
+                output += (fb[i][j] ? '□' : '■') + ' ';
+            }
+            output += '\n';
+        }
+        console.log("<div style=\"font-size: 0.01em\"><pre>");
+        console.log(output);
+        console.log("</pre></div>");
     };
     Nes.prototype._initialize = function () {
         this._screen = [];

@@ -11,10 +11,9 @@ import {
     StatusBitPositions 
 } from './cpu.interface';
 import { CpuAddressingHelper } from './cpu-addressing-helper';
-import { PpuActionQueue } from '../ppu/ppu-action-queue';
 
 export class Cpu {
-    private _ppuActionQueue: PpuActionQueue;
+    private _dbg: boolean;
     private _memory: Memory;
     private _addressingHelper: CpuAddressingHelper;
 
@@ -30,7 +29,9 @@ export class Cpu {
 
     private _log: string[];
 
-    constructor(memory: Memory, ppuActionQueue: PpuActionQueue, log: string[]) {
+    constructor(memory: Memory, log: string[]) {
+        this._dbg = false;
+
         this._currentCycles = 0;
 
         this._log = log;
@@ -43,8 +44,10 @@ export class Cpu {
         this._regPC = new DoubleByteRegister(0x00);
         this._regSP = new ByteRegister(0x00);
         this._regP = new ByteRegister(0x00);
+    }
 
-        this._ppuActionQueue = ppuActionQueue;
+    public debugMode(value: boolean): void {
+        this._dbg = value;
     }
 
     private _memWrite(address: number, data: number) {
@@ -3658,11 +3661,11 @@ export class Cpu {
     }
 
     public handleOp(opCode: number) {
-        const logEntry = this.getLogEntry(opCode);
-
-        this._log.push(logEntry);
-
-        console.log(logEntry);
+        if(this._dbg) {
+            const logEntry = this.getLogEntry(opCode);
+            this._log.push(logEntry);
+            console.log(logEntry);
+        }
 
         switch(opCode) {
             case 0x00:
