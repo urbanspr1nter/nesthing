@@ -2,4 +2,4 @@ import { Nes } from './nes';
 
 const nes = new Nes();
 
-nes.run();
+nes.run(10);

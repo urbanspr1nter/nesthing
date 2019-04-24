@@ -1,8 +1,10 @@
 import { Memory } from '../memory/memory';
 import { Ppu } from '../ppu/ppu';
 import { Cpu } from '../cpu/cpu';
-import * as fs from 'fs';
 import { PpuMemory } from '../memory/ppumemory';
+import * as rom from './rom.json';
+
+const ROM_FILE = './DK.nes';
 
 export class Nes {
     private _memory: Memory;
@@ -11,8 +13,6 @@ export class Nes {
     private _cpu: Cpu;
 
     private _log: string[];
-
-    private _screen: number[][];
 
     constructor() {
         this._log = [];
@@ -27,11 +27,15 @@ export class Nes {
         this._cpu.debugMode(false);
     }
 
-    public loadRom(romFilename: string) {
+    public frameBuffer(): number[][] {
+        return this._ppu.frameBuffer();
+    }
+
+    public loadRom() {
         // For now, we can only load Donkey Kong
         const romBytes: number[] = [];
 
-        let romContents = fs.readFileSync(romFilename);
+        const romContents = rom.raw;
         romContents.forEach((value) => {
             romBytes.push(value);
         });
@@ -62,13 +66,13 @@ export class Nes {
         }
     }
 
-    public run() {
+    public run(cpuCycles: number) {
         /**
          * The general approach to this run loop is to simulate both the CPU, PPU and APU 
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while(this._cpu.getCurrentCycles() <= 10000000) {
+        while(this._cpu.getCurrentCycles() <= cpuCycles) {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!
@@ -87,23 +91,12 @@ export class Nes {
                 const ppuCyclesRan = this._ppu.run();                
                 ppuCyclesToRun -= ppuCyclesRan;
             }
-        
         }
 
-        
-        //console.log("====== START CPU MEMORY ======")
-        //this._memory.printView();
-        //console.log("====== END CPU MEMORY ======")
+        this.debugDrawFrameBuffer();
+    }
 
-
-        //console.log("====== START OAM MEMORY ======")
-        //this._ppu.viewOamMemory();
-        //console.log("====== END OAM MEMORY ======")
-
-        //console.log("====== START PPU MEMORY ======")
-        //this._ppu.viewPpuMemory();
-        //console.log("====== END PPU MEMORY ======")
-
+    public debugDrawFrameBuffer() {
         for(let i = 0x2000; i < 0x23BF; i++) {
             this._ppu.fetchPatternTileBytes(this._ppuMemory.get(i), i);
         }
@@ -117,21 +110,29 @@ export class Nes {
             output += '\n';
         }
 
-        console.log(`<div style="font-size: 0.01em"><pre>`)
-        console.log(output);
-        console.log(`</pre></div>`);
+        //console.log(output);
+    }
+
+    public debugPrintCpuMemory() {
+        console.log("====== START CPU MEMORY ======")
+        this._memory.printView();
+        console.log("====== END CPU MEMORY ======")
+    }
+
+    public debugPrintOamMemory() {
+        console.log("====== START OAM MEMORY ======")
+        this._ppu.viewOamMemory();
+        console.log("====== END OAM MEMORY ======")
+    }
+
+    public debugPrintPpuMemory() {
+        console.log("====== START PPU MEMORY ======")
+        this._ppu.viewPpuMemory();
+        console.log("====== END PPU MEMORY ======")
     }
 
     private _initialize() {
-        this._screen = [];
-        for(let i = 0; i < 256; i++) {
-            this._screen[i] = [];
-            for(let j = 0; j < 240; j++) {
-                this._screen[i].push(0x00);
-            }
-        }
-
-        this.loadRom('./DK.nes');
+        this.loadRom();
         this._cpu.powerUp();
     }
 }
