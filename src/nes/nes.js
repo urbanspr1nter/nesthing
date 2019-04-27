@@ -19,6 +19,22 @@ var Nes = /** @class */ (function () {
     Nes.prototype.frameBuffer = function () {
         return this._ppu.frameBuffer();
     };
+    Nes.prototype.cpuMemory = function () {
+        return this._memory.bits;
+    };
+    Nes.prototype.ppuMemory = function () {
+        return this._ppuMemory.bits;
+    };
+    Nes.prototype.cpuRegisters = function () {
+        return {
+            pc: this._cpu.getPC(),
+            a: this._cpu.getA(),
+            x: this._cpu.getX(),
+            y: this._cpu.getY(),
+            sp: this._cpu.getSP(),
+            p: this._cpu.getP()
+        };
+    };
     Nes.prototype.loadRom = function () {
         // For now, we can only load Donkey Kong
         var romBytes = [];
@@ -84,7 +100,6 @@ var Nes = /** @class */ (function () {
             }
             output += '\n';
         }
-        //console.log(output);
     };
     Nes.prototype.debugPrintCpuMemory = function () {
         console.log("====== START CPU MEMORY ======");

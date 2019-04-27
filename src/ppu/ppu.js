@@ -1,6 +1,8 @@
 "use strict";
 exports.__esModule = true;
 var oammemory_1 = require("../memory/oammemory");
+var ColorPalette = require("../utils/colors.json");
+exports.NesPpuPalette = ColorPalette;
 // Background Shift Registers
 exports.TileShiftRegister1 = {
     HighByte: 0,
@@ -91,6 +93,7 @@ var Ppu = /** @class */ (function () {
         this._regPPUCTRL = 0;
         this._regPPUMASK = 0;
         this._regPPUSTATUS = 0;
+        console.log(JSON.stringify(exports.NesPpuPalette));
     }
     Ppu.prototype.vramAddress = function () {
         return this._vramAddress;
@@ -110,7 +113,7 @@ var Ppu = /** @class */ (function () {
         for (var i = 0; i < 240; i++) {
             this._frameBuffer.push([]);
             for (var j = 0; j < 256; j++) {
-                this._frameBuffer[i].push(0x00);
+                this._frameBuffer[i].push({ r: 0, g: 0, b: 0 });
             }
         }
     };
@@ -212,6 +215,113 @@ var Ppu = /** @class */ (function () {
         }
         return 0x2000;
     };
+    Ppu.prototype._mergeTileLowAndHighBytesToRowBits = function (lowByte, highByte) {
+        var merged = 0x0;
+        var mask = 0x1;
+        var bits = [0, 0, 0, 0, 0, 0, 0, 0];
+        for (var j = 0; j < 8; j++) {
+            var lowBit = (lowByte & (mask << j)) > 0 ? 1 : 0;
+            var highBit = (highByte & (mask << j)) > 0 ? 1 : 0;
+            var mergedBits = (highBit << 1) | lowBit;
+            bits[7 - j] = mergedBits;
+        }
+        return bits;
+    };
+    Ppu.prototype._getPixelColorsForRowBits = function (nameTableAddress, rowBits) {
+        // NT: 0010 NNYY YYYX XXXX
+        //            || |||| ||||
+        //            \____/ \___/
+        //            Tile Y  Tile X
+        // Example:
+        //  Given a nametable address 0x2083:
+        //  0010 0000 1000 0011
+        //
+        //  Tile Y = 0x00100 -> 4
+        //  Tile X = 0x00011 -> 3
+        //
+        // Attribute byte is in following format: 3322 1100
+        //
+        // Now do Y % 2 and X % 2 and map to this table
+        //
+        // X | Y | Att Group
+        // ------------------
+        // 0 | 0 | 0
+        // 1 | 0 | 1
+        // 0 | 1 | 2
+        // 1 | 1 | 3
+        var attributeByteAddress = this._convertNametableAddressToAttributeTableAddress(nameTableAddress);
+        var attributeByte = this._ppuMemory.get(attributeByteAddress);
+        var hTileDelta = this._getHorizontalTileDelta(nameTableAddress);
+        var vTileDelta = this._getVerticalTileDelta(nameTableAddress);
+        var attributeGroupIndex = this._getAttributeGroupIndex(hTileDelta, vTileDelta);
+        var basePaletteAddress = this._getBasePaletteAddress(attributeByte, attributeGroupIndex);
+        var pixelColors = [];
+        for (var i = 0; i < rowBits.length; i++) {
+            var paletteAddress = this._getPaletteAddress(basePaletteAddress, rowBits[i]);
+            var colorByte = this._ppuMemory.get(paletteAddress);
+            var colorComp = this._getColor(colorByte);
+            pixelColors.push(colorComp);
+        }
+        return pixelColors;
+    };
+    Ppu.prototype._getBasePaletteAddress = function (attributeByte, attributeGroup) {
+        // Attribute byte is in following format: 3322 1100
+        //
+        // Now do Y % 2 and X % 2 and map to this table
+        //
+        // X | Y | Att Group
+        // ------------------
+        // 0 | 0 | 0
+        // 1 | 0 | 1
+        // 0 | 1 | 2
+        // 1 | 1 | 3
+        var result = ((attributeByte) & (0x3 << (attributeGroup * 2))) >> (attributeGroup * 2);
+        switch (result) {
+            case 0:
+                return 0x3F01;
+            case 1:
+                return 0x3F05;
+            case 2:
+                return 0x3F09;
+            case 3:
+                return 0x3F0D;
+        }
+        // Universal background
+        return 0x3F00;
+    };
+    Ppu.prototype._getPaletteAddress = function (basePaletteAddress, colorIndex) {
+        return basePaletteAddress + (colorIndex - 1);
+    };
+    Ppu.prototype._getHorizontalTileDelta = function (nameTableAddress) {
+        return (nameTableAddress & 0x3E) >> 5 % 2;
+    };
+    Ppu.prototype._getVerticalTileDelta = function (nameTableAddress) {
+        return (nameTableAddress & 0x1F);
+    };
+    Ppu.prototype._getAttributeGroupIndex = function (hTileDelta, vTileDelta) {
+        var x = hTileDelta % 2;
+        var y = vTileDelta % 2;
+        if (x === 0 && y == 0) {
+            return 0;
+        }
+        else if (x === 1 && y === 0) {
+            return 1;
+        }
+        else if (x === 0 && y === 1) {
+            return 2;
+        }
+        else if (x === 1 && y === 1) {
+            return 3;
+        }
+        return 0;
+    };
+    Ppu.prototype._getColor = function (colorByte) {
+        var key = colorByte.toString(16).toUpperCase();
+        if (key.length < 2) {
+            key = "0" + key;
+        }
+        return exports.NesPpuPalette[key];
+    };
     Ppu.prototype.fetchPatternTileBytes = function (patternIndex, nametableAddress) {
         var baseAddress = (this._regPPUCTRL & (0x1 << PpuCtrlBits.BackgroundTileSelect)) === 0
             ? 0x0000 : 0x1000;
@@ -221,14 +331,8 @@ var Ppu = /** @class */ (function () {
         for (var i = patternStartAddress; i < patternStartAddress + 8; i++) {
             var currPatternLow = this._ppuMemory.get(i);
             var currPatternHigh = this._ppuMemory.get(i + 8);
-            var merged = 0x0;
-            var mask = 0x1;
-            for (var j = 0; j < 8; j++) {
-                var lowBit = (currPatternLow & (mask << j)) > 0 ? 1 : 0;
-                var highBit = (currPatternHigh & (mask << j)) > 0 ? 1 : 0;
-                var mergedBits = (highBit << 1) | lowBit;
-                merged = merged | (mergedBits << j);
-            }
+            var rowBits = this._mergeTileLowAndHighBytesToRowBits(currPatternLow, currPatternHigh);
+            var frameBufferRowBits = this._getPixelColorsForRowBits(nametableAddress, rowBits);
             // NOW we have a ROW BYTE. 
             //  1. Get the current row in the frame buffer. We know row for the current tile being processed.
             //  2. Translate the tile ROW to the startin row coordinate in the frame buffer
@@ -241,7 +345,8 @@ var Ppu = /** @class */ (function () {
                 if (!this._frameBuffer[fbRow]) {
                     break;
                 }
-                this._frameBuffer[fbRow][k] = (merged & (0x80 >> shift)) > 0 ? 1 : 0;
+                //const pixel = (merged & (0x80 >> shift));
+                this._frameBuffer[fbRow][k] = frameBufferRowBits[shift];
                 shift++;
             }
         }
@@ -250,7 +355,7 @@ var Ppu = /** @class */ (function () {
      * Converts an address from the name table to an attribute table address.
      * @param ntAddress Attribute table address
      */
-    Ppu.prototype._nameTableAddressToAttributeTableAddress = function (ntAddress) {
+    Ppu.prototype._convertNametableAddressToAttributeTableAddress = function (ntAddress) {
         // Nametable address: 0010 NNYY YYYX XXXX
         // Attribute Table Address: 0010 NN11 11YY YXXX
         var yBits = (ntAddress & 0x03E0); // 0000 0011 1110 0000
@@ -270,28 +375,6 @@ var Ppu = /** @class */ (function () {
         // > 0010 0011 1110 0010 => 0x23E2
         var address = base | ntBits | mask | topYBits | topXBits;
         return address;
-    };
-    /**
-     * Puts 1s on the area of the framebuffer in which the tile would be rendered to.
-     *
-     * This is for debugging purposes if there is no graphical rendering enabled and only
-     * in text mode.
-     *
-     * @param tileLocationX The tile location X component.
-     * @param tileLocationY The tile location Y component.
-     */
-    Ppu.prototype._debugPutPatternOntoFramebuffer = function (tileLocationX, tileLocationY) {
-        // 32 x 30
-        // Therefore if tile (1, 1) we are at => (8, 8) on frame buffer.
-        // If (2, 3) then we are at => (16, 48) 
-        // And finally (31, 29) we are at => (248, 232)
-        var xStartOnFramebuffer = tileLocationX * 8;
-        var yStartOnFramebuffer = tileLocationY * 8;
-        for (var i = xStartOnFramebuffer; i < xStartOnFramebuffer + 8; i++) {
-            for (var j = yStartOnFramebuffer; j < yStartOnFramebuffer + 8; j++) {
-                this._frameBuffer[i][j] = 1;
-            }
-        }
     };
     Ppu.prototype.run = function () {
         this._currentCyclesInRun = 0;

@@ -11,11 +11,15 @@ export class Memory {
 
         // Blank out the memory
         for(let i = 0; i <= 0xFFFF; i++) {
-            this.set(i, 0xFF);
+            this._memory[i] = 0xFF;
         }
     }
 
-    public set(address: number, value: number): void {
+    get bits(): number[] {
+        return this._memory;
+    }
+
+    public set = (address: number, value: number): void => {
         // Mirrored at 0x0800 - 0x0FFF
         //  -> 0x800 - 0x0FFF
         //  -> 0x1000 - 0x17FF
@@ -52,7 +56,7 @@ export class Memory {
         }
     }
 
-    public get(address: number): number {
+    public get = (address: number): number => {
         if(address >= 0x2000 && address <= 0x3FFF) {
             const decodedAddress = (0x20 << 8) | (address & 0x0007);
             if(decodedAddress === 0x2000) { 

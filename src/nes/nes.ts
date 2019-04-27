@@ -1,10 +1,19 @@
 import { Memory } from '../memory/memory';
-import { Ppu } from '../ppu/ppu';
+import { Ppu, ColorComponent } from '../ppu/ppu';
 import { Cpu } from '../cpu/cpu';
 import { PpuMemory } from '../memory/ppumemory';
 import * as rom from './rom.json';
 
 const ROM_FILE = './DK.nes';
+
+export interface CpuRegisters {
+    pc: number;
+    a: number;
+    x: number;
+    y: number;
+    sp: number;
+    p: number;
+}
 
 export class Nes {
     private _memory: Memory;
@@ -27,9 +36,28 @@ export class Nes {
         this._cpu.debugMode(false);
     }
 
-    public frameBuffer(): number[][] {
+    public frameBuffer(): ColorComponent[][] {
         return this._ppu.frameBuffer();
     }
+
+    public cpuMemory(): number[] {
+        return this._memory.bits;
+    }
+
+    public ppuMemory(): number[] {
+        return this._ppuMemory.bits;
+    }
+
+    public cpuRegisters(): CpuRegisters {
+        return {
+            pc: this._cpu.getPC(),
+            a: this._cpu.getA(),
+            x: this._cpu.getX(),
+            y: this._cpu.getY(),
+            sp: this._cpu.getSP(),
+            p: this._cpu.getP()
+        }
+    } 
 
     public loadRom() {
         // For now, we can only load Donkey Kong
@@ -109,8 +137,6 @@ export class Nes {
             }
             output += '\n';
         }
-
-        //console.log(output);
     }
 
     public debugPrintCpuMemory() {

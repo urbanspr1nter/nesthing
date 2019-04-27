@@ -1,5 +1,15 @@
 import { PpuMemory } from '../memory/ppumemory';
 import { OamMemory } from '../memory/oammemory';
+import * as ColorPalette from '../utils/colors.json';
+
+export interface ColorComponent {
+    r: number;
+    g: number;
+    b: number;
+}
+
+export const NesPpuPalette: { [id: string]: ColorComponent } = ColorPalette;
+
 
 // Background Shift Registers
 export const TileShiftRegister1 = {
@@ -82,7 +92,7 @@ export const IgnoredWritesBeforeWarmedUp = [
 const cpuCyclesToWarmUp = 29658;
 
 export class Ppu {
-    private _frameBuffer: number[][];
+    private _frameBuffer: ColorComponent[][];
 
     private _cpuNmiIrq: boolean;
     private _ppuMemory: PpuMemory;
@@ -120,6 +130,8 @@ export class Ppu {
         this._regPPUCTRL = 0;
         this._regPPUMASK = 0;
         this._regPPUSTATUS = 0;
+        
+        console.log(JSON.stringify(NesPpuPalette));
     }
 
     public vramAddress() {
@@ -141,7 +153,7 @@ export class Ppu {
         for(let i = 0; i < 240; i++) {
             this._frameBuffer.push([]);
             for(let j = 0; j < 256; j++) {
-                this._frameBuffer[i].push(0x00);
+                this._frameBuffer[i].push({r: 0, g: 0, b: 0});
             }
         }
     }
@@ -149,7 +161,7 @@ export class Ppu {
     /**
      * Gets the framebuffer
      */
-    public frameBuffer(): number[][] {
+    public frameBuffer(): ColorComponent[][] {
         return this._frameBuffer;
     }
 
@@ -271,6 +283,132 @@ export class Ppu {
         return 0x2000;
     }
 
+    private _mergeTileLowAndHighBytesToRowBits(lowByte: number, highByte: number): number[] {
+        let merged = 0x0;
+        let mask = 0x1;
+
+        const bits: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+        for(let j = 0; j < 8; j++) {
+            const lowBit = (lowByte & (mask << j)) > 0 ? 1 : 0;
+            const highBit = (highByte & (mask << j)) > 0 ? 1 : 0;
+
+            const mergedBits = (highBit << 1) | lowBit;
+
+            bits[7 - j] = mergedBits;
+        }
+
+        return bits;
+    }
+
+    private _getPixelColorsForRowBits(nameTableAddress: number, rowBits: number[]): ColorComponent[] {
+        // NT: 0010 NNYY YYYX XXXX
+        //            || |||| ||||
+        //            \____/ \___/
+        //            Tile Y  Tile X
+        // Example:
+        //  Given a nametable address 0x2083:
+        //  0010 0000 1000 0011
+        //
+        //  Tile Y = 0x00100 -> 4
+        //  Tile X = 0x00011 -> 3
+        //
+        // Attribute byte is in following format: 3322 1100
+        //
+        // Now do Y % 2 and X % 2 and map to this table
+        //
+        // X | Y | Att Group
+        // ------------------
+        // 0 | 0 | 0
+        // 1 | 0 | 1
+        // 0 | 1 | 2
+        // 1 | 1 | 3
+        
+        
+        const attributeByteAddress = this._convertNametableAddressToAttributeTableAddress(nameTableAddress);
+        const attributeByte = this._ppuMemory.get(attributeByteAddress);
+        const hTileDelta = this._getHorizontalTileDelta(nameTableAddress);
+        const vTileDelta = this._getVerticalTileDelta(nameTableAddress);
+        const attributeGroupIndex = this._getAttributeGroupIndex(hTileDelta, vTileDelta);
+        const basePaletteAddress = this._getBasePaletteAddress(attributeByte, attributeGroupIndex);
+
+        const pixelColors: ColorComponent[] = [];
+        for(let i = 0; i < rowBits.length; i++) {
+            const paletteAddress = this._getPaletteAddress(basePaletteAddress, rowBits[i]);
+            const colorByte = this._ppuMemory.get(paletteAddress);
+            const colorComp = this._getColor(colorByte);
+            pixelColors.push(colorComp);
+        }
+
+        return pixelColors;
+    }
+
+    private _getBasePaletteAddress(attributeByte: number, attributeGroup: number) {
+        // Attribute byte is in following format: 3322 1100
+        //
+        // Now do Y % 2 and X % 2 and map to this table
+        //
+        // X | Y | Att Group
+        // ------------------
+        // 0 | 0 | 0
+        // 1 | 0 | 1
+        // 0 | 1 | 2
+        // 1 | 1 | 3
+
+        const result = ((attributeByte) & (0x3 << (attributeGroup * 2))) >> (attributeGroup * 2);
+
+        switch(result) {
+            case 0:
+                return 0x3F01;
+            case 1:
+                return 0x3F05;
+            case 2:
+                return 0x3F09;
+            case 3:
+                return 0x3F0D;
+        }
+
+        // Universal background
+        return 0x3F00; 
+    }
+
+    private _getPaletteAddress(basePaletteAddress: number, colorIndex: number): number {
+        return basePaletteAddress + (colorIndex - 1);
+    }
+
+    private _getHorizontalTileDelta(nameTableAddress: number) {
+        return (nameTableAddress & 0x3E) >> 5 %  2;
+    }
+
+    private _getVerticalTileDelta(nameTableAddress: number) {
+        return (nameTableAddress & 0x1F);
+    }
+
+    private _getAttributeGroupIndex(hTileDelta: number, vTileDelta: number): number {
+        const x = hTileDelta % 2;
+        const y = vTileDelta % 2;
+
+        if(x === 0 && y == 0) {
+            return 0;
+        } else if(x === 1 && y === 0) {
+            return 1;
+        } else if(x === 0 && y === 1) {
+            return 2;
+        } else if(x === 1 && y === 1) {
+            return 3;
+        }
+
+        return 0;
+    }
+
+    private _getColor(colorByte: number): ColorComponent {
+        let key = colorByte.toString(16).toUpperCase();
+        if(key.length < 2) {
+            key = `0${key}`;
+        }
+
+        return NesPpuPalette[key];
+    }
+
     public fetchPatternTileBytes(patternIndex: number, nametableAddress: number) {
         const baseAddress = (this._regPPUCTRL & (0x1 << PpuCtrlBits.BackgroundTileSelect)) === 0 
             ? 0x0000 : 0x1000;
@@ -284,16 +422,8 @@ export class Ppu {
             const currPatternLow = this._ppuMemory.get(i);
             const currPatternHigh = this._ppuMemory.get(i + 8);
         
-            let merged = 0x0;
-            let mask = 0x1;
-            for(let j = 0; j < 8; j++) {
-                const lowBit = (currPatternLow & (mask << j)) > 0 ? 1 : 0;
-                const highBit = (currPatternHigh & (mask << j)) > 0 ? 1 : 0;
-
-                const mergedBits = (highBit << 1) | lowBit;
-
-                merged = merged | (mergedBits << j);
-            }
+            const rowBits = this._mergeTileLowAndHighBytesToRowBits(currPatternLow, currPatternHigh);
+            const frameBufferRowBits = this._getPixelColorsForRowBits(nametableAddress, rowBits);
 
             // NOW we have a ROW BYTE. 
             //  1. Get the current row in the frame buffer. We know row for the current tile being processed.
@@ -302,14 +432,16 @@ export class Ppu {
 
             //  3. Find the column to begin dropping the bits.
             const fbCol = fbTileCol * 8;
-   
+
             //  4. Start shift at 0;
             let shift = 0;
             for(let k = fbCol; k < fbCol + 8; k++) {
                 if(!this._frameBuffer[fbRow]) {
                     break;
                 }
-                this._frameBuffer[fbRow][k] = (merged & (0x80 >> shift)) > 0 ? 1 : 0;
+                //const pixel = (merged & (0x80 >> shift));
+
+                this._frameBuffer[fbRow][k] = frameBufferRowBits[shift];
                 shift++;
             }
         }
@@ -319,7 +451,7 @@ export class Ppu {
      * Converts an address from the name table to an attribute table address.
      * @param ntAddress Attribute table address
      */
-    private _nameTableAddressToAttributeTableAddress(ntAddress: number) {
+    private _convertNametableAddressToAttributeTableAddress(ntAddress: number) {
         // Nametable address: 0010 NNYY YYYX XXXX
         // Attribute Table Address: 0010 NN11 11YY YXXX
 
@@ -344,31 +476,6 @@ export class Ppu {
         const address = base | ntBits | mask | topYBits | topXBits;
 
         return address;
-    }
-
-    /**
-     * Puts 1s on the area of the framebuffer in which the tile would be rendered to.
-     * 
-     * This is for debugging purposes if there is no graphical rendering enabled and only 
-     * in text mode.
-     * 
-     * @param tileLocationX The tile location X component.
-     * @param tileLocationY The tile location Y component.
-     */
-    private _debugPutPatternOntoFramebuffer(tileLocationX: number, tileLocationY: number) {
-        // 32 x 30
-        // Therefore if tile (1, 1) we are at => (8, 8) on frame buffer.
-        // If (2, 3) then we are at => (16, 48) 
-        // And finally (31, 29) we are at => (248, 232)
-        
-        const xStartOnFramebuffer = tileLocationX * 8;
-        const yStartOnFramebuffer = tileLocationY * 8;
-
-        for(let i = xStartOnFramebuffer; i < xStartOnFramebuffer + 8; i++) {
-            for(let j = yStartOnFramebuffer; j < yStartOnFramebuffer + 8; j++) {
-                this._frameBuffer[i][j] = 1;
-            }
-        }
     }
 
     public run(): number {

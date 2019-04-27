@@ -8,15 +8,19 @@ export class PpuMemory {
 
         // Blank out
         for(let i = 0x0000; i <= MaxMemoryAddress; i++) {
-            this.set(i, 0xFF);
+            this._memory[i] = 0xFF;
         }
     }
 
-    public set(address: number, value: number): void {
+    get bits(): number[] {
+        return this._memory;
+    }
+
+    public set = (address: number, value: number): void  => {
         this._memory[address & MaxMemoryAddress] = value & 0xFF;
     }
 
-    public get(address: number) {
+    public get = (address: number) => {
         return this._memory[address] & 0xFF;
     }
 
