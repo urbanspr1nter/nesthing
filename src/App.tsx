@@ -12,6 +12,7 @@ interface NesState {
   cpuRegisters: CpuRegisters;
   ppuMemory: number[];
   frameBuffer: ColorComponent[][];
+  totalRunCycles: number;
 }
 
 class App extends Component<{}, NesState> {
@@ -27,7 +28,8 @@ class App extends Component<{}, NesState> {
       cpuMemory: this._nes.cpuMemory(),
       cpuRegisters: this._nes.cpuRegisters(),
       ppuMemory: this._nes.ppuMemory(),
-      frameBuffer: this._nes.frameBuffer()
+      frameBuffer: this._nes.frameBuffer(),
+      totalRunCycles: 0
     };
   }
 
@@ -35,35 +37,38 @@ class App extends Component<{}, NesState> {
   }
 
   runCycles = (e: React.SyntheticEvent) => {
-    const cycles = this.state.cycles;    
-    this._nes.run(cycles);
+    const cycles = this.state.cycles;
 
-    const ctx = (document.getElementById('canvas') as HTMLCanvasElement).getContext('2d');
+    setInterval(() => {
+      this._nes.run(cycles);
 
-    this.setState({
-      cpuRegisters: this._nes.cpuRegisters(),
-      cpuMemory: this._nes.cpuMemory(),
-      ppuMemory: this._nes.ppuMemory(),
-      frameBuffer: this._nes.frameBuffer()
-    }, () => {
-      for(let i = 0; i < 240; i++) {
-          for(let j = 0; j < 256; j++) {
-              if(!this.state.frameBuffer[i][j]) {
-                break;
-              }
-              let r = this.state.frameBuffer[i][j].r;
-              let g = this.state.frameBuffer[i][j].g;
-              let b = this.state.frameBuffer[i][j].b;
-              ctx.strokeStyle = `rgba(${r}, ${g}, ${b})`;
+      const ctx = (document.getElementById('canvas') as HTMLCanvasElement).getContext('2d');
   
-              ctx.beginPath();
-              ctx.moveTo(j, i);
-              ctx.lineTo(j+1, i+1);
-              ctx.stroke();
-              ctx.closePath();
-          }
-      }
-    });
+      this.setState({
+        cpuRegisters: this._nes.cpuRegisters(),
+        cpuMemory: this._nes.cpuMemory(),
+        ppuMemory: this._nes.ppuMemory(),
+        frameBuffer: this._nes.frameBuffer(),
+      }, () => {
+        for(let i = 0; i < 240; i++) {
+            for(let j = 0; j < 256; j++) {
+                if(!this.state.frameBuffer[i][j]) {
+                  break;
+                }
+                let r = this.state.frameBuffer[i][j].r;
+                let g = this.state.frameBuffer[i][j].g;
+                let b = this.state.frameBuffer[i][j].b;
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${b})`;
+    
+                ctx.beginPath();
+                ctx.moveTo(j, i);
+                ctx.lineTo(j+1, i+1);
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+      });
+    }, 1000);
   }
 
   printFrameBuffer = () => {

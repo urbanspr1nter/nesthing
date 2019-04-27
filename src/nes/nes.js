@@ -15,6 +15,7 @@ var Nes = /** @class */ (function () {
         this._cpu = new cpu_1.Cpu(this._memory, this._log);
         this._initialize();
         this._cpu.debugMode(false);
+        this._cycles = 0;
     }
     Nes.prototype.frameBuffer = function () {
         return this._ppu.frameBuffer();
@@ -70,7 +71,7 @@ var Nes = /** @class */ (function () {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while (this._cpu.getCurrentCycles() <= cpuCycles) {
+        while (this._cycles <= cpuCycles) {
             var beginCpuCycles = this._cpu.getCurrentCycles();
             // If we are entering in VBLANK, Enter NMI handling routine!
             if (this._ppu.cpuNmiIrqStatus() && ((this._ppu.read$2000() & 0x80) > 0x0)) {
@@ -85,7 +86,7 @@ var Nes = /** @class */ (function () {
                 var ppuCyclesRan = this._ppu.run();
                 ppuCyclesToRun -= ppuCyclesRan;
             }
-            this._cycles += this._cpu.getCurrentCycles();
+            this._cycles += cpuCyclesRan;
         }
         this._cycles = 0;
         this.debugDrawFrameBuffer();

@@ -35,6 +35,8 @@ export class Nes {
         this._initialize();
 
         this._cpu.debugMode(false);
+
+        this._cycles = 0;
     }
 
     public frameBuffer(): ColorComponent[][] {
@@ -101,7 +103,7 @@ export class Nes {
          * all running at the same time. Each piece of hardware will run for the necessary amount of
          * cycles.
          */
-        while(this._cpu.getCurrentCycles() <= cpuCycles) {
+        while(this._cycles <= cpuCycles) {
             const beginCpuCycles = this._cpu.getCurrentCycles();
 
             // If we are entering in VBLANK, Enter NMI handling routine!
@@ -121,7 +123,7 @@ export class Nes {
                 ppuCyclesToRun -= ppuCyclesRan;
             }
 
-            this._cycles += this._cpu.getCurrentCycles();
+            this._cycles += cpuCyclesRan;
         }
 
         this._cycles = 0;
