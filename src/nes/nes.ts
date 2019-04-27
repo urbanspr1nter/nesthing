@@ -20,6 +20,7 @@ export class Nes {
     private _ppuMemory: PpuMemory;
     private _ppu: Ppu;
     private _cpu: Cpu;
+    private _cycles: number;
 
     private _log: string[];
 
@@ -119,7 +120,11 @@ export class Nes {
                 const ppuCyclesRan = this._ppu.run();                
                 ppuCyclesToRun -= ppuCyclesRan;
             }
+
+            this._cycles += this._cpu.getCurrentCycles();
         }
+
+        this._cycles = 0;
 
         this.debugDrawFrameBuffer();
     }
@@ -128,33 +133,6 @@ export class Nes {
         for(let i = 0x2000; i < 0x23BF; i++) {
             this._ppu.fetchPatternTileBytes(this._ppuMemory.get(i), i);
         }
-        const fb = this._ppu.frameBuffer();
-
-        let output = '';
-        for(let i = 0; i < 240; i++) {
-            for(let j = 0; j < 256; j++) {
-                output += (fb[i][j] ? '□' : '■') + ' ';
-            }
-            output += '\n';
-        }
-    }
-
-    public debugPrintCpuMemory() {
-        console.log("====== START CPU MEMORY ======")
-        this._memory.printView();
-        console.log("====== END CPU MEMORY ======")
-    }
-
-    public debugPrintOamMemory() {
-        console.log("====== START OAM MEMORY ======")
-        this._ppu.viewOamMemory();
-        console.log("====== END OAM MEMORY ======")
-    }
-
-    public debugPrintPpuMemory() {
-        console.log("====== START PPU MEMORY ======")
-        this._ppu.viewPpuMemory();
-        console.log("====== END PPU MEMORY ======")
     }
 
     private _initialize() {

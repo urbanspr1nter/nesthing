@@ -93,7 +93,6 @@ var Ppu = /** @class */ (function () {
         this._regPPUCTRL = 0;
         this._regPPUMASK = 0;
         this._regPPUSTATUS = 0;
-        console.log(JSON.stringify(exports.NesPpuPalette));
     }
     Ppu.prototype.vramAddress = function () {
         return this._vramAddress;
@@ -343,9 +342,8 @@ var Ppu = /** @class */ (function () {
             var shift = 0;
             for (var k = fbCol; k < fbCol + 8; k++) {
                 if (!this._frameBuffer[fbRow]) {
-                    break;
+                    //break;
                 }
-                //const pixel = (merged & (0x80 >> shift));
                 this._frameBuffer[fbRow][k] = frameBufferRowBits[shift];
                 shift++;
             }

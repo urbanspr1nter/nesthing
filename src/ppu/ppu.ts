@@ -130,8 +130,6 @@ export class Ppu {
         this._regPPUCTRL = 0;
         this._regPPUMASK = 0;
         this._regPPUSTATUS = 0;
-        
-        console.log(JSON.stringify(NesPpuPalette));
     }
 
     public vramAddress() {
@@ -437,10 +435,8 @@ export class Ppu {
             let shift = 0;
             for(let k = fbCol; k < fbCol + 8; k++) {
                 if(!this._frameBuffer[fbRow]) {
-                    break;
+                    //break;
                 }
-                //const pixel = (merged & (0x80 >> shift));
-
                 this._frameBuffer[fbRow][k] = frameBufferRowBits[shift];
                 shift++;
             }

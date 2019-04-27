@@ -85,36 +85,15 @@ var Nes = /** @class */ (function () {
                 var ppuCyclesRan = this._ppu.run();
                 ppuCyclesToRun -= ppuCyclesRan;
             }
+            this._cycles += this._cpu.getCurrentCycles();
         }
+        this._cycles = 0;
         this.debugDrawFrameBuffer();
     };
     Nes.prototype.debugDrawFrameBuffer = function () {
         for (var i = 0x2000; i < 0x23BF; i++) {
             this._ppu.fetchPatternTileBytes(this._ppuMemory.get(i), i);
         }
-        var fb = this._ppu.frameBuffer();
-        var output = '';
-        for (var i = 0; i < 240; i++) {
-            for (var j = 0; j < 256; j++) {
-                output += (fb[i][j] ? '□' : '■') + ' ';
-            }
-            output += '\n';
-        }
-    };
-    Nes.prototype.debugPrintCpuMemory = function () {
-        console.log("====== START CPU MEMORY ======");
-        this._memory.printView();
-        console.log("====== END CPU MEMORY ======");
-    };
-    Nes.prototype.debugPrintOamMemory = function () {
-        console.log("====== START OAM MEMORY ======");
-        this._ppu.viewOamMemory();
-        console.log("====== END OAM MEMORY ======");
-    };
-    Nes.prototype.debugPrintPpuMemory = function () {
-        console.log("====== START PPU MEMORY ======");
-        this._ppu.viewPpuMemory();
-        console.log("====== END PPU MEMORY ======");
     };
     Nes.prototype._initialize = function () {
         this.loadRom();

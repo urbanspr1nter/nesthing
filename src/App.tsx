@@ -23,7 +23,7 @@ class App extends Component<{}, NesState> {
     this._nes = new Nes();
 
     this.state = {
-      cycles: 1000000,
+      cycles: 100000,
       cpuMemory: this._nes.cpuMemory(),
       cpuRegisters: this._nes.cpuRegisters(),
       ppuMemory: this._nes.ppuMemory(),
@@ -36,7 +36,6 @@ class App extends Component<{}, NesState> {
 
   runCycles = (e: React.SyntheticEvent) => {
     const cycles = this.state.cycles;    
-    this._nes = new Nes();
     this._nes.run(cycles);
 
     const ctx = (document.getElementById('canvas') as HTMLCanvasElement).getContext('2d');
@@ -49,6 +48,9 @@ class App extends Component<{}, NesState> {
     }, () => {
       for(let i = 0; i < 240; i++) {
           for(let j = 0; j < 256; j++) {
+              if(!this.state.frameBuffer[i][j]) {
+                break;
+              }
               let r = this.state.frameBuffer[i][j].r;
               let g = this.state.frameBuffer[i][j].g;
               let b = this.state.frameBuffer[i][j].b;
