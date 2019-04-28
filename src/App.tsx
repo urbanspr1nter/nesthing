@@ -2,9 +2,9 @@ import React, { Component } from 'react';
 import './App.css';
 import { Nes, CpuRegisters } from './nes/nes';
 import 'bulma/css/bulma.css'
-import { Memory } from './memory/memory';
 import { prettifyMemory } from './utils/ui/utils';
 import { ColorComponent } from './ppu/ppu';
+import FrameBufferView from './components/FrameBufferView';
 
 interface NesState {
   cycles: number;
@@ -39,36 +39,34 @@ class App extends Component<{}, NesState> {
   runCycles = (e: React.SyntheticEvent) => {
     const cycles = this.state.cycles;
 
-    setInterval(() => {
-      this._nes.run(cycles);
+    this._nes.run(cycles);
 
-      const ctx = (document.getElementById('canvas') as HTMLCanvasElement).getContext('2d');
+    const ctx = (document.getElementById('canvas') as HTMLCanvasElement).getContext('2d');
+
+    this.setState({
+      cpuRegisters: this._nes.cpuRegisters(),
+      cpuMemory: this._nes.cpuMemory(),
+      ppuMemory: this._nes.ppuMemory(),
+      frameBuffer: this._nes.frameBuffer(),
+    }, () => {
+      for(let i = 0; i < 240; i++) {
+          for(let j = 0; j < 256; j++) {
+              if(!this.state.frameBuffer[i][j]) {
+                break;
+              }
+              let r = this.state.frameBuffer[i][j].r;
+              let g = this.state.frameBuffer[i][j].g;
+              let b = this.state.frameBuffer[i][j].b;
+              ctx.strokeStyle = `rgba(${r}, ${g}, ${b})`;
   
-      this.setState({
-        cpuRegisters: this._nes.cpuRegisters(),
-        cpuMemory: this._nes.cpuMemory(),
-        ppuMemory: this._nes.ppuMemory(),
-        frameBuffer: this._nes.frameBuffer(),
-      }, () => {
-        for(let i = 0; i < 240; i++) {
-            for(let j = 0; j < 256; j++) {
-                if(!this.state.frameBuffer[i][j]) {
-                  break;
-                }
-                let r = this.state.frameBuffer[i][j].r;
-                let g = this.state.frameBuffer[i][j].g;
-                let b = this.state.frameBuffer[i][j].b;
-                ctx.strokeStyle = `rgba(${r}, ${g}, ${b})`;
-    
-                ctx.beginPath();
-                ctx.moveTo(j, i);
-                ctx.lineTo(j+1, i+1);
-                ctx.stroke();
-                ctx.closePath();
-            }
-        }
-      });
-    }, 1000);
+              ctx.beginPath();
+              ctx.moveTo(j, i);
+              ctx.lineTo(j+1, i+1);
+              ctx.stroke();
+              ctx.closePath();
+          }
+      }
+    });
   }
 
   printFrameBuffer = () => {
@@ -150,18 +148,6 @@ class App extends Component<{}, NesState> {
           <div className="columns">
             <div className="column">
               <h2>CPU Memory</h2>
-              <div className="memory-field" style={{
-                maxWidth: '100%',
-                maxHeight: '67vh',
-                overflowX: 'hidden',
-                overflowY: 'scroll',
-                border: '1px solid grey',
-                fontFamily: 'monospace',
-                textAlign: 'left',
-                paddingLeft: '16px'
-              }}>
-                {this.fillCpuMemory()}
-              </div>
             </div>
             <div className="column">
               <canvas id="canvas" width={256} height={240} style={{border: '1px solid black'}} />
@@ -195,35 +181,11 @@ class App extends Component<{}, NesState> {
           </div>
           <div>
             <h3>Frame Buffer</h3>
-            <div className="memory-field" style={{
-                maxWidth: '100%',
-                maxHeight: '33vh',
-                overflowX: 'hidden',
-                overflowY: 'scroll',
-                border: '1px solid grey',
-                fontFamily: 'monospace',
-                textAlign: 'left',
-                paddingLeft: '16px'
-              }}>
-                {this.printFrameBuffer()}
-              </div>
+            <FrameBufferView data={this.state.frameBuffer} />
           </div>
         </div>
             </div>
             <div className="column">
-              <h2>PPU Memory</h2>
-              <div className="memory-field" style={{
-                maxWidth: '100%',
-                maxHeight: '67vh',
-                overflowX: 'hidden',
-                overflowY: 'scroll',
-                border: '1px solid grey',
-                fontFamily: 'monospace',
-                textAlign: 'left',
-                paddingLeft: '16px'
-              }}>
-                {this.fillPpuMemory()}
-              </div>
             </div>
           </div>
         </div>
