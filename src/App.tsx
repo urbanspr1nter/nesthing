@@ -7,6 +7,7 @@ import { ColorComponent } from "./ppu/ppu";
 import FrameBufferView from "./components/FrameBufferView";
 import Palette from "./components/Palette";
 import MainTitle from "./components/MainTitle";
+import CpuMemoryView from "./components/CpuMemoryView";
 
 interface NesState {
   cycles: number;
@@ -166,6 +167,9 @@ class App extends Component<{}, NesState> {
           <div className="columns">
             <div className="column">
               <FrameBufferView data={this.state.frameBuffer} />
+            </div>
+            <div className="column">
+              <CpuMemoryView data={this.state.cpuMemory} />
             </div>
             <div className="column">
               <canvas
