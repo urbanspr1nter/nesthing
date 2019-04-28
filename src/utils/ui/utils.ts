@@ -1,3 +1,5 @@
+import { ColorComponent } from "../../ppu/ppu";
+
 export const prettifyMemory = (memoryArray: number[]): string[] => {
   const data = [];
   for (let i = 0; i < memoryArray.length; i++) {
@@ -19,4 +21,8 @@ export const byteValue2HexString = (byteValue: number): string => {
   }
 
   return hex;
+};
+
+export const buildRgbString = (color: ColorComponent): string => {
+  return `rgba(${color.r}, ${color.g}, ${color.b})`;
 };
