@@ -5,10 +5,10 @@ import "bulma/css/bulma.css";
 import { prettifyMemory } from "./utils/ui/utils";
 import { ColorComponent } from "./ppu/ppu";
 import FrameBufferView from "./components/FrameBufferView";
-import Palette from "./components/Palette";
 import MainTitle from "./components/MainTitle";
 import CpuMemoryView from "./components/CpuMemoryView";
 import PpuMemoryView from "./components/PpuMemoryView";
+import CpuRegisterView from "./components/CpuRegisterView";
 
 interface NesState {
   cycles: number;
@@ -37,9 +37,7 @@ class App extends Component<{}, NesState> {
     };
   }
 
-  componentDidMount() {
-    
-  }
+  componentDidMount() {}
 
   runCycles = (e: React.SyntheticEvent) => {
     const cycles = this.state.cycles;
@@ -163,7 +161,7 @@ class App extends Component<{}, NesState> {
   render = () => {
     return (
       <div id="App" className="App container">
-        <MainTitle/>
+        <MainTitle />
         <div className={"container"} id="screen">
           <div className="columns">
             <div className="column">
@@ -186,37 +184,13 @@ class App extends Component<{}, NesState> {
                   Run
                 </button>
                 <div>
-                  <h3>Registers</h3>
-                  <div className="columns">
-                    <div className="column">
-                      A: {this.state.cpuRegisters.a.toString(16).toUpperCase()}
-                    </div>
-                    <div className="column">
-                      X: {this.state.cpuRegisters.x.toString(16).toUpperCase()}
-                    </div>
-                    <div className="column">
-                      Y: {this.state.cpuRegisters.y.toString(16).toUpperCase()}
-                    </div>
-                  </div>
-                  <div className="columns">
-                    <div className="column">
-                      PC:{" "}
-                      {this.state.cpuRegisters.pc.toString(16).toUpperCase()}
-                    </div>
-                    <div className="column">
-                      SP:{" "}
-                      {this.state.cpuRegisters.sp.toString(16).toUpperCase()}
-                    </div>
-                    <div className="column">
-                      P: {this.state.cpuRegisters.p.toString(16).toUpperCase()}
-                    </div>
-                  </div>
+                  <CpuRegisterView data={this.state.cpuRegisters} />
                 </div>
               </div>
             </div>
             <div className="column">
               <CpuMemoryView data={this.state.cpuMemory} />
-              <PpuMemoryView data={this.state.ppuMemory}/>
+              <PpuMemoryView data={this.state.ppuMemory} />
             </div>
           </div>
         </div>
