@@ -1,13 +1,13 @@
 import React, { Component } from "react";
 import { Nes, CpuRegisters } from "./nes/nes";
 import "bulma/css/bulma.css";
-import { prettifyMemory } from "./utils/ui/utils";
-import { ColorComponent } from "./ppu/ppu";
+import { ColorComponent } from "./nes/common/interface";
 import FrameBufferView from "./components/FrameBufferView";
 import MainTitle from "./components/MainTitle";
 import CpuMemoryView from "./components/CpuMemoryView";
 import PpuMemoryView from "./components/PpuMemoryView";
 import CpuRegisterView from "./components/CpuRegisterView";
+import { buildRgbString } from "./utils/ui/utils";
 
 interface NesState {
   cycles: number;
@@ -20,12 +20,13 @@ interface NesState {
 
 class App extends Component<{}, NesState> {
   private _nes: Nes;
+  private _canvas: HTMLCanvasElement | null;
 
   constructor(props: any) {
     super(props);
 
     this._nes = new Nes();
-
+    this._canvas = null;
     this.state = {
       cycles: 1000000,
       cpuMemory: this._nes.cpuMemory(),
@@ -36,7 +37,12 @@ class App extends Component<{}, NesState> {
     };
   }
 
-  componentDidMount() {}
+  componentDidMount = () => {
+    this._canvas = document.getElementById("canvas") as HTMLCanvasElement;
+
+    this._canvas.getContext("2d").fillStyle = "rgb(0, 0, 192)";
+    this._canvas.getContext("2d").fillRect(0, 0, 256, 240);
+  };
 
   runCycles = (e: React.SyntheticEvent) => {
     const cycles = this.state.cycles;
@@ -44,9 +50,7 @@ class App extends Component<{}, NesState> {
     setInterval(() => {
       this._nes.run(cycles);
 
-      const ctx = (document.getElementById(
-        "canvas"
-      ) as HTMLCanvasElement).getContext("2d");
+      const ctx = this._canvas.getContext("2d");
 
       this.setState(
         {
@@ -61,10 +65,7 @@ class App extends Component<{}, NesState> {
               if (!this.state.frameBuffer[i][j]) {
                 break;
               }
-              let r = this.state.frameBuffer[i][j].r;
-              let g = this.state.frameBuffer[i][j].g;
-              let b = this.state.frameBuffer[i][j].b;
-              ctx.strokeStyle = `rgba(${r}, ${g}, ${b})`;
+              ctx.strokeStyle = buildRgbString(this.state.frameBuffer[i][j]);
 
               ctx.beginPath();
               ctx.moveTo(j, i);
@@ -76,75 +77,6 @@ class App extends Component<{}, NesState> {
         }
       );
     }, 500);
-  };
-
-  printFrameBuffer = () => {
-    const data = this.state.frameBuffer;
-
-    const comps = [];
-    for (let i = 0; i < data.length; i++) {
-      for (let j = 0; j < data[i].length; j++) {
-        comps.push(
-          <div>{`(${i}, ${j}) - ${JSON.stringify(data[i][j])})`}</div>
-        );
-      }
-    }
-
-    return comps;
-  };
-
-  fillCpuMemory = () => {
-    const data = prettifyMemory(this.state.cpuMemory);
-
-    const addressValues = [];
-    for (let i = 0; i < data.length; i++) {
-      if (i % 0x10 === 0) {
-        let label = i.toString(16).toUpperCase();
-        let padding = 4 - label.length;
-        for (let j = 0; j < padding; j++) {
-          label = "0" + label;
-        }
-        addressValues.push(<br />);
-        addressValues.push(
-          <span style={{ fontSize: "small" }}>
-            <strong>{label + " "}</strong>
-          </span>
-        );
-      }
-
-      addressValues.push(
-        <span style={{ fontSize: "small" }}>{`${data[i]} `}</span>
-      );
-    }
-
-    return addressValues;
-  };
-
-  fillPpuMemory = () => {
-    const data = prettifyMemory(this.state.ppuMemory);
-
-    const addressValues = [];
-    for (let i = 0; i < data.length; i++) {
-      if (i % 0x10 === 0) {
-        let label = i.toString(16).toUpperCase();
-        let padding = 4 - label.length;
-        for (let j = 0; j < padding; j++) {
-          label = "0" + label;
-        }
-        addressValues.push(<br />);
-        addressValues.push(
-          <span style={{ fontSize: "small" }}>
-            <strong>{label + " "}</strong>
-          </span>
-        );
-      }
-
-      addressValues.push(
-        <span style={{ fontSize: "small" }}>{`${data[i]} `}</span>
-      );
-    }
-
-    return addressValues;
   };
 
   setCycles = (e: React.SyntheticEvent<HTMLInputElement>) => {
@@ -159,7 +91,7 @@ class App extends Component<{}, NesState> {
 
   render = () => {
     return (
-      <div id="App" className="App container">
+      <div id="App" className="container">
         <MainTitle />
         <div className={"container"} id="screen">
           <div className="columns">
@@ -171,7 +103,7 @@ class App extends Component<{}, NesState> {
                 id="canvas"
                 width={256}
                 height={240}
-                style={{ border: "1px solid black" }}
+                style={{ border: "1px solid rgb(200, 200, 200)" }}
               />
               <div>
                 <input

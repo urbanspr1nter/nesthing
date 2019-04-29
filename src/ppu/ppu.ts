@@ -1,15 +1,9 @@
 import { PpuMemory } from '../memory/ppumemory';
 import { OamMemory } from '../memory/oammemory';
 import * as ColorPalette from '../utils/colors.json';
-
-export interface ColorComponent {
-    r: number;
-    g: number;
-    b: number;
-}
+import { ColorComponent } from '../nes/common/interface';
 
 export const NesPpuPalette: { [id: string]: ColorComponent } = ColorPalette;
-
 
 // Background Shift Registers
 export const TileShiftRegister1 = {
@@ -162,7 +156,7 @@ export class Ppu {
     public frameBuffer(): ColorComponent[][] {
         return this._frameBuffer;
     }
-    
+
     public viewOamMemory() {
         this._oamMemory.printView();
     }

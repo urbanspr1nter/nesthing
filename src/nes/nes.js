@@ -5,7 +5,7 @@ var ppu_1 = require("../ppu/ppu");
 var cpu_1 = require("../cpu/cpu");
 var ppumemory_1 = require("../memory/ppumemory");
 var rom = require("./rom.json");
-var ROM_FILE = './DK.nes';
+var ROM_FILE = "./DK.nes";
 var Nes = /** @class */ (function () {
     function Nes() {
         this._log = [];
@@ -45,23 +45,23 @@ var Nes = /** @class */ (function () {
         });
         var currentAddress = 0x8000;
         // Load PRG ROM from 0x8000 -> 0xBFFF
-        for (var i = 0; i < romBytes.length && currentAddress < 0xC000; i++, currentAddress++) {
+        for (var i = 0; i < romBytes.length && currentAddress < 0xc000; i++, currentAddress++) {
             this._memory.set(currentAddress, romBytes[i]);
         }
         // Load PRG ROM from 0xC000 -> 0xFFFF (Mirror of 0x8000->0xBFFF)
-        currentAddress = 0xC000;
-        for (var i = 0; i < romBytes.length && currentAddress <= 0xFFFF; i++, currentAddress++) {
+        currentAddress = 0xc000;
+        for (var i = 0; i < romBytes.length && currentAddress <= 0xffff; i++, currentAddress++) {
             this._memory.set(currentAddress, romBytes[i]);
         }
         // Load the CHR ROM
         var chrRomAddress = 0x4000;
-        for (var i = 0x0000; i <= 0x1FFF; i++) {
+        for (var i = 0x0000; i <= 0x1fff; i++) {
             this._ppuMemory.set(i, romBytes[chrRomAddress]);
             chrRomAddress++;
         }
         // Initialize the nametables to $00
         var ntStartAddress = 0x2000;
-        for (var i = ntStartAddress; i < 0x3F00; i++) {
+        for (var i = ntStartAddress; i < 0x3f00; i++) {
             this._ppuMemory.set(i, 0x00);
         }
     };
@@ -74,7 +74,7 @@ var Nes = /** @class */ (function () {
         while (this._cycles <= cpuCycles) {
             var beginCpuCycles = this._cpu.getCurrentCycles();
             // If we are entering in VBLANK, Enter NMI handling routine!
-            if (this._ppu.cpuNmiIrqStatus() && ((this._ppu.read$2000() & 0x80) > 0x0)) {
+            if (this._ppu.cpuNmiIrqStatus() && (this._ppu.read$2000() & 0x80) > 0x0) {
                 this._cpu.handleNmiIrq();
             }
             var opCode = this._memory.get(this._cpu.getPC());
@@ -92,7 +92,7 @@ var Nes = /** @class */ (function () {
         this.debugDrawFrameBuffer();
     };
     Nes.prototype.debugDrawFrameBuffer = function () {
-        for (var i = 0x2000; i < 0x23BF; i++) {
+        for (var i = 0x2000; i < 0x23bf; i++) {
             this._ppu.fetchPatternTileBytes(this._ppuMemory.get(i), i);
         }
     };

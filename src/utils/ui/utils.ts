@@ -1,4 +1,4 @@
-import { ColorComponent } from "../../ppu/ppu";
+import { ColorComponent } from "../../nes/common/interface";
 
 export const prettifyMemory = (memoryArray: number[]): string[] => {
   const data = [];
