@@ -162,11 +162,7 @@ export class Ppu {
     public frameBuffer(): ColorComponent[][] {
         return this._frameBuffer;
     }
-
-    public viewPpuMemory() {
-        this._ppuMemory.printView();
-    }
-
+    
     public viewOamMemory() {
         this._oamMemory.printView();
     }

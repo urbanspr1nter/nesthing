@@ -122,9 +122,6 @@ var Ppu = /** @class */ (function () {
     Ppu.prototype.frameBuffer = function () {
         return this._frameBuffer;
     };
-    Ppu.prototype.viewPpuMemory = function () {
-        this._ppuMemory.printView();
-    };
     Ppu.prototype.viewOamMemory = function () {
         this._oamMemory.printView();
     };

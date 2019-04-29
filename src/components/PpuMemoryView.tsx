@@ -1,20 +1,20 @@
 import React from "react";
 import { shortValue2HexString, byteValue2HexString } from "../utils/ui/utils";
 
-interface CpuMemoryViewProps {
+interface PpuMemoryViewProps {
   data: number[];
 }
 
-interface CpuMemoryViewState {
+interface PpuMemoryViewState {
   startAddress: number;
   endAddress: number;
 }
 
-export default class CpuMemoryView extends React.Component<
-  CpuMemoryViewProps,
-  CpuMemoryViewState
+export default class PpuMemoryView extends React.Component<
+  PpuMemoryViewProps,
+  PpuMemoryViewState
 > {
-  constructor(props: CpuMemoryViewProps) {
+  constructor(props: PpuMemoryViewProps) {
     super(props);
 
     this.state = {
@@ -29,7 +29,8 @@ export default class CpuMemoryView extends React.Component<
       height: "512px",
       maxHeight: "512px",
       display: "inline-block",
-      border: "1px solid rgb(200, 200, 200)"
+      border: "1px solid rgb(200, 200, 200)",
+      marginTop: "16px"
     };
 
     const containerTitleStyle: React.CSSProperties = {
@@ -39,27 +40,28 @@ export default class CpuMemoryView extends React.Component<
     };
 
     const controlContainerStyle: React.CSSProperties = {
-      maxWidth: "420px",
-      margin: "16px",
-      paddingBottom: "16px",
-      borderBottom: "1px solid rgb(200, 200, 200)"
-    };
+        maxWidth: "420px",
+        margin: "16px",
+        paddingBottom: "16px",
+        borderBottom: "1px solid rgb(200, 200, 200)"
+      };
+  
 
     const containerResultsStyle: React.CSSProperties = {
-      overflowY: "scroll",
-      overflowX: "hidden",
-      fontSize: "medium",
-      maxWidth: "442px",
-      maxHeight: "380px",
-      textAlign: "left",
-      margin: "8px",
-      fontFamily: "Monospace"
-    };
+        overflowY: "scroll",
+        overflowX: "hidden",
+        fontSize: "medium",
+        maxWidth: "442px",
+        maxHeight: "380px",
+        textAlign: "left",
+        margin: "8px",
+        fontFamily: "Monospace"
+      };
 
     return (
       <div className="container" style={containerStyle}>
         <div className="container" style={containerTitleStyle}>
-          <p>CPU Memory Finder</p>
+          <p>PPU Memory Finder</p>
         </div>
         <div className="container" style={controlContainerStyle}>
           <div className="columns">
@@ -104,15 +106,18 @@ export default class CpuMemoryView extends React.Component<
           </div>
         </div>
         <div className="container" style={containerResultsStyle}>
-          {this._handleFindElements()}
+            {this._handleFindElements()}
         </div>
       </div>
     );
   };
 
   private _handleFindElements = (): JSX.Element => {
+      if(this.state.startAddress > this.state.endAddress) {
+        return null;
+      }
     const components: JSX.Element[] = [];
-    for (let i = this.state.startAddress; i <= this.state.endAddress; i += 16) {
+    for (let i = this.state.startAddress; i <= this.state.endAddress; i += 0x10) {
       components.push(this._getRowElements(i));
     }
 

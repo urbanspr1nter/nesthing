@@ -23,25 +23,4 @@ export class PpuMemory {
     public get = (address: number) => {
         return this._memory[address] & 0xFF;
     }
-
-    public printView() {
-        let output = "";
-        for(let i = 0; i <= MaxMemoryAddress; i++) {
-            if(i % 0x20 === 0) {
-                let label = i.toString(16).toUpperCase();
-                let padding = 4 - label.length;
-                for(let j = 0; j < padding; j++) {
-                    label = '0' + label;
-                }
-                output += `\n${label}:\t\t`;
-            }
-            let val = `${this._memory[i].toString(16).toUpperCase()}`;
-            if(val.length < 2) {
-                val = `0${val}`;
-            }
-            output += `0x${val}` + "\t";
-        }
-
-        console.log(output); 
-    }
 }

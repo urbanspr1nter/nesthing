@@ -23,25 +23,6 @@ var PpuMemory = /** @class */ (function () {
         enumerable: true,
         configurable: true
     });
-    PpuMemory.prototype.printView = function () {
-        var output = "";
-        for (var i = 0; i <= MaxMemoryAddress; i++) {
-            if (i % 0x20 === 0) {
-                var label = i.toString(16).toUpperCase();
-                var padding = 4 - label.length;
-                for (var j = 0; j < padding; j++) {
-                    label = '0' + label;
-                }
-                output += "\n" + label + ":\t\t";
-            }
-            var val = "" + this._memory[i].toString(16).toUpperCase();
-            if (val.length < 2) {
-                val = "0" + val;
-            }
-            output += "0x" + val + "\t";
-        }
-        console.log(output);
-    };
     return PpuMemory;
 }());
 exports.PpuMemory = PpuMemory;
