@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import "./App.css";
 import { Nes, CpuRegisters } from "./nes/nes";
 import "bulma/css/bulma.css";
 import { prettifyMemory } from "./utils/ui/utils";
