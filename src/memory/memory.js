@@ -9,20 +9,10 @@ var Memory = /** @class */ (function () {
             //  -> 0x1000 - 0x17FF
             //  -> 0x1800 - 0x1FFF
             value = value & 0xFF;
-            if (address >= 0x800 && address <= 0x0FFF) {
-                _this._memory[address & 0xFFFF] = value;
-                _this._memory[(address + 1 * 0x800) & 0xFFFF] = value;
-                _this._memory[(address + 2 * 0x800) & 0xFFFF] = value;
-            }
-            else if (address >= 0x1000 && address <= 0x17FF) {
-                _this._memory[(address - 1 * 0x800) & 0xFFFF] = value;
-                _this._memory[address & 0xFFFF] = value;
-                _this._memory[(address + 1 * 0x800) & 0xFFFF] = value;
-            }
-            else if (address >= 0x1800 && address <= 0x1FFF) {
-                _this._memory[(address - 2 * 0x800) & 0xFFFF] = value;
-                _this._memory[(address - 1 * 0x800) & 0xFFFF] = value;
-                _this._memory[address & 0xFFFF] = value;
+            if (address < 0x2000) {
+                _this._memory[address & 0x07FF] = value;
+                _this._memory[(address | 0x0800) & 0x0FFF] = value;
+                _this._memory[(address | 0x1000) & 0x1FFF] = value;
             }
             else if (address >= 0x2000 && address <= 0x3FFF) {
                 // PPU registers
@@ -48,7 +38,10 @@ var Memory = /** @class */ (function () {
             }
         };
         this.get = function (address) {
-            if (address >= 0x2000 && address <= 0x3FFF) {
+            if (address < 0x2000) {
+                return _this._memory[address & 0x07FF];
+            }
+            else if (address >= 0x2000 && address <= 0x3FFF) {
                 var decodedAddress = (0x20 << 8) | (address & 0x0007);
                 if (decodedAddress === 0x2000) {
                     return _this._ppu.read$2000();

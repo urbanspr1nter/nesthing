@@ -16,11 +16,13 @@ interface NesState {
   ppuMemory: number[];
   frameBuffer: ColorComponent[][];
   totalRunCycles: number;
+  isRunning: boolean;
 }
 
 class App extends Component<{}, NesState> {
   private _nes: Nes;
   private _canvas: HTMLCanvasElement | null;
+  private _runInterval: NodeJS.Timeout;
 
   constructor(props: any) {
     super(props);
@@ -33,7 +35,8 @@ class App extends Component<{}, NesState> {
       cpuRegisters: this._nes.cpuRegisters(),
       ppuMemory: this._nes.ppuMemory(),
       frameBuffer: this._nes.frameBuffer(),
-      totalRunCycles: 0
+      totalRunCycles: 0,
+      isRunning: false
     };
   }
 
@@ -47,7 +50,7 @@ class App extends Component<{}, NesState> {
   runCycles = (e: React.SyntheticEvent) => {
     const cycles = this.state.cycles;
 
-    setInterval(() => {
+    this._runInterval = setInterval(() => {
       this._nes.run(cycles);
 
       const ctx = this._canvas.getContext("2d");
@@ -57,7 +60,8 @@ class App extends Component<{}, NesState> {
           cpuRegisters: this._nes.cpuRegisters(),
           cpuMemory: this._nes.cpuMemory(),
           ppuMemory: this._nes.ppuMemory(),
-          frameBuffer: this._nes.frameBuffer()
+          frameBuffer: this._nes.frameBuffer(),
+          isRunning: true
         },
         () => {
           for (let i = 0; i < 240; i++) {
@@ -77,6 +81,12 @@ class App extends Component<{}, NesState> {
         }
       );
     }, 500);
+  };
+
+  handlePause = () => {
+    this.setState({ isRunning: false });
+    clearInterval(this._runInterval);
+    this._runInterval = undefined;
   };
 
   setCycles = (e: React.SyntheticEvent<HTMLInputElement>) => {
@@ -105,18 +115,49 @@ class App extends Component<{}, NesState> {
                 height={240}
                 style={{ border: "1px solid rgb(200, 200, 200)" }}
               />
-              <div>
-                <input
-                  type="text"
-                  onChange={this.setCycles}
-                  value={this.state.cycles}
-                />
-                <button type="button" onClick={this.runCycles}>
-                  Run
-                </button>
-                <div>
-                  <CpuRegisterView data={this.state.cpuRegisters} />
+              <div className="field is-horizontal">
+                <div className="field-label is-small">
+                  <label className="label">Cycle Stepping</label>
                 </div>
+                <div className="field-body">
+                  <div className="field">
+                    <input
+                      type="text"
+                      onChange={this.setCycles}
+                      value={this.state.cycles}
+                    />
+                  </div>
+                  <div className="field">
+                    <button
+                      className={`button is-primary is-normal ${
+                        this.state.isRunning ? "is-loading" : undefined
+                      }`}
+                      type="button"
+                      onClick={this.runCycles}
+                    >
+                      Run
+                    </button>
+                  </div>
+                  <div className="field">
+                    <button
+                      className="button is-light is-normal"
+                      type="button"
+                      onClick={this.handlePause}
+                    >
+                      Pause
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <CpuRegisterView data={this.state.cpuRegisters} />
+              </div>
+              <div>
+                <textarea
+                  className="textarea has-fixed-size"
+                  placeholder="Notes"
+                  rows={8}
+                />
               </div>
             </div>
             <div className="column">

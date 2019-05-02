@@ -1,5 +1,18 @@
 import { Ppu } from "../ppu/ppu";
 
+/**
+ * CPU MEMORY MAP
+ * 
+ * $0000 - $07FF ($0800) - RAM
+ * $0800 - $0FFF ($0800) - Mirror of RAM
+ * $1000 - $17FF ($0800) - Mirror of RAM
+ * $1800 - $1FFF ($0800) - Mirror of RAM
+ * $2000 - $2007 ($0008) - PPU Registers
+ * $2008 - $3FFF ($1FF8) - Mirror of PPU Registers
+ * $4000 - $4017 ($0018) - APU / IO Registers
+ * $4018 - $401F ($0008) - APU / IO Functionality Disabled
+ * $4020 - $FFFF ($BFE0) - Cartridge space: PRG RAOM, PRG RAM, mapper registers
+ */
 export class Memory {
     private _memory: number[];
 
@@ -20,23 +33,11 @@ export class Memory {
     }
 
     public set = (address: number, value: number): void => {
-        // Mirrored at 0x0800 - 0x0FFF
-        //  -> 0x800 - 0x0FFF
-        //  -> 0x1000 - 0x17FF
-        //  -> 0x1800 - 0x1FFF
         value = value & 0xFF;
-        if(address >= 0x800 && address <= 0x0FFF) {
-            this._memory[address & 0xFFFF] = value;
-            this._memory[(address + 1*0x800) & 0xFFFF] = value;
-            this._memory[(address + 2*0x800) & 0xFFFF] = value;
-        } else if(address >= 0x1000 && address <= 0x17FF) {
-            this._memory[(address - 1*0x800) & 0xFFFF] = value;
-            this._memory[address & 0xFFFF] = value;
-            this._memory[(address + 1*0x800) & 0xFFFF] = value;
-        } else if(address >= 0x1800 && address <= 0x1FFF) {
-            this._memory[(address - 2*0x800) & 0xFFFF] = value;
-            this._memory[(address - 1*0x800) & 0xFFFF] = value;
-            this._memory[address & 0xFFFF] = value;
+        if(address < 0x2000) {
+            this._memory[address & 0x07FF] = value;
+            this._memory[(address | 0x0800) & 0x0FFF] = value;
+            this._memory[(address | 0x1000) & 0x1FFF] = value;
         } else if(address >= 0x2000 && address <= 0x3FFF) {
             // PPU registers
             const decodedAddress = (0x20 << 8) | (address & 0x0007);
@@ -57,7 +58,9 @@ export class Memory {
     }
 
     public get = (address: number): number => {
-        if(address >= 0x2000 && address <= 0x3FFF) {
+        if(address < 0x2000) {
+            return this._memory[address & 0x07FF];
+        } else if(address >= 0x2000 && address <= 0x3FFF) {
             const decodedAddress = (0x20 << 8) | (address & 0x0007);
             if(decodedAddress === 0x2000) { 
                 return this._ppu.read$2000();
