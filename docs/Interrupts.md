@@ -69,3 +69,10 @@ Think of it as the period of time when the CPU can **write** to VRAM again.
 ### IRQ
 
 Software generated. If the *interrupt disable* bit is set in the P register, then these are ignored by the CPU. `BRK` instruction will generate the IRQ. 
+
+---
+
+#### References
+
+1. Nintendo Entertainment System Documentation - Version 1.0. Patrick Diskin, [Source](http://www.nesdev.com/NESDoc.pdf)
+2. The Frame and NMIs. NesDev Wiki, [Source](https://wiki.nesdev.com/w/index.php/The_frame_and_NMIs)
