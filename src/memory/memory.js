@@ -1,18 +1,28 @@
 "use strict";
 exports.__esModule = true;
+/**
+ * CPU MEMORY MAP
+ *
+ * $0000 - $07FF ($0800) - RAM
+ * $0800 - $0FFF ($0800) - Mirror of RAM
+ * $1000 - $17FF ($0800) - Mirror of RAM
+ * $1800 - $1FFF ($0800) - Mirror of RAM
+ * $2000 - $2007 ($0008) - PPU Registers
+ * $2008 - $3FFF ($1FF8) - Mirror of PPU Registers
+ * $4000 - $4017 ($0018) - APU / IO Registers
+ * $4018 - $401F ($0008) - APU / IO Functionality Disabled
+ * $4020 - $FFFF ($BFE0) - Cartridge space: PRG RAOM, PRG RAM, mapper registers
+ */
 var Memory = /** @class */ (function () {
     function Memory(ppu) {
         var _this = this;
         this.set = function (address, value) {
-            // Mirrored at 0x0800 - 0x0FFF
-            //  -> 0x800 - 0x0FFF
-            //  -> 0x1000 - 0x17FF
-            //  -> 0x1800 - 0x1FFF
             value = value & 0xFF;
             if (address < 0x2000) {
                 _this._memory[address & 0x07FF] = value;
                 _this._memory[(address | 0x0800) & 0x0FFF] = value;
-                _this._memory[(address | 0x1000) & 0x1FFF] = value;
+                _this._memory[(address | 0x1000) & 0x17FF] = value;
+                _this._memory[(address | 0x1800) & 0x1FFF] = value;
             }
             else if (address >= 0x2000 && address <= 0x3FFF) {
                 // PPU registers

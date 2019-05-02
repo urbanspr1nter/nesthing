@@ -37,7 +37,8 @@ export class Memory {
         if(address < 0x2000) {
             this._memory[address & 0x07FF] = value;
             this._memory[(address | 0x0800) & 0x0FFF] = value;
-            this._memory[(address | 0x1000) & 0x1FFF] = value;
+            this._memory[(address | 0x1000) & 0x17FF] = value;
+            this._memory[(address | 0x1800) & 0x1FFF] = value;
         } else if(address >= 0x2000 && address <= 0x3FFF) {
             // PPU registers
             const decodedAddress = (0x20 << 8) | (address & 0x0007);
