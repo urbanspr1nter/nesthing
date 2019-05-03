@@ -459,8 +459,6 @@ var Ppu = /** @class */ (function () {
                 this.addPpuCyclesInRun(1);
             }
         }
-        var debugOutput = "--> PPU Cycles " + this._currentCyclesInRun + ". Total: " + this._cycles + ", Scanline: " + this._scanlines;
-        // console.log(debugOutput);
         return this._currentCyclesInRun;
     };
     return Ppu;

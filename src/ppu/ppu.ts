@@ -544,10 +544,6 @@ export class Ppu {
                 this.addPpuCyclesInRun(1);
             }
         }
-
-        let debugOutput = `--> PPU Cycles ${this._currentCyclesInRun}. Total: ${this._cycles}, Scanline: ${this._scanlines}`;
-        // console.log(debugOutput);
-
         return this._currentCyclesInRun;
     }
 }

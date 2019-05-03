@@ -267,9 +267,7 @@ export class Cpu {
   }
 
   public powerUp(): void {
-    // Need to set to 0x24 if using nestest ROM.
-    this._regP.set(0x24);
-    // this._regP.set(0x34);
+    this._regP.set(0x34);
 
     this._regA.set(0);
     this._regX.set(0);
@@ -279,29 +277,40 @@ export class Cpu {
     // Frame IRQ Enabled
     this._memWrite(0x4015, 0);
 
-    // All cannels disabled
+    // All channels disabled
     this._memWrite(0x4017, 0);
 
     for (let i = 0x4000; i <= 0x400f; i++) {
       this._memWrite(i, 0x0);
     }
 
-    // Initialize RAM (0x0000->0x07FFF) values to 0xFF
     for (let i = 0x0000; i <= 0x07ff; i++) {
       this._memWrite(i, 0xff);
     }
 
-    // If using nestest ROM, actually set the PC to 0xC000.
-    // this._regPC.set(0xC000);
+    // Perform the RESET Interrupt
+    this.interruptReset();
+  }
 
-    // The PC is set from the bytes found in 0xFFFC, 0xFFFD
-    const lowByte = this._memRead(ResetVectorLocation.Low);
-    const highByte = this._memRead(ResetVectorLocation.High);
+  public interruptReset(): void {
+    const currPcLow = this._regPC.get() & 0xFF;
+    const currPcHigh = (this._regPC.get() >> 8) & 0xFF;
 
-    this._regPC.set((highByte << 8) | lowByte);
+    this.stackPush(currPcHigh);
+    this.stackPush(currPcLow);
 
-    // Perform an IRQ Operation
-    // this._currentCycles = 7;
+    this.stackPush(this._regP.get());
+
+    this.setStatusBit(StatusBitPositions.InterruptDisable);
+
+    this._regPC.set(
+      (this._memRead(ResetVectorLocation.High) << 8) |
+        this._memRead(ResetVectorLocation.Low)
+    );
+
+    this.setStatusBit(StatusBitPositions.InterruptDisable);
+
+    this._currentCycles += 7;
   }
 
   public stackPush(data: number): void {
@@ -405,8 +414,8 @@ export class Cpu {
   }
 
   public handleNmiIrq() {
-    const currPcLow = this._regPC.get() & 0xff;
-    const currPcHigh = (this._regPC.get() >> 8) & 0xff;
+    const currPcLow = this._regPC.get() & 0xFF;
+    const currPcHigh = (this._regPC.get() >> 8) & 0xFF;
 
     this.stackPush(currPcHigh);
     this.stackPush(currPcLow);

@@ -26,6 +26,15 @@ var Nes = /** @class */ (function () {
     Nes.prototype.ppuMemory = function () {
         return this._ppuMemory.bits;
     };
+    Nes.prototype.nmiStatus = function () {
+        return this._ppu.cpuNmiIrqStatus();
+    };
+    Nes.prototype.scanlines = function () {
+        return this._ppu.getScanlines();
+    };
+    Nes.prototype.ppuCycles = function () {
+        return this._ppu.getCycles();
+    };
     Nes.prototype.cpuRegisters = function () {
         return {
             pc: this._cpu.getPC(),

@@ -52,6 +52,18 @@ export class Nes {
     return this._ppuMemory.bits;
   }
 
+  public nmiStatus(): boolean {
+      return this._ppu.cpuNmiIrqStatus();
+  }
+
+  public scanlines(): number {
+      return this._ppu.getScanlines();
+  }
+
+  public ppuCycles(): number {
+      return this._ppu.getCycles();
+  }
+
   public cpuRegisters(): CpuRegisters {
     return {
       pc: this._cpu.getPC(),

@@ -17,6 +17,9 @@ interface NesState {
   frameBuffer: ColorComponent[][];
   totalRunCycles: number;
   isRunning: boolean;
+  nmiIrq: boolean;
+  scanline: number;
+  ppuCycles: number;
 }
 
 class App extends Component<{}, NesState> {
@@ -36,7 +39,10 @@ class App extends Component<{}, NesState> {
       ppuMemory: this._nes.ppuMemory(),
       frameBuffer: this._nes.frameBuffer(),
       totalRunCycles: 0,
-      isRunning: false
+      isRunning: false,
+      nmiIrq: false,
+      scanline: this._nes.scanlines(),
+      ppuCycles: this._nes.ppuCycles()
     };
   }
 
@@ -61,7 +67,10 @@ class App extends Component<{}, NesState> {
           cpuMemory: this._nes.cpuMemory(),
           ppuMemory: this._nes.ppuMemory(),
           frameBuffer: this._nes.frameBuffer(),
-          isRunning: true
+          isRunning: true,
+          nmiIrq: this._nes.nmiStatus(),
+          scanline: this._nes.scanlines(),
+          ppuCycles: this._nes.ppuCycles()
         },
         () => {
           for (let i = 0; i < 240; i++) {
@@ -151,6 +160,18 @@ class App extends Component<{}, NesState> {
               </div>
               <div>
                 <CpuRegisterView data={this.state.cpuRegisters} />
+              </div>
+              <div className="columns">
+                <div className="column">
+                  <span className={`tag ${this.state.nmiIrq? 'is-warning' : 'is-light'}`}>NMI</span>                  
+                </div>
+                <div className="column">
+                  Scanline: {this.state.scanline}
+                </div>
+                <div className="column">
+                  PPU Cycles: {this.state.ppuCycles}
+                </div>
+
               </div>
               <div>
                 <textarea
