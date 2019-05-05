@@ -21,6 +21,6 @@ export class PpuMemory {
     }
 
     public get = (address: number) => {
-        return this._memory[address] & 0xFF;
+        return this._memory[address & MaxMemoryAddress] & 0xFF;
     }
 }

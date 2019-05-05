@@ -8,7 +8,7 @@ var PpuMemory = /** @class */ (function () {
             _this._memory[address & MaxMemoryAddress] = value & 0xFF;
         };
         this.get = function (address) {
-            return _this._memory[address] & 0xFF;
+            return _this._memory[address & MaxMemoryAddress] & 0xFF;
         };
         this._memory = [];
         // Blank out
