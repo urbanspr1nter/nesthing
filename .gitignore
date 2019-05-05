@@ -109,3 +109,4 @@ typings/
 .dynamodb/
 
 */**/tests/*.js
+*/**/nes/*.js
