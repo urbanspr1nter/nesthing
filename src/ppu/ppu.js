@@ -1,8 +1,9 @@
 "use strict";
 exports.__esModule = true;
 var oammemory_1 = require("../memory/oammemory");
-var ColorPalette = require("../utils/colors.json");
-exports.NesPpuPalette = ColorPalette;
+var ppu_helpers_1 = require("./ppu.helpers");
+var ppu_interface_1 = require("./ppu.interface");
+var framebuffer_1 = require("../framebuffer/framebuffer");
 // Background Shift Registers
 exports.TileShiftRegister1 = {
     HighByte: 0,
@@ -18,25 +19,6 @@ exports.PaletteShiftRegister1 = {
 exports.PaletteShiftRegister2 = {
     Value: 0
 };
-exports.BaseNametableAddresses = {
-    0x00: 0x2000,
-    0x01: 0x2400,
-    0x02: 0x2800,
-    0x03: 0x2C00
-};
-var PpuRegister;
-(function (PpuRegister) {
-    PpuRegister[PpuRegister["PPUCTRL"] = 8192] = "PPUCTRL";
-    PpuRegister[PpuRegister["PPUMASK"] = 8193] = "PPUMASK";
-    PpuRegister[PpuRegister["PPUSTATUS"] = 8194] = "PPUSTATUS";
-    PpuRegister[PpuRegister["OAMADDR"] = 8195] = "OAMADDR";
-    PpuRegister[PpuRegister["OAMDATA"] = 8196] = "OAMDATA";
-    PpuRegister[PpuRegister["PPUSCROLL"] = 8197] = "PPUSCROLL";
-    PpuRegister[PpuRegister["PPUADDR"] = 8198] = "PPUADDR";
-    PpuRegister[PpuRegister["PPUDATA"] = 8199] = "PPUDATA";
-    PpuRegister[PpuRegister["OAMDMA"] = 16404] = "OAMDMA";
-})(PpuRegister = exports.PpuRegister || (exports.PpuRegister = {}));
-;
 // PPUCTRL (0x2000)
 var PpuCtrlBits;
 (function (PpuCtrlBits) {
@@ -67,24 +49,23 @@ var PpuStatusBits;
 (function (PpuStatusBits) {
     PpuStatusBits[PpuStatusBits["SpriteOverflow"] = 5] = "SpriteOverflow";
     PpuStatusBits[PpuStatusBits["SpriteZeroHit"] = 6] = "SpriteZeroHit";
-    PpuStatusBits[PpuStatusBits["VblankStarted"] = 7] = "VblankStarted";
+    PpuStatusBits[PpuStatusBits["Vblank"] = 7] = "Vblank";
 })(PpuStatusBits = exports.PpuStatusBits || (exports.PpuStatusBits = {}));
 exports.IgnoredWritesBeforeWarmedUp = [
-    PpuRegister.PPUCTRL,
-    PpuRegister.PPUMASK,
-    PpuRegister.PPUSCROLL,
-    PpuRegister.PPUADDR
+    ppu_interface_1.PpuRegister.PPUCTRL,
+    ppu_interface_1.PpuRegister.PPUMASK,
+    ppu_interface_1.PpuRegister.PPUSCROLL,
+    ppu_interface_1.PpuRegister.PPUADDR
 ];
-// PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR registers are not functional
-// --> PPUSCROLL and PPLUADDR Latches will not toggle.
-var cpuCyclesToWarmUp = 29658;
 var Ppu = /** @class */ (function () {
     function Ppu(ppuMemory) {
-        this._initializeFrameBuffer();
-        this._cpuNmiIrq = false;
+        // this._initializeFrameBuffer();
+        this._frameBuffer = new framebuffer_1.FrameBuffer();
+        this._cpuNmiRequested = false;
         this._ppuMemory = ppuMemory;
         this._oamMemory = new oammemory_1.OamMemory();
         this._currentCyclesInRun = 0;
+        this._totalCycles = 0;
         this._scanlines = -1;
         this._cycles = 0;
         this._vramAddress = 0;
@@ -98,32 +79,10 @@ var Ppu = /** @class */ (function () {
         return this._vramAddress;
     };
     /**
-     * Initializes the frame buffer.
-     *
-     * This will store the representation of the screen.
-     *
-     * Since the resolution is 256x240 for the NES, we have
-     * decided to use a 2D array of 256 rows, and 240 columns.
-     *
-     * Each element represents a single pixel.
-     */
-    Ppu.prototype._initializeFrameBuffer = function () {
-        this._frameBuffer = [];
-        for (var i = 0; i < 240; i++) {
-            this._frameBuffer.push([]);
-            for (var j = 0; j < 256; j++) {
-                this._frameBuffer[i].push({ r: 0, g: 0, b: 0 });
-            }
-        }
-    };
-    /**
      * Gets the framebuffer
      */
     Ppu.prototype.frameBuffer = function () {
-        return this._frameBuffer;
-    };
-    Ppu.prototype.viewOamMemory = function () {
-        this._oamMemory.printView();
+        return this._frameBuffer.buffer;
     };
     Ppu.prototype.addPpuCyclesInRun = function (ppuCycles) {
         this._currentCyclesInRun += ppuCycles;
@@ -148,6 +107,10 @@ var Ppu = /** @class */ (function () {
     };
     Ppu.prototype.write$2000 = function (dataByte) {
         this._regPPUCTRL = dataByte & 0xFF;
+        if (((this._regPPUCTRL & (0x1 << PpuCtrlBits.Vblank)) > 0x0)
+            && this._isVblank()) {
+            this._cpuNmiRequested = true;
+        }
     };
     Ppu.prototype.write$2001 = function (dataByte) {
         this._regPPUMASK = dataByte & 0xFF;
@@ -174,7 +137,7 @@ var Ppu = /** @class */ (function () {
     };
     Ppu.prototype.read$2002 = function () {
         var currentStatus = this._regPPUSTATUS;
-        this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
+        this._clearVblank();
         this._isSecondWrite = false;
         return currentStatus;
     };
@@ -190,29 +153,34 @@ var Ppu = /** @class */ (function () {
             : 1;
         this._vramAddress += vramIncrement;
     };
-    Ppu.prototype.cpuNmiIrqStatus = function () {
-        if (this._cpuNmiIrq) {
-            this._cpuNmiIrq = false;
+    Ppu.prototype.cpuNmiRequested = function () {
+        if (this._cpuNmiRequested) {
+            this._cpuNmiRequested = false;
             return true;
         }
         return false;
     };
-    Ppu.prototype._getBaseNametableAddress = function () {
-        var base = this._regPPUCTRL & 0x03;
-        switch (base) {
-            case 0x00:
-                return 0x2000;
-            case 0x01:
-                return 0x2400;
-            case 0x02:
-                return 0x2800;
-            case 0x03:
-                return 0x2C00;
+    Ppu.prototype._setVblank = function () {
+        this._regPPUSTATUS = this._regPPUSTATUS | (0x1 << PpuStatusBits.Vblank);
+    };
+    Ppu.prototype._clearVblank = function () {
+        this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.Vblank);
+    };
+    Ppu.prototype._isVblank = function () {
+        return (this._regPPUSTATUS & (0x1 << PpuStatusBits.Vblank)) > 0x0;
+    };
+    /**
+     * An NMI can be PREVENTED if bit 7 of $2002 is off.
+     *
+     * Therefore, we only generate an NMI request to the CPU
+     * IFF bit 7 of $2002 is ON.
+     */
+    Ppu.prototype._requestNmiIfNeeded = function () {
+        if ((this._regPPUCTRL & 0x80) > 0x0) {
+            this._cpuNmiRequested = true;
         }
-        return 0x2000;
     };
     Ppu.prototype._mergeTileLowAndHighBytesToRowBits = function (lowByte, highByte) {
-        var merged = 0x0;
         var mask = 0x1;
         var bits = [0, 0, 0, 0, 0, 0, 0, 0];
         for (var j = 0; j < 8; j++) {
@@ -255,7 +223,7 @@ var Ppu = /** @class */ (function () {
         for (var i = 0; i < rowBits.length; i++) {
             var paletteAddress = this._getPaletteAddress(basePaletteAddress, rowBits[i]);
             var colorByte = this._ppuMemory.get(paletteAddress);
-            var colorComp = this._getColor(colorByte);
+            var colorComp = this._frameBuffer.getColor(colorByte);
             pixelColors.push(colorComp);
         }
         return pixelColors;
@@ -311,13 +279,6 @@ var Ppu = /** @class */ (function () {
         }
         return 0;
     };
-    Ppu.prototype._getColor = function (colorByte) {
-        var key = colorByte.toString(16).toUpperCase();
-        if (key.length < 2) {
-            key = "0" + key;
-        }
-        return exports.NesPpuPalette[key];
-    };
     Ppu.prototype.fetchPatternTileBytes = function (patternIndex, nametableAddress) {
         var baseAddress = (this._regPPUCTRL & (0x1 << PpuCtrlBits.BackgroundTileSelect)) === 0
             ? 0x0000 : 0x1000;
@@ -338,10 +299,7 @@ var Ppu = /** @class */ (function () {
             //  4. Start shift at 0;
             var shift = 0;
             for (var k = fbCol; k < fbCol + 8; k++) {
-                if (!this._frameBuffer[fbRow]) {
-                    //break;
-                }
-                this._frameBuffer[fbRow][k] = frameBufferRowBits[shift];
+                this._frameBuffer.draw(fbRow, k, frameBufferRowBits[shift]);
                 shift++;
             }
         }
@@ -379,7 +337,7 @@ var Ppu = /** @class */ (function () {
                 this.addPpuCyclesInRun(1);
             }
             else if (this._cycles === 1) {
-                this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
+                this._clearVblank();
                 this.addPpuCyclesInRun(1);
             }
             else {
@@ -420,22 +378,19 @@ var Ppu = /** @class */ (function () {
                  *
                  * Meaning, that for each scan line, it will visit that same pattern tile 8 times
                  * due to pattern tiles being 8x8 pixels.
-                 *
-                 *
-                 *
                  */
                 // Fetch NT Byte
-                var ntByteIndex = (this._vramAddress & 0xFFF) + this._getBaseNametableAddress();
+                var ntByteIndex = (this._vramAddress & 0xFFF) + ppu_helpers_1.getBaseNametableAddress(this._regPPUCTRL);
                 // console.log(`NT BYTE INDEX: ${ntByteIndex.toString(16).toUpperCase()}`);
                 //this.incrementVramAddress();
-                this.addPpuCyclesInRun(2);
+                this.addPpuCyclesInRun(8);
             }
             else if (this._cycles >= 257 && this._cycles <= 320) {
                 // Garbage fetch
-                this.addPpuCyclesInRun(1);
+                this.addPpuCyclesInRun(2);
             }
             else if (this._cycles >= 321 && this._cycles <= 336) {
-                this.addPpuCyclesInRun(1);
+                this.addPpuCyclesInRun(2);
             }
             else if (this._cycles >= 337 && this._cycles <= 340) {
                 this.addPpuCyclesInRun(1);
@@ -450,9 +405,8 @@ var Ppu = /** @class */ (function () {
                 this.addPpuCyclesInRun(1);
             }
             else if (this._scanlines === 241 && this._cycles === 1) {
-                this._regPPUSTATUS = this._regPPUSTATUS | (0x1 << PpuStatusBits.VblankStarted);
-                // Request an interrupt
-                this._cpuNmiIrq = true;
+                this._setVblank();
+                this._requestNmiIfNeeded();
                 this.addPpuCyclesInRun(1);
             }
             else {

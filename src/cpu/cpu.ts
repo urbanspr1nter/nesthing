@@ -8,9 +8,11 @@ import {
   OpAddressingMode,
   OpLabel,
   ResetVectorLocation,
-  StatusBitPositions
+  StatusBitPositions,
+  InterruptRequestType
 } from "./cpu.interface";
 import { CpuAddressingHelper } from "./cpu-addressing-helper";
+import { LogUtil } from "./log.util";
 
 export class Cpu {
   private _dbg: boolean;
@@ -19,22 +21,25 @@ export class Cpu {
 
   private _currentCycles: number;
 
+  // Registers
   private _regA: ByteRegister;
   private _regX: ByteRegister;
   private _regY: ByteRegister;
-
   private _regPC: DoubleByteRegister;
   private _regSP: ByteRegister;
   private _regP: ByteRegister;
 
-  private _log: string[];
+  // Helpers
+  private _interrupt: InterruptRequestType;
 
-  constructor(memory: Memory, log: string[]) {
-    this._dbg = false;
+  private _logger: LogUtil;
+
+  constructor(memory: Memory, logger: LogUtil) {
+    this._dbg = true;
 
     this._currentCycles = 0;
 
-    this._log = log;
+    this._logger = logger;
     this._memory = memory;
     this._addressingHelper = new CpuAddressingHelper(this._memory);
 
@@ -44,6 +49,12 @@ export class Cpu {
     this._regPC = new DoubleByteRegister(0x00);
     this._regSP = new ByteRegister(0x00);
     this._regP = new ByteRegister(0x00);
+
+    this._interrupt = InterruptRequestType.None;
+  }
+
+  public totalCycles(): number {
+    return this._currentCycles;
   }
 
   public debugMode(value: boolean): void {
@@ -413,7 +424,7 @@ export class Cpu {
     }
   }
 
-  public handleNmiIrq() {
+  public setupNmi() {
     const currPcLow = this._regPC.get() & 0xFF;
     const currPcHigh = (this._regPC.get() >> 8) & 0xFF;
 
@@ -430,6 +441,8 @@ export class Cpu {
     );
 
     this._currentCycles += 7;
+
+    this._interrupt = InterruptRequestType.NMI;
   }
 
   public adc(opCode: number) {
@@ -802,6 +815,8 @@ export class Cpu {
   }
 
   public bcs(opCode: number) {
+    if(this._regPC.get() === 0xF211) {
+    }
     this._regPC.add(1);
     switch (opCode) {
       case 0xb0:
@@ -1005,8 +1020,8 @@ export class Cpu {
     this._regPC.add(2);
     switch (opCode) {
       case 0x00:
-        this.stackPush((this._regPC.get() | 0xff00) >> 8);
-        this.stackPush(this._regPC.get() | 0x00ff);
+        this.stackPush((this._regPC.get() & 0xff00) >> 8);
+        this.stackPush(this._regPC.get() & 0x00ff);
 
         this.setStatusBit(StatusBitPositions.BrkCausedInterrupt);
         this.stackPush(this._regP.get() | 0x10);
@@ -1018,6 +1033,8 @@ export class Cpu {
         this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
 
         this._currentCycles += 7;
+
+        this._interrupt = InterruptRequestType.IRQ;
         break;
       default:
         console.error(`ERROR: Unhandled BRK opcode! ${opCode}`);
@@ -4080,6 +4097,8 @@ export class Cpu {
         this._regSP.set(this._regX.get());
         this._currentCycles += 2;
         break;
+      default:
+        break;
     }
   }
 
@@ -4089,6 +4108,8 @@ export class Cpu {
       case 0x98:
         this._regA.set(this._regY.get());
         this._currentCycles += 2;
+        break;
+      default:
         break;
     }
 
@@ -4106,11 +4127,9 @@ export class Cpu {
   }
 
   public handleOp(opCode: number) {
-    if (this._dbg) {
-      const logEntry = this.getLogEntry(opCode);
-      this._log.push(logEntry);
-      console.log(logEntry);
-    }
+    const logEntry = this.getLogEntry(opCode);
+    //this._logger.log(logEntry);
+    //console.log(logEntry);
 
     switch (opCode) {
       case 0x00:

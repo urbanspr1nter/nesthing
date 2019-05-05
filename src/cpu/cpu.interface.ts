@@ -24,6 +24,13 @@ export const NmiVectorLocation = {
     High: 0xFFFB
 }
 
+export enum InterruptRequestType {
+    Reset,
+    NMI,
+    IRQ,
+    None
+};
+
 export enum AddressingModes {
     Immediate,
     Absolute,

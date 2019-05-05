@@ -5,14 +5,15 @@ var ppu_1 = require("../ppu/ppu");
 var cpu_1 = require("../cpu/cpu");
 var ppumemory_1 = require("../memory/ppumemory");
 var rom = require("./rom.json");
+var log_util_1 = require("../cpu/log.util");
 var ROM_FILE = "./DK.nes";
 var Nes = /** @class */ (function () {
     function Nes() {
-        this._log = [];
+        this._logger = new log_util_1.LogUtil(10000);
         this._ppuMemory = new ppumemory_1.PpuMemory();
         this._ppu = new ppu_1.Ppu(this._ppuMemory);
         this._memory = new memory_1.Memory(this._ppu);
-        this._cpu = new cpu_1.Cpu(this._memory, this._log);
+        this._cpu = new cpu_1.Cpu(this._memory, this._logger);
         this._initialize();
         this._cpu.debugMode(false);
         this._cycles = 0;
@@ -26,14 +27,20 @@ var Nes = /** @class */ (function () {
     Nes.prototype.ppuMemory = function () {
         return this._ppuMemory.bits;
     };
-    Nes.prototype.nmiStatus = function () {
-        return this._ppu.cpuNmiIrqStatus();
+    Nes.prototype.cpuNmiRequested = function () {
+        return this._nmiTriggered;
+    };
+    Nes.prototype.cpuTotalCycles = function () {
+        return this._cpu.totalCycles();
     };
     Nes.prototype.scanlines = function () {
         return this._ppu.getScanlines();
     };
     Nes.prototype.ppuCycles = function () {
         return this._ppu.getCycles();
+    };
+    Nes.prototype.logEntries = function () {
+        return this._logger.entries;
     };
     Nes.prototype.cpuRegisters = function () {
         return {
@@ -83,8 +90,9 @@ var Nes = /** @class */ (function () {
         while (this._cycles <= cpuCycles) {
             var beginCpuCycles = this._cpu.getCurrentCycles();
             // If we are entering in VBLANK, Enter NMI handling routine!
-            if (this._ppu.cpuNmiIrqStatus() && (this._ppu.read$2000() & 0x80) > 0x0) {
-                this._cpu.handleNmiIrq();
+            this._nmiTriggered = this._ppu.cpuNmiRequested();
+            if (this._nmiTriggered) {
+                this._cpu.setupNmi();
             }
             var opCode = this._memory.get(this._cpu.getPC());
             this._cpu.handleOp(opCode);
@@ -108,6 +116,7 @@ var Nes = /** @class */ (function () {
     Nes.prototype._initialize = function () {
         this.loadRom();
         this._cpu.powerUp();
+        this._cpu.debugMode(true);
     };
     return Nes;
 }());

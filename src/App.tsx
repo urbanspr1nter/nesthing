@@ -20,6 +20,8 @@ interface NesState {
   nmiIrq: boolean;
   scanline: number;
   ppuCycles: number;
+  cpuCycles: number;
+  logBuffer: string[];
 }
 
 class App extends Component<{}, NesState> {
@@ -42,7 +44,9 @@ class App extends Component<{}, NesState> {
       isRunning: false,
       nmiIrq: false,
       scanline: this._nes.scanlines(),
-      ppuCycles: this._nes.ppuCycles()
+      ppuCycles: this._nes.ppuCycles(),
+      cpuCycles: this._nes.cpuTotalCycles(),
+      logBuffer: this._nes.logEntries()
     };
   }
 
@@ -68,9 +72,10 @@ class App extends Component<{}, NesState> {
           ppuMemory: this._nes.ppuMemory(),
           frameBuffer: this._nes.frameBuffer(),
           isRunning: true,
-          nmiIrq: this._nes.nmiStatus(),
+          nmiIrq: this._nes.cpuNmiRequested(),
           scanline: this._nes.scanlines(),
-          ppuCycles: this._nes.ppuCycles()
+          ppuCycles: this._nes.ppuCycles(),
+          cpuCycles: this._nes.cpuTotalCycles(),
         },
         () => {
           for (let i = 0; i < 240; i++) {
@@ -103,10 +108,15 @@ class App extends Component<{}, NesState> {
     this.setState(
       {
         cycles: parseInt(target.value)
-      },
-      () => console.log(target.value)
+      }
     );
   };
+
+  onNotesChanged = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const target = e.target as HTMLTextAreaElement;
+
+    localStorage.setItem("nesthing.notes", target.value);
+  }
 
   render = () => {
     return (
@@ -171,13 +181,19 @@ class App extends Component<{}, NesState> {
                 <div className="column">
                   PPU Cycles: {this.state.ppuCycles}
                 </div>
-
+              </div>
+              <div className="columns">
+                <div className="column">
+                  CPU Cycles: {this.state.cpuCycles}
+                </div>
               </div>
               <div>
                 <textarea
                   className="textarea has-fixed-size"
                   placeholder="Notes"
                   rows={8}
+                  defaultValue={localStorage.getItem("nesthing.notes")}
+                  onChange={this.onNotesChanged}
                 />
               </div>
             </div>

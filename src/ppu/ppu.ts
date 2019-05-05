@@ -1,9 +1,9 @@
 import { PpuMemory } from '../memory/ppumemory';
 import { OamMemory } from '../memory/oammemory';
-import * as ColorPalette from '../utils/colors.json';
 import { ColorComponent } from '../nes/common/interface';
-
-export const NesPpuPalette: { [id: string]: ColorComponent } = ColorPalette;
+import { getBaseNametableAddress } from './ppu.helpers';
+import { PpuRegister } from './ppu.interface';
+import { FrameBuffer } from '../framebuffer/framebuffer';
 
 // Background Shift Registers
 export const TileShiftRegister1 = {
@@ -23,25 +23,6 @@ export const PaletteShiftRegister1 = {
 export const PaletteShiftRegister2 = {
     Value: 0
 }
-
-export const BaseNametableAddresses = {
-    0x00: 0x2000,
-    0x01: 0x2400,
-    0x02: 0x2800,
-    0x03: 0x2C00
-};
-
-export enum PpuRegister {
-    PPUCTRL = 0x2000,
-    PPUMASK = 0x2001,
-    PPUSTATUS = 0x2002,
-    OAMADDR = 0x2003,
-    OAMDATA = 0x2004,
-    PPUSCROLL = 0x2005,
-    PPUADDR = 0x2006,
-    PPUDATA = 0x2007,
-    OAMDMA = 0x4014
-};
 
 // PPUCTRL (0x2000)
 export enum PpuCtrlBits {
@@ -71,7 +52,7 @@ export enum PpuMaskBits {
 export enum PpuStatusBits {
     SpriteOverflow = 5,
     SpriteZeroHit = 6,
-    VblankStarted = 7
+    Vblank = 7
 }
 
 export const IgnoredWritesBeforeWarmedUp = [
@@ -81,14 +62,10 @@ export const IgnoredWritesBeforeWarmedUp = [
     PpuRegister.PPUADDR
 ];
 
-// PPUCTRL, PPUMASK, PPUSCROLL, PPUADDR registers are not functional
-// --> PPUSCROLL and PPLUADDR Latches will not toggle.
-const cpuCyclesToWarmUp = 29658;
-
 export class Ppu {
-    private _frameBuffer: ColorComponent[][];
+    private _frameBuffer: FrameBuffer;
 
-    private _cpuNmiIrq: boolean;
+    private _cpuNmiRequested: boolean;
     private _ppuMemory: PpuMemory;
     private _oamMemory: OamMemory;
 
@@ -98,7 +75,7 @@ export class Ppu {
     private _isSecondWrite: boolean;
 
     private _cycles: number;
-
+    private _totalCycles: number;
     private _currentCyclesInRun: number;
     private _scanlines: number;
 
@@ -107,13 +84,15 @@ export class Ppu {
     private _regPPUSTATUS: number;
 
     constructor(ppuMemory: PpuMemory) {
-        this._initializeFrameBuffer();
+        // this._initializeFrameBuffer();
+        this._frameBuffer = new FrameBuffer();
 
-        this._cpuNmiIrq = false;
+        this._cpuNmiRequested = false;
         this._ppuMemory = ppuMemory;
         this._oamMemory = new OamMemory();
 
         this._currentCyclesInRun = 0;
+        this._totalCycles = 0;
         this._scanlines = -1;
         this._cycles = 0;
 
@@ -131,34 +110,10 @@ export class Ppu {
     }
 
     /**
-     * Initializes the frame buffer. 
-     * 
-     * This will store the representation of the screen. 
-     * 
-     * Since the resolution is 256x240 for the NES, we have 
-     * decided to use a 2D array of 256 rows, and 240 columns. 
-     * 
-     * Each element represents a single pixel.
-     */
-    private _initializeFrameBuffer() {
-        this._frameBuffer = [];
-        for(let i = 0; i < 240; i++) {
-            this._frameBuffer.push([]);
-            for(let j = 0; j < 256; j++) {
-                this._frameBuffer[i].push({r: 0, g: 0, b: 0});
-            }
-        }
-    }
-
-    /**
      * Gets the framebuffer
      */
     public frameBuffer(): ColorComponent[][] {
-        return this._frameBuffer;
-    }
-
-    public viewOamMemory() {
-        this._oamMemory.printView();
+        return this._frameBuffer.buffer;
     }
 
     public addPpuCyclesInRun(ppuCycles: number) {
@@ -190,6 +145,12 @@ export class Ppu {
 
     public write$2000(dataByte: number) {
         this._regPPUCTRL = dataByte & 0xFF;
+        if(
+            ((this._regPPUCTRL & (0x1 << PpuCtrlBits.Vblank)) > 0x0) 
+            && this._isVblank() 
+        ) {
+            this._cpuNmiRequested = true;
+        }
     }
 
     public write$2001(dataByte: number) {
@@ -222,7 +183,8 @@ export class Ppu {
 
     public read$2002() {
         const currentStatus = this._regPPUSTATUS;
-        this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
+
+        this._clearVblank();
         this._isSecondWrite = false;
 
         return currentStatus;
@@ -245,34 +207,40 @@ export class Ppu {
         this._vramAddress += vramIncrement;
     }
 
-    public cpuNmiIrqStatus(): boolean {
-        if(this._cpuNmiIrq) {
-            this._cpuNmiIrq = false;
+    public cpuNmiRequested(): boolean {
+        if(this._cpuNmiRequested) {
+            this._cpuNmiRequested = false;
             return true;
         }
 
         return false;
     }
 
+    private _setVblank() {
+        this._regPPUSTATUS = this._regPPUSTATUS | (0x1 << PpuStatusBits.Vblank);
+    }
 
-    private _getBaseNametableAddress(): number {
-        const base = this._regPPUCTRL & 0x03;
-        switch(base) {
-            case 0x00:
-                return 0x2000;
-            case 0x01:
-                return 0x2400;
-            case 0x02:
-                return 0x2800;
-            case 0x03:
-                return 0x2C00;
+    private _clearVblank() {
+        this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.Vblank);
+    }
+
+    private _isVblank(): boolean {
+        return (this._regPPUSTATUS & (0x1 << PpuStatusBits.Vblank)) > 0x0;
+    }
+
+    /**
+     * An NMI can be PREVENTED if bit 7 of $2002 is off.
+     * 
+     * Therefore, we only generate an NMI request to the CPU 
+     * IFF bit 7 of $2002 is ON.
+     */
+    private _requestNmiIfNeeded(): void {
+        if((this._regPPUCTRL & 0x80) > 0x0) {
+            this._cpuNmiRequested = true;
         }
-
-        return 0x2000;
     }
 
     private _mergeTileLowAndHighBytesToRowBits(lowByte: number, highByte: number): number[] {
-        let merged = 0x0;
         let mask = 0x1;
 
         const bits: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -323,7 +291,7 @@ export class Ppu {
         for(let i = 0; i < rowBits.length; i++) {
             const paletteAddress = this._getPaletteAddress(basePaletteAddress, rowBits[i]);
             const colorByte = this._ppuMemory.get(paletteAddress);
-            const colorComp = this._getColor(colorByte);
+            const colorComp = this._frameBuffer.getColor(colorByte);
             pixelColors.push(colorComp);
         }
 
@@ -388,15 +356,6 @@ export class Ppu {
         return 0;
     }
 
-    private _getColor(colorByte: number): ColorComponent {
-        let key = colorByte.toString(16).toUpperCase();
-        if(key.length < 2) {
-            key = `0${key}`;
-        }
-
-        return NesPpuPalette[key];
-    }
-
     public fetchPatternTileBytes(patternIndex: number, nametableAddress: number) {
         const baseAddress = (this._regPPUCTRL & (0x1 << PpuCtrlBits.BackgroundTileSelect)) === 0 
             ? 0x0000 : 0x1000;
@@ -424,10 +383,7 @@ export class Ppu {
             //  4. Start shift at 0;
             let shift = 0;
             for(let k = fbCol; k < fbCol + 8; k++) {
-                if(!this._frameBuffer[fbRow]) {
-                    //break;
-                }
-                this._frameBuffer[fbRow][k] = frameBufferRowBits[shift];
+                this._frameBuffer.draw(fbRow, k, frameBufferRowBits[shift]);
                 shift++;
             }
         }
@@ -466,13 +422,13 @@ export class Ppu {
 
     public run(): number {
         this._currentCyclesInRun = 0;
-        
+
         if(this._scanlines === -1) {
             if(this._cycles === 0) {
                 // Idle Cycle
                 this.addPpuCyclesInRun(1);
             } else if(this._cycles === 1) {
-                this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.VblankStarted);
+                this._clearVblank();
                 this.addPpuCyclesInRun(1);
             } else {
                 this.addPpuCyclesInRun(1);
@@ -510,22 +466,19 @@ export class Ppu {
                  * 
                  * Meaning, that for each scan line, it will visit that same pattern tile 8 times 
                  * due to pattern tiles being 8x8 pixels.
-                 * 
-                 * 
-                 * 
                  */
                 
                 // Fetch NT Byte
-                const ntByteIndex = (this._vramAddress & 0xFFF) + this._getBaseNametableAddress();
+                const ntByteIndex = (this._vramAddress & 0xFFF) + getBaseNametableAddress(this._regPPUCTRL);
                 // console.log(`NT BYTE INDEX: ${ntByteIndex.toString(16).toUpperCase()}`);
                 //this.incrementVramAddress();
 
-                this.addPpuCyclesInRun(2);
+                this.addPpuCyclesInRun(8);
             } else if(this._cycles >= 257 && this._cycles <= 320) {
                 // Garbage fetch
-                this.addPpuCyclesInRun(1);
+                this.addPpuCyclesInRun(2);
             } else if(this._cycles >= 321 && this._cycles <= 336) {
-                this.addPpuCyclesInRun(1);
+                this.addPpuCyclesInRun(2);
             } else if(this._cycles >= 337 && this._cycles <= 340) {
                 this.addPpuCyclesInRun(1);
             }
@@ -536,9 +489,11 @@ export class Ppu {
                 // Idle cycle.
                 this.addPpuCyclesInRun(1);
             } else if(this._scanlines === 241 && this._cycles === 1) {
-                this._regPPUSTATUS = this._regPPUSTATUS | (0x1 << PpuStatusBits.VblankStarted);
-                // Request an interrupt
-                this._cpuNmiIrq = true;
+                this._setVblank();
+
+
+                this._requestNmiIfNeeded();
+                
                 this.addPpuCyclesInRun(1);
             } else {
                 this.addPpuCyclesInRun(1);

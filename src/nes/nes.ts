@@ -4,6 +4,7 @@ import { ColorComponent } from "./common/interface";
 import { Cpu } from "../cpu/cpu";
 import { PpuMemory } from "../memory/ppumemory";
 import * as rom from "./rom.json";
+import { LogUtil } from "../cpu/log.util";
 
 const ROM_FILE = "./DK.nes";
 
@@ -21,17 +22,18 @@ export class Nes {
   private _ppuMemory: PpuMemory;
   private _ppu: Ppu;
   private _cpu: Cpu;
+  private _nmiTriggered: boolean;
   private _cycles: number;
 
-  private _log: string[];
+  private _logger: LogUtil;
 
   constructor() {
-    this._log = [];
+    this._logger = new LogUtil(10000);
     this._ppuMemory = new PpuMemory();
 
     this._ppu = new Ppu(this._ppuMemory);
     this._memory = new Memory(this._ppu);
-    this._cpu = new Cpu(this._memory, this._log);
+    this._cpu = new Cpu(this._memory, this._logger);
 
     this._initialize();
 
@@ -52,8 +54,12 @@ export class Nes {
     return this._ppuMemory.bits;
   }
 
-  public nmiStatus(): boolean {
-      return this._ppu.cpuNmiIrqStatus();
+  public cpuNmiRequested(): boolean {
+      return this._nmiTriggered;
+  }
+
+  public cpuTotalCycles(): number {
+      return this._cpu.totalCycles();
   }
 
   public scanlines(): number {
@@ -62,6 +68,10 @@ export class Nes {
 
   public ppuCycles(): number {
       return this._ppu.getCycles();
+  }
+
+  public logEntries(): string[] {
+    return this._logger.entries;
   }
 
   public cpuRegisters(): CpuRegisters {
@@ -128,12 +138,13 @@ export class Nes {
       const beginCpuCycles = this._cpu.getCurrentCycles();
 
       // If we are entering in VBLANK, Enter NMI handling routine!
-      if (this._ppu.cpuNmiIrqStatus() && (this._ppu.read$2000() & 0x80) > 0x0) {
-        this._cpu.handleNmiIrq();
+      this._nmiTriggered = this._ppu.cpuNmiRequested();
+      if (this._nmiTriggered) {
+        this._cpu.setupNmi();
       }
 
       const opCode = this._memory.get(this._cpu.getPC());
-      this._cpu.handleOp(opCode);
+      this._cpu.handleOp(opCode);  
 
       const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
 
@@ -161,5 +172,6 @@ export class Nes {
   private _initialize() {
     this.loadRom();
     this._cpu.powerUp();
+    this._cpu.debugMode(true);
   }
 }

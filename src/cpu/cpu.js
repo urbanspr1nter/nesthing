@@ -5,10 +5,10 @@ var double_byte_register_1 = require("./double-byte-register");
 var cpu_interface_1 = require("./cpu.interface");
 var cpu_addressing_helper_1 = require("./cpu-addressing-helper");
 var Cpu = /** @class */ (function () {
-    function Cpu(memory, log) {
-        this._dbg = false;
+    function Cpu(memory, logger) {
+        this._dbg = true;
         this._currentCycles = 0;
-        this._log = log;
+        this._logger = logger;
         this._memory = memory;
         this._addressingHelper = new cpu_addressing_helper_1.CpuAddressingHelper(this._memory);
         this._regA = new byte_register_1.ByteRegister(0x00);
@@ -17,7 +17,11 @@ var Cpu = /** @class */ (function () {
         this._regPC = new double_byte_register_1.DoubleByteRegister(0x00);
         this._regSP = new byte_register_1.ByteRegister(0x00);
         this._regP = new byte_register_1.ByteRegister(0x00);
+        this._interrupt = cpu_interface_1.InterruptRequestType.None;
     }
+    Cpu.prototype.totalCycles = function () {
+        return this._currentCycles;
+    };
     Cpu.prototype.debugMode = function (value) {
         this._dbg = value;
     };
@@ -327,7 +331,7 @@ var Cpu = /** @class */ (function () {
             return !(first < second);
         }
     };
-    Cpu.prototype.handleNmiIrq = function () {
+    Cpu.prototype.setupNmi = function () {
         var currPcLow = this._regPC.get() & 0xFF;
         var currPcHigh = (this._regPC.get() >> 8) & 0xFF;
         this.stackPush(currPcHigh);
@@ -337,6 +341,7 @@ var Cpu = /** @class */ (function () {
         this._regPC.set((this._memRead(cpu_interface_1.NmiVectorLocation.High) << 8) |
             this._memRead(cpu_interface_1.NmiVectorLocation.Low));
         this._currentCycles += 7;
+        this._interrupt = cpu_interface_1.InterruptRequestType.NMI;
     };
     Cpu.prototype.adc = function (opCode) {
         var oldA = this._regA.get();
@@ -611,6 +616,8 @@ var Cpu = /** @class */ (function () {
         }
     };
     Cpu.prototype.bcs = function (opCode) {
+        if (this._regPC.get() === 0xF211) {
+        }
         this._regPC.add(1);
         switch (opCode) {
             case 0xb0:
@@ -789,8 +796,8 @@ var Cpu = /** @class */ (function () {
         this._regPC.add(2);
         switch (opCode) {
             case 0x00:
-                this.stackPush((this._regPC.get() | 0xff00) >> 8);
-                this.stackPush(this._regPC.get() | 0x00ff);
+                this.stackPush((this._regPC.get() & 0xff00) >> 8);
+                this.stackPush(this._regPC.get() & 0x00ff);
                 this.setStatusBit(cpu_interface_1.StatusBitPositions.BrkCausedInterrupt);
                 this.stackPush(this._regP.get() | 0x10);
                 this.setStatusBit(cpu_interface_1.StatusBitPositions.InterruptDisable);
@@ -798,6 +805,7 @@ var Cpu = /** @class */ (function () {
                 var interruptVectorHigh = this._memRead(cpu_interface_1.IrqVectorLocation.High);
                 this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
                 this._currentCycles += 7;
+                this._interrupt = cpu_interface_1.InterruptRequestType.IRQ;
                 break;
             default:
                 console.error("ERROR: Unhandled BRK opcode! " + opCode);
@@ -3236,6 +3244,8 @@ var Cpu = /** @class */ (function () {
                 this._regSP.set(this._regX.get());
                 this._currentCycles += 2;
                 break;
+            default:
+                break;
         }
     };
     Cpu.prototype.tya = function (opcode) {
@@ -3244,6 +3254,8 @@ var Cpu = /** @class */ (function () {
             case 0x98:
                 this._regA.set(this._regY.get());
                 this._currentCycles += 2;
+                break;
+            default:
                 break;
         }
         if (this.isNegative(this._regA.get())) {
@@ -3260,11 +3272,9 @@ var Cpu = /** @class */ (function () {
         }
     };
     Cpu.prototype.handleOp = function (opCode) {
-        if (this._dbg) {
-            var logEntry = this.getLogEntry(opCode);
-            this._log.push(logEntry);
-            console.log(logEntry);
-        }
+        var logEntry = this.getLogEntry(opCode);
+        //this._logger.log(logEntry);
+        //console.log(logEntry);
         switch (opCode) {
             case 0x00:
                 this.brk(opCode);

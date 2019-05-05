@@ -24,6 +24,14 @@ exports.NmiVectorLocation = {
     Low: 0xFFFA,
     High: 0xFFFB
 };
+var InterruptRequestType;
+(function (InterruptRequestType) {
+    InterruptRequestType[InterruptRequestType["Reset"] = 0] = "Reset";
+    InterruptRequestType[InterruptRequestType["NMI"] = 1] = "NMI";
+    InterruptRequestType[InterruptRequestType["IRQ"] = 2] = "IRQ";
+    InterruptRequestType[InterruptRequestType["None"] = 3] = "None";
+})(InterruptRequestType = exports.InterruptRequestType || (exports.InterruptRequestType = {}));
+;
 var AddressingModes;
 (function (AddressingModes) {
     AddressingModes[AddressingModes["Immediate"] = 0] = "Immediate";
