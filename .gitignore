@@ -110,3 +110,4 @@ typings/
 
 */**/tests/*.js
 */**/nes/*.js
+*/**/nes/common/*.js
