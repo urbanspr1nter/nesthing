@@ -55,9 +55,14 @@ FFFB: C4
 
 Then the handler address will be: `C4E8`. The program counter will be redirected there.
 
-* The NMI is not controlled by the CPU, and is associated with VBLANK from the PPU. When it occurs and when it is done is seen in te following situations:
+#### Terminology
+* `NMI_occurrred` refers to the flag set in bit 7 in the `$2002` PPUSTATUS register
+ * `NMI_output` refers to bit 7 set in the `$2000` PPUCTRL register.
 
-1. When the PPU starts the VBLANK phase, the `NMI_occurred` flag in PPU is set to `true`. 
+#### Occurrence
+* The NMI is not controlled by the CPU, and is associated with VBLANK from the PPU. When it occurs and when it is done is seen in the following situations:
+
+1. When the PPU starts the VBLANK phase (bit 7 of $2002), the `NMI_occurred` flag in PPU is set to `true`. 
     * The `NMI_occurred` flag is reset to `false` at the end of VBLANK.
 2. When the `PPUSTATUS` register is read, the *current* `NMI_occured` value is returned in bit 7. Once it is returned, this bit is reset and `NMI_occurred` is set to `false`.
 3. A write to `PPUCTRL` at bit 7 (`NMI_output`) during VBLANK, will force NMI to occur.
@@ -65,6 +70,17 @@ Then the handler address will be: `C4E8`. The program counter will be redirected
 When NMI occurs, PPU stays out of the bus for 20 scanlines (2273 cycles). This allows the CPU to load the graphics data into memory.
 
 Think of it as the period of time when the CPU can **write** to VRAM again.
+
+#### Can an NMI be Prevented?
+
+An NMI request can actually be blocked if and only if bit 7 of $2002/PPUSTATUS is off. We can then perform a check like so to actually request the NMI upon the start of a VBLANK:
+
+**Pseudo Code**
+```
+if ((this._regPPUSTATUS & 0x80) > 0x0) {
+    requestNmi();
+}
+```
 
 ### IRQ
 
@@ -76,3 +92,4 @@ Software generated. If the *interrupt disable* bit is set in the P register, the
 
 1. Nintendo Entertainment System Documentation - Version 1.0. Patrick Diskin, [Source](http://www.nesdev.com/NESDoc.pdf)
 2. The Frame and NMIs. NesDev Wiki, [Source](https://wiki.nesdev.com/w/index.php/The_frame_and_NMIs)
+3. PPU Programmer Reference. NesDev Wiki, [Source](https://wiki.nesdev.com/w/index.php/PPU_programmer_reference)
