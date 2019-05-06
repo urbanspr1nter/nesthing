@@ -35,7 +35,7 @@ class App extends Component<{}, NesState> {
     this._nes = new Nes();
     this._canvas = null;
     this.state = {
-      cycles: 1000000,
+      cycles: 100000,
       cpuMemory: this._nes.cpuMemory(),
       cpuRegisters: this._nes.cpuRegisters(),
       ppuMemory: this._nes.ppuMemory(),
@@ -94,7 +94,7 @@ class App extends Component<{}, NesState> {
           }
         }
       );
-    }, 500);
+    }, 1000);
   };
 
   handlePause = () => {

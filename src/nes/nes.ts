@@ -159,14 +159,6 @@ export class Nes {
     }
 
     this._cycles = 0;
-
-    this.debugDrawFrameBuffer();
-  }
-
-  public debugDrawFrameBuffer() {
-    for (let i = 0x2000; i < 0x23bf; i++) {
-      this._ppu.fetchPatternTileBytes(this._ppuMemory.get(i), i);
-    }
   }
 
   private _initialize() {
