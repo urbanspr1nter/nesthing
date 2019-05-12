@@ -33,6 +33,9 @@ var Memory = /** @class */ (function () {
                 else if (decodedAddress === 0x2001) {
                     _this._ppu.write$2001(value);
                 }
+                else if (decodedAddress === 0x2005) {
+                    _this._ppu.write$2005(value);
+                }
                 else if (decodedAddress === 0x2006) {
                     _this._ppu.write$2006(value);
                 }

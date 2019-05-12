@@ -2,32 +2,7 @@
 exports.__esModule = true;
 var oammemory_1 = require("../memory/oammemory");
 var ppu_helpers_1 = require("./ppu.helpers");
-var ppu_interface_1 = require("./ppu.interface");
 var framebuffer_1 = require("../framebuffer/framebuffer");
-// PPUCTRL (0x2000)
-var PpuCtrlBits;
-(function (PpuCtrlBits) {
-    PpuCtrlBits[PpuCtrlBits["NametableSelectLsb"] = 0] = "NametableSelectLsb";
-    PpuCtrlBits[PpuCtrlBits["NametableSelectMsb"] = 1] = "NametableSelectMsb";
-    PpuCtrlBits[PpuCtrlBits["Increment"] = 2] = "Increment";
-    PpuCtrlBits[PpuCtrlBits["SpriteTileSelect"] = 3] = "SpriteTileSelect";
-    PpuCtrlBits[PpuCtrlBits["BackgroundTileSelect"] = 4] = "BackgroundTileSelect";
-    PpuCtrlBits[PpuCtrlBits["SpriteHeight"] = 5] = "SpriteHeight";
-    PpuCtrlBits[PpuCtrlBits["MasterToggle"] = 6] = "MasterToggle";
-    PpuCtrlBits[PpuCtrlBits["Vblank"] = 7] = "Vblank";
-})(PpuCtrlBits = exports.PpuCtrlBits || (exports.PpuCtrlBits = {}));
-// PPUMASK (0x2001)
-var PpuMaskBits;
-(function (PpuMaskBits) {
-    PpuMaskBits[PpuMaskBits["Greyscale"] = 0] = "Greyscale";
-    PpuMaskBits[PpuMaskBits["ShowBackgroundInLeftmost"] = 1] = "ShowBackgroundInLeftmost";
-    PpuMaskBits[PpuMaskBits["ShowSpritesInLeftmost"] = 2] = "ShowSpritesInLeftmost";
-    PpuMaskBits[PpuMaskBits["ShowBackground"] = 3] = "ShowBackground";
-    PpuMaskBits[PpuMaskBits["ShowSprites"] = 4] = "ShowSprites";
-    PpuMaskBits[PpuMaskBits["EmphasizeRed"] = 5] = "EmphasizeRed";
-    PpuMaskBits[PpuMaskBits["EmphasizeGreen"] = 6] = "EmphasizeGreen";
-    PpuMaskBits[PpuMaskBits["EmphasizeBlue"] = 7] = "EmphasizeBlue";
-})(PpuMaskBits = exports.PpuMaskBits || (exports.PpuMaskBits = {}));
 // PPUSTATUS (0x2002)
 var PpuStatusBits;
 (function (PpuStatusBits) {
@@ -35,31 +10,25 @@ var PpuStatusBits;
     PpuStatusBits[PpuStatusBits["SpriteZeroHit"] = 6] = "SpriteZeroHit";
     PpuStatusBits[PpuStatusBits["Vblank"] = 7] = "Vblank";
 })(PpuStatusBits = exports.PpuStatusBits || (exports.PpuStatusBits = {}));
-exports.IgnoredWritesBeforeWarmedUp = [
-    ppu_interface_1.PpuRegister.PPUCTRL,
-    ppu_interface_1.PpuRegister.PPUMASK,
-    ppu_interface_1.PpuRegister.PPUSCROLL,
-    ppu_interface_1.PpuRegister.PPUADDR
-];
 var Ppu = /** @class */ (function () {
     function Ppu(ppuMemory) {
         this._frameBuffer = new framebuffer_1.FrameBuffer();
         this._cpuNmiRequested = false;
         this._ppuMemory = ppuMemory;
         this._oamMemory = new oammemory_1.OamMemory();
-        this._currentCyclesInRun = 0;
         this._totalCycles = 0;
-        this._scanlines = -1;
+        this._scanlines = 0;
         this._cycles = 0;
         this._vramAddress = 0;
         this._tVramAddress = 0;
         this._isSecondWrite = false;
-        this._regPPUCTRL = 0;
-        this._regPPUMASK = 0;
         this._regPPUSTATUS = 0;
         this._fineY = 0;
         this._coarseX = 0;
         this._coarseY = 0;
+        this._tileLowByte = 0;
+        this._tileHighByte = 0;
+        this._tileData = 0;
     }
     Ppu.prototype.vramAddress = function () {
         return this._vramAddress;
@@ -70,19 +39,17 @@ var Ppu = /** @class */ (function () {
     Ppu.prototype.frameBuffer = function () {
         return this._frameBuffer.buffer;
     };
-    Ppu.prototype.addPpuCyclesInRun = function (ppuCycles) {
-        this._currentCyclesInRun += ppuCycles;
-        this.addPpuCycles(ppuCycles);
+    Ppu.prototype.addPpuCyclesInRun = function () {
+        this.addPpuCycle();
     };
-    Ppu.prototype.addPpuCycles = function (cycles) {
-        this._cycles += cycles;
-        if (this._cycles >= 341) {
+    Ppu.prototype.addPpuCycle = function () {
+        this._cycles++;
+        if (this._cycles > 340) {
             this._scanlines++;
-            if (this._scanlines === 261) {
-                this._scanlines = -1;
+            this._cycles = 0;
+            if (this._scanlines > 261) {
+                this._scanlines = 0;
             }
-            var remaining = this._cycles - 341;
-            this._cycles = remaining;
         }
     };
     Ppu.prototype.getCycles = function () {
@@ -92,17 +59,68 @@ var Ppu = /** @class */ (function () {
         return this._scanlines;
     };
     Ppu.prototype.write$2000 = function (dataByte) {
-        this._regPPUCTRL = dataByte & 0xff;
-        if ((this._regPPUCTRL & (0x1 << PpuCtrlBits.Vblank)) > 0x0 &&
-            this._isVblank()) {
+        this._regPPUCTRL_nt0 = dataByte & 0x01;
+        this._regPPUCTRL_nt1 = dataByte & 0x02;
+        this._regPPUCTRL_vramIncrement = (dataByte & 0x04) === 0x0 ? 1 : 32;
+        this._regPPUCTRL_spritePatternTableBaseAddress =
+            (dataByte & 0x08) === 0x0 ? 0x0 : 0x1000;
+        this._regPPUCTRL_backgroundPatternTableBaseAddress =
+            (dataByte & 0x10) === 0x0 ? 0x0 : 0x1000;
+        this._regPPUCTRL_spriteSizeLarge = (dataByte & 0x20) === 0x0 ? false : true;
+        this._regPPUCTRL_masterSlaveSelect =
+            (dataByte & 0x40) === 0x0 ? false : true;
+        this._regPPUCTRL_generateNmiAtVblankStart =
+            (dataByte & 0x80) === 0x0 ? false : true;
+        if (this._regPPUCTRL_generateNmiAtVblankStart && this._isVblank()) {
             this._cpuNmiRequested = true;
         }
     };
+    Ppu.prototype.read$2000 = function () {
+        var bit_0 = this._regPPUCTRL_nt0;
+        var bit_1 = this._regPPUCTRL_nt1;
+        var bit_2 = this._regPPUCTRL_vramIncrement === 1 ? 0 : 1;
+        var bit_3 = this._regPPUCTRL_spritePatternTableBaseAddress === 0 ? 0 : 1;
+        var bit_4 = this._regPPUCTRL_backgroundPatternTableBaseAddress === 0 ? 0 : 1;
+        var bit_5 = this._regPPUCTRL_spriteSizeLarge ? 1 : 0;
+        var bit_6 = this._regPPUCTRL_masterSlaveSelect ? 1 : 0;
+        var bit_7 = this._regPPUCTRL_generateNmiAtVblankStart ? 1 : 0;
+        return ((bit_7 << 7) |
+            (bit_6 << 6) |
+            (bit_5 << 5) |
+            (bit_4 << 4) |
+            (bit_3 << 3) |
+            (bit_2 << 2) |
+            (bit_1 << 1) |
+            bit_0);
+    };
     Ppu.prototype.write$2001 = function (dataByte) {
-        this._regPPUMASK = dataByte & 0xff;
+        this._regPPUMASK_greyscale = (dataByte & 0x01) === 0x01 ? true : false;
+        this._regPPUMASK_showBgInLeftMost8pxOfScreen =
+            (dataByte & 0x02) === 0x02 ? true : false;
+        this._regPPUMASK_showSpritesLeftMost8pxOfScreen =
+            (dataByte & 0x04) === 0x04 ? true : false;
+        this._regPPUMASK_showBackground = (dataByte & 0x08) === 0x08 ? true : false;
+        this._regPPUMASK_showSprites = (dataByte & 0x10) === 0x10 ? true : false;
+        this._regPPUMASK_emphasizeRed = (dataByte & 0x20) === 0x20 ? true : false;
+        this._regPPUMASK_emphasizeGreen = (dataByte & 0x40) === 0x40 ? true : false;
+        this._regPPUMASK_emphasizeBlue = (dataByte & 0x80) === 0x80 ? true : false;
     };
     Ppu.prototype.write$2002 = function (dataByte) {
         this._regPPUSTATUS = dataByte & 0xff;
+    };
+    Ppu.prototype.write$2005 = function (dataByte) {
+        if (!this._isSecondWrite) {
+            this._tVramAddress = (this._tVramAddress & 0xfffe0) | (dataByte >> 3);
+            this._regPPUSCROLL_x = dataByte & 0x07;
+            this._isSecondWrite = true;
+        }
+        else {
+            this._tVramAddress =
+                (this._tVramAddress & 0x8fff) | ((dataByte & 0x07) << 12);
+            this._tVramAddress =
+                (this._tVramAddress & 0xfc1f) | ((dataByte & 0xf8) << 2);
+            this._isSecondWrite = false;
+        }
     };
     Ppu.prototype.write$2006 = function (dataByte) {
         if (!this._isSecondWrite) {
@@ -118,9 +136,6 @@ var Ppu = /** @class */ (function () {
         this._ppuMemory.set(this._vramAddress, dataByte);
         this.incrementVramAddress();
     };
-    Ppu.prototype.read$2000 = function () {
-        return this._regPPUCTRL;
-    };
     Ppu.prototype.read$2002 = function () {
         var currentStatus = this._regPPUSTATUS;
         this._clearVblank();
@@ -134,8 +149,7 @@ var Ppu = /** @class */ (function () {
         return result;
     };
     Ppu.prototype.incrementVramAddress = function () {
-        var vramIncrement = (this._regPPUCTRL & (0x1 << PpuCtrlBits.Increment)) > 0x0 ? 32 : 1;
-        this._vramAddress += vramIncrement;
+        this._vramAddress += this._regPPUCTRL_vramIncrement;
     };
     Ppu.prototype.cpuNmiRequested = function () {
         if (this._cpuNmiRequested) {
@@ -160,9 +174,7 @@ var Ppu = /** @class */ (function () {
      * IFF bit 7 of $2002 is ON.
      */
     Ppu.prototype._requestNmiIfNeeded = function () {
-        if ((this._regPPUCTRL & 0x80) > 0x0) {
-            this._cpuNmiRequested = true;
-        }
+        this._cpuNmiRequested = this._regPPUCTRL_generateNmiAtVblankStart;
     };
     Ppu.prototype._getPaletteAddress = function (basePaletteAddress, colorIndex) {
         return basePaletteAddress + (colorIndex - 1);
@@ -200,75 +212,145 @@ var Ppu = /** @class */ (function () {
     };
     Ppu.prototype._fetchNametableByte = function () {
         var currentVramAddress = this._vramAddress;
-        var ntAddress = ppu_helpers_1.getBaseNametableAddress(this._regPPUCTRL) | (currentVramAddress & 0x0fff);
+        var ntAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
         this._ntByte = this._ppuMemory.get(ntAddress);
     };
     Ppu.prototype._fetchAttributeByte = function () {
         var currentVramAddress = this._vramAddress;
-        var ntAddress = ppu_helpers_1.getBaseNametableAddress(this._regPPUCTRL) | (currentVramAddress & 0x0fff);
+        var ntAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
         var attributeAddress = this._convertNametableAddressToAttributeTableAddress(ntAddress);
         this._attributeByte = this._ppuMemory.get(attributeAddress);
     };
     Ppu.prototype._fetchTileLowByte = function () {
-        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-        var patternLowAddress = baseNtAddress + 0x10 * this._ntByte + this._fineY;
+        var fineY = (this._vramAddress >> 12) & 7;
+        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (this._vramAddress & 0x0fff);
+        var patternLowAddress = baseNtAddress + 0x10 * this._ntByte + fineY;
         this._tileLowByte = this._ppuMemory.get(patternLowAddress);
     };
     Ppu.prototype._fetchTileHighByte = function () {
-        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-        var patternHighAddress = baseNtAddress + 0x10 * this._ntByte + this._fineY + 8;
+        var fineY = (this._vramAddress >> 12) & 7;
+        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (this._vramAddress & 0x0fff);
+        var patternHighAddress = baseNtAddress + 0x10 * this._ntByte + fineY + 8;
         this._tileHighByte = this._ppuMemory.get(patternHighAddress);
     };
-    Ppu.prototype._mergeTileBytesToPixelColorComponents = function () {
-        var mergedRowBits = this._mergeTileLowAndHighBytesToRowBits(this._tileLowByte, this._tileHighByte);
-        var attributeByte = this._attributeByte;
-        var ntAddress = ppu_helpers_1.getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-        var hTileDelta = this._getHorizontalTileDelta(ntAddress);
-        var vTileDelta = this._getVerticalTileDelta(ntAddress);
-        var attributeGroupIndex = ppu_helpers_1.getAttributeGroupIndex(hTileDelta, vTileDelta);
-        var basePaletteAddress = ppu_helpers_1.getBasePaletteAddress(attributeByte, attributeGroupIndex);
-        var pixelColors = [];
-        for (var i = 0; i < mergedRowBits.length; i++) {
-            var paletteAddress = this._getPaletteAddress(basePaletteAddress, mergedRowBits[i]);
-            var colorByte = this._ppuMemory.get(paletteAddress);
-            var colorComp = this._frameBuffer.getColor(colorByte);
-            pixelColors.push(colorComp);
+    /*
+    private _mergeTileBytesToPixelColorComponents(): ColorComponent[] {
+      const mergedRowBits: number[] = this._mergeTileLowAndHighBytesToRowBits(
+        this._tileLowByte,
+        this._tileHighByte
+      );
+      const attributeByte: number = this._attributeByte;
+  
+      const ntAddress =
+        getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
+      const hTileDelta = this._getHorizontalTileDelta(ntAddress);
+      const vTileDelta = this._getVerticalTileDelta(ntAddress);
+  
+      const attributeGroupIndex = getAttributeGroupIndex(hTileDelta, vTileDelta);
+  
+      const basePaletteAddress = getBasePaletteAddress(
+        attributeByte,
+        attributeGroupIndex
+      );
+  
+      const pixelColors: ColorComponent[] = [];
+      for (let i = 0; i < mergedRowBits.length; i++) {
+        const paletteAddress = this._getPaletteAddress(
+          basePaletteAddress,
+          mergedRowBits[i]
+        );
+        const colorByte = this._ppuMemory.get(paletteAddress);
+        const colorComp = this._frameBuffer.getColor(colorByte);
+        pixelColors.push(colorComp);
+      }
+  
+      return pixelColors;
+    }*/
+    Ppu.prototype._storeTileData = function () {
+        var data = 0x0;
+        for (var i = 0; i < 8; i++) {
+            var attributeByte = this._attributeByte;
+            var lowBit = (this._tileLowByte & 0x80) >> 7;
+            var highBit = (this._tileHighByte & 0x80) >> 6;
+            this._tileLowByte <<= 1;
+            this._tileHighByte <<= 1;
+            data <<= 4;
+            data |= attributeByte | lowBit | highBit;
         }
-        return pixelColors;
+        this._tileData |= data;
     };
-    Ppu.prototype._mergeTileLowAndHighBytesToRowBits = function (lowByte, highByte) {
-        var mask = 0x1;
-        var bits = [0, 0, 0, 0, 0, 0, 0, 0];
-        for (var j = 0; j < 8; j++) {
-            var lowBit = (lowByte & (mask << j)) > 0 ? 1 : 0;
-            var highBit = (highByte & (mask << j)) > 0 ? 1 : 0;
-            var mergedBits = (highBit << 1) | lowBit;
-            bits[7 - j] = mergedBits;
-        }
-        return bits;
+    Ppu.prototype._renderPixel = function () {
+        var x = this._cycles - 1;
+        var y = this._scanlines;
+        var backgroundPixel = ((this._tileData >> 32) >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
+        // Now need to obtain the palette and then reach for the color offset...
+        // backgorund color:
+        this._frameBuffer.draw(y, x, framebuffer_1.NesPpuPalette["0" + backgroundPixel.toString(16)]);
     };
-    Ppu.prototype._drawColorComponentsToFrameBuffer = function (colors) {
-        var ntAddress = ppu_helpers_1.getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-        var fbTileRow = parseInt(((ntAddress % 0x2000) / 0x20).toString());
-        var fbTileCol = parseInt(((ntAddress % 0x2000) % 0x20).toString());
-        var fbCol = fbTileCol * 8;
-        var fbRow = fbTileRow * 8 + this._fineY;
-        var shift = 0;
-        for (var k = fbCol; k < fbCol + 8; k++) {
-            this._frameBuffer.draw(fbRow, k, colors[shift]);
-            shift++;
-        }
-    };
+    /*
+    private _mergeTileLowAndHighBytesToRowBits(
+      lowByte: number,
+      highByte: number
+    ): number[] {
+      let mask = 0x1;
+  
+      const bits: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+      for (let j = 0; j < 8; j++) {
+        const lowBit = (lowByte & (mask << j)) > 0 ? 1 : 0;
+        const highBit = (highByte & (mask << j)) > 0 ? 1 : 0;
+  
+        const mergedBits = (highBit << 1) | lowBit;
+  
+        bits[7 - j] = mergedBits;
+      }
+  
+      return bits;
+    }*/
+    /*
+    private _drawColorComponentsToFrameBuffer(colors: ColorComponent[]) {
+      const ntAddress =
+        getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
+      let fbTileRow = parseInt(((ntAddress % 0x2000) / 0x20).toString());
+      let fbTileCol = parseInt(((ntAddress % 0x2000) % 0x20).toString());
+  
+      const fbCol = fbTileCol * 8;
+      const fbRow = fbTileRow * 8 + this._fineY;
+  
+      let shift = 0;
+      for (let k = fbCol; k < fbCol + 8; k++) {
+        this._frameBuffer.draw(fbRow, k, colors[shift]);
+        shift++;
+      }
+    }
+  */
     Ppu.prototype._incrementX = function () {
         if ((this._vramAddress & 0x001f) === 31) {
             this._vramAddress &= 0xffe0; // wrap-back to 0.
         }
         else {
             this.incrementVramAddress();
-            this._coarseX++;
         }
+        this._coarseX = this._vramAddress & 0x001f;
     };
     Ppu.prototype._incrementY = function () {
+        if ((this._vramAddress & 0x7000) !== 0x7000) {
+            // fine Y increment
+            this._vramAddress += 0x1000;
+        }
+        else {
+            this._vramAddress = this._vramAddress & 0x8fff;
+            this._coarseY = (this._vramAddress & 0x3e0) >> 5;
+            if (this._coarseY === 29) {
+                this._coarseY = 0;
+            }
+            else if (this._coarseY === 31) {
+                this._coarseY = 0;
+            }
+            else {
+                this._coarseY++;
+            }
+            this._vramAddress = (this._vramAddress & 0xfc1f) | (this._coarseY << 5);
+        }
         if (this._fineY < 7) {
             this._fineY++;
         }
@@ -277,130 +359,76 @@ var Ppu = /** @class */ (function () {
             this._coarseY++;
             if (this._coarseY > 29) {
                 this._coarseY = 0;
+                this._vramAddress = this._vramAddress += 32;
             }
-            this._vramAddress = (this._vramAddress & 0xfc1f) | (this._coarseY << 5);
         }
     };
-    Ppu.prototype._adjustXandY = function () {
-        if (this._cycles % 8 === 0) {
-            this._incrementX();
-        }
-        if (this._coarseX >= 32) {
-            this._incrementY();
-        }
+    Ppu.prototype._copyX = function () {
+        this._vramAddress =
+            (this._vramAddress & 0xfbe0) | (this._tVramAddress & 0x041f);
+    };
+    Ppu.prototype._copyY = function () {
+        this._vramAddress =
+            (this._vramAddress & 0x841f) | (this._tVramAddress & 0x7be0);
     };
     Ppu.prototype.tick = function () {
         // add a cycle to the PPU
+        this.addPpuCyclesInRun();
     };
     Ppu.prototype.run = function () {
-        this._currentCyclesInRun = 0;
-        if (this._scanlines === -1) {
-            if (this._cycles === 0) {
-                // Idle Cycle
-                this.addPpuCyclesInRun(1);
+        this.tick();
+        var isRenderingEnabled = this._regPPUMASK_showBackground;
+        var isPrerenderLine = this._scanlines === 261;
+        var isVisibleLine = this._scanlines < 240;
+        var isRenderLine = isPrerenderLine || isVisibleLine;
+        var isPrefetchCycle = this._cycles >= 321 && this._cycles <= 336;
+        var isVisibleCycle = this._cycles >= 1 && this._cycles <= 256;
+        var isFetchCycle = isPrefetchCycle || isVisibleCycle;
+        if (isRenderingEnabled) {
+            if (isVisibleLine && isVisibleCycle) {
+                this._renderPixel();
             }
-            else if (this._cycles === 1) {
-                this._clearVblank();
-                // FIXME: HACKKKKK!!!!
-                this._vramAddress = 0x2000;
-                this.addPpuCyclesInRun(1);
-            }
-            else if (this._cycles >= 280 && this._cycles <= 304) {
-                // this._vramAddress =
-                // (this._vramAddress & 0xfbe0) | (this._tVramAddress & 0x041f);
-                this.addPpuCyclesInRun(1);
-            }
-            else {
-                this.addPpuCyclesInRun(1);
-            }
-        }
-        else if (this._scanlines >= 0 && this._scanlines <= 239) {
-            if (this._cycles == 0) {
-                this.addPpuCyclesInRun(1);
-            }
-            else if (this._cycles >= 1 && this._cycles <= 256) {
-                /**
-                 * Here's how to actually process these cycles:
-                 *
-                 * Note that the vramAddress here is now set to the start of the nametable
-                 * base address. The CPU can only manipulate the VRAM address during VBLANK.
-                 *
-                 * That is why it is not good to actually write to $2006 when the PPU is not
-                 * in the VBLANK state because it can potentially disrupt this section of the
-                 * routine.
-                 *
-                 * Anyway, to process the nametable and fill our frame-buffer, we will need to
-                 * use 8 cycles per pattern tile in which we want to render.
-                 *
-                 * Then we do:
-                 *
-                 * 1. Fetch the pattern tile index at the nametable location. (2 cycles)
-                 * 2. Calculate the attribute address by converting the
-                 *    nametable location to attribute location. (2 cycles)
-                 * 3. Increment the VRAM address within the same row.
-                 * 4. Fetch the current low-byte of the pattern tile (8x1 row) (2 cycles)
-                 * 5. Fetch the current high-byte of the pattern tile (8x1 row) (2 cycles)
-                 *
-                 * As we can see, each "row" of the pattern tile is processed in 8 cycles.
-                 *
-                 * Therefore, 32 different pattern tiles are evaluated in a per row basis for
-                 * each scan line. (256 cycles / 8 cycles per row) = 32.
-                 *
-                 * Meaning, that for each scan line, it will visit that same pattern tile 8 times
-                 * due to pattern tiles being 8x8 pixels.
-                 */
-                debugger;
+            if (isRenderLine && isFetchCycle) {
+                this._tileData <<= 4;
                 switch (this._cycles % 8) {
                     case 1:
                         this._fetchNametableByte();
-                        this.addPpuCyclesInRun(2);
                         break;
                     case 3:
                         this._fetchAttributeByte();
-                        this.addPpuCyclesInRun(2);
                         break;
                     case 5:
                         this._fetchTileLowByte();
-                        this.addPpuCyclesInRun(2);
                         break;
                     case 7:
                         this._fetchTileHighByte();
-                        this.addPpuCyclesInRun(2);
-                        var rowColorComponents = this._mergeTileBytesToPixelColorComponents();
-                        this._drawColorComponentsToFrameBuffer(rowColorComponents);
+                    case 0:
+                        this._storeTileData();
                         break;
                 }
-                this._adjustXandY();
             }
-            else if (this._cycles >= 257 && this._cycles <= 320) {
-                // Garbage fetch
-                this.addPpuCyclesInRun(2);
+            if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
+                this._copyY();
             }
-            else if (this._cycles >= 321 && this._cycles <= 336) {
-                this.addPpuCyclesInRun(2);
-            }
-            else if (this._cycles >= 337 && this._cycles <= 340) {
-                this.addPpuCyclesInRun(1);
-            }
-        }
-        else if (this._scanlines === 240) {
-            this.addPpuCyclesInRun(1);
-        }
-        else if (this._scanlines >= 241 && this._scanlines <= 260) {
-            if (this._scanlines === 241 && this._cycles === 0) {
-                // Idle cycle.
-                this.addPpuCyclesInRun(1);
-            }
-            else if (this._scanlines === 241 && this._cycles === 1) {
-                this._setVblank();
-                this._requestNmiIfNeeded();
-                this.addPpuCyclesInRun(1);
-            }
-            else {
-                this.addPpuCyclesInRun(1);
+            if (isRenderLine) {
+                if (isFetchCycle && this._cycles % 8 === 0) {
+                    this._incrementX();
+                }
+                if (this._cycles === 256) {
+                    this._incrementY();
+                }
+                if (this._cycles === 257) {
+                    this._copyX();
+                }
             }
         }
-        return this._currentCyclesInRun;
+        if (this._scanlines === 241 && this._cycles === 1) {
+            this._setVblank();
+            this._requestNmiIfNeeded();
+        }
+        if (isPrerenderLine && this._cycles === 1) {
+            this._clearVblank();
+        }
     };
     return Ppu;
 }());

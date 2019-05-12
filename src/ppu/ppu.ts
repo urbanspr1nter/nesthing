@@ -7,31 +7,7 @@ import {
   getAttributeGroupIndex
 } from "./ppu.helpers";
 import { PpuRegister } from "./ppu.interface";
-import { FrameBuffer } from "../framebuffer/framebuffer";
-
-// PPUCTRL (0x2000)
-export enum PpuCtrlBits {
-  NametableSelectLsb = 0,
-  NametableSelectMsb = 1,
-  Increment = 2,
-  SpriteTileSelect = 3,
-  BackgroundTileSelect = 4,
-  SpriteHeight = 5,
-  MasterToggle = 6,
-  Vblank = 7
-}
-
-// PPUMASK (0x2001)
-export enum PpuMaskBits {
-  Greyscale = 0,
-  ShowBackgroundInLeftmost = 1,
-  ShowSpritesInLeftmost = 2,
-  ShowBackground = 3,
-  ShowSprites = 4,
-  EmphasizeRed = 5,
-  EmphasizeGreen = 6,
-  EmphasizeBlue = 7
-}
+import { FrameBuffer, NesPpuPalette } from "../framebuffer/framebuffer";
 
 // PPUSTATUS (0x2002)
 export enum PpuStatusBits {
@@ -39,13 +15,6 @@ export enum PpuStatusBits {
   SpriteZeroHit = 6,
   Vblank = 7
 }
-
-export const IgnoredWritesBeforeWarmedUp = [
-  PpuRegister.PPUCTRL,
-  PpuRegister.PPUMASK,
-  PpuRegister.PPUSCROLL,
-  PpuRegister.PPUADDR
-];
 
 export class Ppu {
   private _frameBuffer: FrameBuffer;
@@ -61,11 +30,8 @@ export class Ppu {
 
   private _cycles: number;
   private _totalCycles: number;
-  private _currentCyclesInRun: number;
   private _scanlines: number;
 
-  private _regPPUCTRL: number;
-  private _regPPUMASK: number;
   private _regPPUSTATUS: number;
 
   private _fineY: number;
@@ -75,6 +41,31 @@ export class Ppu {
   private _attributeByte: number;
   private _tileLowByte: number;
   private _tileHighByte: number;
+  private _tileData: number;
+
+  // Declare $2000/PPUCTRL bits
+  private _regPPUCTRL_nt0: number;
+  private _regPPUCTRL_nt1: number;
+  private _regPPUCTRL_vramIncrement: number;
+  private _regPPUCTRL_spritePatternTableBaseAddress: number;
+  private _regPPUCTRL_backgroundPatternTableBaseAddress: number;
+  private _regPPUCTRL_spriteSizeLarge: boolean;
+  private _regPPUCTRL_masterSlaveSelect: boolean;
+  private _regPPUCTRL_generateNmiAtVblankStart: boolean;
+
+  // Declare $2001/PPUMASK bits
+  private _regPPUMASK_greyscale: boolean;
+  private _regPPUMASK_showBgInLeftMost8pxOfScreen: boolean;
+  private _regPPUMASK_showSpritesLeftMost8pxOfScreen: boolean;
+  private _regPPUMASK_showBackground: boolean;
+  private _regPPUMASK_showSprites: boolean;
+  private _regPPUMASK_emphasizeRed: boolean;
+  private _regPPUMASK_emphasizeGreen: boolean;
+  private _regPPUMASK_emphasizeBlue: boolean;
+
+  // Declare $2005/PPUSCROLL bits
+  private _regPPUSCROLL_x: number;
+  private _regPPUSCROLL_y: number;
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
@@ -83,22 +74,23 @@ export class Ppu {
     this._ppuMemory = ppuMemory;
     this._oamMemory = new OamMemory();
 
-    this._currentCyclesInRun = 0;
     this._totalCycles = 0;
-    this._scanlines = -1;
+    this._scanlines = 0;
     this._cycles = 0;
 
     this._vramAddress = 0;
     this._tVramAddress = 0;
     this._isSecondWrite = false;
 
-    this._regPPUCTRL = 0;
-    this._regPPUMASK = 0;
     this._regPPUSTATUS = 0;
 
     this._fineY = 0;
     this._coarseX = 0;
     this._coarseY = 0;
+
+    this._tileLowByte = 0;
+    this._tileHighByte = 0;
+    this._tileData = 0;
   }
 
   public vramAddress() {
@@ -112,22 +104,20 @@ export class Ppu {
     return this._frameBuffer.buffer;
   }
 
-  public addPpuCyclesInRun(ppuCycles: number) {
-    this._currentCyclesInRun += ppuCycles;
-    this.addPpuCycles(ppuCycles);
+  public addPpuCyclesInRun() {
+    this.addPpuCycle();
   }
 
-  public addPpuCycles(cycles: number) {
-    this._cycles += cycles;
+  public addPpuCycle() {
+    this._cycles++;
 
-    if (this._cycles >= 341) {
+    if (this._cycles > 340) {
       this._scanlines++;
-      if (this._scanlines === 261) {
-        this._scanlines = -1;
-      }
+      this._cycles = 0;
 
-      const remaining = this._cycles - 341;
-      this._cycles = remaining;
+      if (this._scanlines > 261) {
+        this._scanlines = 0;
+      }
     }
   }
 
@@ -140,21 +130,75 @@ export class Ppu {
   }
 
   public write$2000(dataByte: number) {
-    this._regPPUCTRL = dataByte & 0xff;
-    if (
-      (this._regPPUCTRL & (0x1 << PpuCtrlBits.Vblank)) > 0x0 &&
-      this._isVblank()
-    ) {
+    this._regPPUCTRL_nt0 = dataByte & 0x01;
+    this._regPPUCTRL_nt1 = dataByte & 0x02;
+    this._regPPUCTRL_vramIncrement = (dataByte & 0x04) === 0x0 ? 1 : 32;
+    this._regPPUCTRL_spritePatternTableBaseAddress =
+      (dataByte & 0x08) === 0x0 ? 0x0 : 0x1000;
+    this._regPPUCTRL_backgroundPatternTableBaseAddress =
+      (dataByte & 0x10) === 0x0 ? 0x0 : 0x1000;
+    this._regPPUCTRL_spriteSizeLarge = (dataByte & 0x20) === 0x0 ? false : true;
+    this._regPPUCTRL_masterSlaveSelect =
+      (dataByte & 0x40) === 0x0 ? false : true;
+    this._regPPUCTRL_generateNmiAtVblankStart =
+      (dataByte & 0x80) === 0x0 ? false : true;
+
+    if (this._regPPUCTRL_generateNmiAtVblankStart && this._isVblank()) {
       this._cpuNmiRequested = true;
     }
   }
 
+  public read$2000() {
+    const bit_0 = this._regPPUCTRL_nt0;
+    const bit_1 = this._regPPUCTRL_nt1;
+    const bit_2 = this._regPPUCTRL_vramIncrement === 1 ? 0 : 1;
+    const bit_3 = this._regPPUCTRL_spritePatternTableBaseAddress === 0 ? 0 : 1;
+    const bit_4 =
+      this._regPPUCTRL_backgroundPatternTableBaseAddress === 0 ? 0 : 1;
+    const bit_5 = this._regPPUCTRL_spriteSizeLarge ? 1 : 0;
+    const bit_6 = this._regPPUCTRL_masterSlaveSelect ? 1 : 0;
+    const bit_7 = this._regPPUCTRL_generateNmiAtVblankStart ? 1 : 0;
+    return (
+      (bit_7 << 7) |
+      (bit_6 << 6) |
+      (bit_5 << 5) |
+      (bit_4 << 4) |
+      (bit_3 << 3) |
+      (bit_2 << 2) |
+      (bit_1 << 1) |
+      bit_0
+    );
+  }
+
   public write$2001(dataByte: number) {
-    this._regPPUMASK = dataByte & 0xff;
+    this._regPPUMASK_greyscale = (dataByte & 0x01) === 0x01 ? true : false;
+    this._regPPUMASK_showBgInLeftMost8pxOfScreen =
+      (dataByte & 0x02) === 0x02 ? true : false;
+    this._regPPUMASK_showSpritesLeftMost8pxOfScreen =
+      (dataByte & 0x04) === 0x04 ? true : false;
+    this._regPPUMASK_showBackground = (dataByte & 0x08) === 0x08 ? true : false;
+    this._regPPUMASK_showSprites = (dataByte & 0x10) === 0x10 ? true : false;
+    this._regPPUMASK_emphasizeRed = (dataByte & 0x20) === 0x20 ? true : false;
+    this._regPPUMASK_emphasizeGreen = (dataByte & 0x40) === 0x40 ? true : false;
+    this._regPPUMASK_emphasizeBlue = (dataByte & 0x80) === 0x80 ? true : false;
   }
 
   public write$2002(dataByte: number) {
     this._regPPUSTATUS = dataByte & 0xff;
+  }
+
+  public write$2005(dataByte: number) {
+    if (!this._isSecondWrite) {
+      this._tVramAddress = (this._tVramAddress & 0xfffe0) | (dataByte >> 3);
+      this._regPPUSCROLL_x = dataByte & 0x07;
+      this._isSecondWrite = true;
+    } else {
+      this._tVramAddress =
+        (this._tVramAddress & 0x8fff) | ((dataByte & 0x07) << 12);
+      this._tVramAddress =
+        (this._tVramAddress & 0xfc1f) | ((dataByte & 0xf8) << 2);
+      this._isSecondWrite = false;
+    }
   }
 
   public write$2006(dataByte: number) {
@@ -171,10 +215,6 @@ export class Ppu {
     this._ppuMemory.set(this._vramAddress, dataByte);
 
     this.incrementVramAddress();
-  }
-
-  public read$2000() {
-    return this._regPPUCTRL;
   }
 
   public read$2002() {
@@ -196,10 +236,7 @@ export class Ppu {
   }
 
   public incrementVramAddress() {
-    const vramIncrement =
-      (this._regPPUCTRL & (0x1 << PpuCtrlBits.Increment)) > 0x0 ? 32 : 1;
-
-    this._vramAddress += vramIncrement;
+    this._vramAddress += this._regPPUCTRL_vramIncrement;
   }
 
   public cpuNmiRequested(): boolean {
@@ -230,9 +267,7 @@ export class Ppu {
    * IFF bit 7 of $2002 is ON.
    */
   private _requestNmiIfNeeded(): void {
-    if ((this._regPPUCTRL & 0x80) > 0x0) {
-      this._cpuNmiRequested = true;
-    }
+    this._cpuNmiRequested = this._regPPUCTRL_generateNmiAtVblankStart;
   }
 
   private _getPaletteAddress(
@@ -286,14 +321,14 @@ export class Ppu {
   private _fetchNametableByte(): void {
     const currentVramAddress = this._vramAddress;
     const ntAddress =
-      getBaseNametableAddress(this._regPPUCTRL) | (currentVramAddress & 0x0fff);
+      getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
     this._ntByte = this._ppuMemory.get(ntAddress);
   }
 
   private _fetchAttributeByte(): void {
     const currentVramAddress = this._vramAddress;
     const ntAddress =
-      getBaseNametableAddress(this._regPPUCTRL) | (currentVramAddress & 0x0fff);
+      getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
     const attributeAddress = this._convertNametableAddressToAttributeTableAddress(
       ntAddress
     );
@@ -302,21 +337,24 @@ export class Ppu {
   }
 
   private _fetchTileLowByte(): void {
+    const fineY = (this._vramAddress >> 12) & 7;
     const baseNtAddress =
-      getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-    const patternLowAddress = baseNtAddress + 0x10 * this._ntByte + this._fineY;
+      getBaseNametableAddress(this.read$2000()) | (this._vramAddress & 0x0fff);
+    const patternLowAddress = baseNtAddress + 0x10 * this._ntByte + fineY;
     this._tileLowByte = this._ppuMemory.get(patternLowAddress);
   }
 
   private _fetchTileHighByte(): void {
+    const fineY = (this._vramAddress >> 12) & 7;
+
     const baseNtAddress =
-      getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-    const patternHighAddress =
-      baseNtAddress + 0x10 * this._ntByte + this._fineY + 8;
+      getBaseNametableAddress(this.read$2000()) | (this._vramAddress & 0x0fff);
+    const patternHighAddress = baseNtAddress + 0x10 * this._ntByte + fineY + 8;
 
     this._tileHighByte = this._ppuMemory.get(patternHighAddress);
   }
 
+  /*
   private _mergeTileBytesToPixelColorComponents(): ColorComponent[] {
     const mergedRowBits: number[] = this._mergeTileLowAndHighBytesToRowBits(
       this._tileLowByte,
@@ -348,8 +386,44 @@ export class Ppu {
     }
 
     return pixelColors;
+  }*/
+
+  private _storeTileData() {
+    let data = 0x0;
+    for (let i = 0; i < 8; i++) {
+      const attributeByte = this._attributeByte;
+      const lowBit = (this._tileLowByte & 0x80) >> 7;
+      const highBit = (this._tileHighByte & 0x80) >> 6;
+
+      this._tileLowByte <<= 1;
+      this._tileHighByte <<= 1;
+
+      data <<= 4;
+      data |= attributeByte | lowBit | highBit;
+    }
+
+    this._tileData |= data;
   }
 
+  private _renderPixel() {
+    const x = this._cycles - 1;
+    const y = this._scanlines;
+
+    const backgroundPixel =
+      ((this._tileData >> 32) >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
+
+    // Now need to obtain the palette and then reach for the color offset...
+
+    // backgorund color:
+
+    this._frameBuffer.draw(
+      y,
+      x,
+      NesPpuPalette["0" + backgroundPixel.toString(16)]
+    );
+  }
+
+  /*
   private _mergeTileLowAndHighBytesToRowBits(
     lowByte: number,
     highByte: number
@@ -367,8 +441,9 @@ export class Ppu {
     }
 
     return bits;
-  }
+  }*/
 
+  /*
   private _drawColorComponentsToFrameBuffer(colors: ColorComponent[]) {
     const ntAddress =
       getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
@@ -384,17 +459,36 @@ export class Ppu {
       shift++;
     }
   }
-
+*/
   private _incrementX(): void {
     if ((this._vramAddress & 0x001f) === 31) {
       this._vramAddress &= 0xffe0; // wrap-back to 0.
     } else {
       this.incrementVramAddress();
-      this._coarseX++;
     }
+
+    this._coarseX = this._vramAddress & 0x001f;
   }
 
   private _incrementY(): void {
+    if ((this._vramAddress & 0x7000) !== 0x7000) {
+      // fine Y increment
+      this._vramAddress += 0x1000;
+    } else {
+      this._vramAddress = this._vramAddress & 0x8fff;
+      this._coarseY = (this._vramAddress & 0x3e0) >> 5;
+
+      if (this._coarseY === 29) {
+        this._coarseY = 0;
+      } else if (this._coarseY === 31) {
+        this._coarseY = 0;
+      } else {
+        this._coarseY++;
+      }
+
+      this._vramAddress = (this._vramAddress & 0xfc1f) | (this._coarseY << 5);
+    }
+
     if (this._fineY < 7) {
       this._fineY++;
     } else {
@@ -403,128 +497,83 @@ export class Ppu {
 
       if (this._coarseY > 29) {
         this._coarseY = 0;
+        this._vramAddress = this._vramAddress += 32;
       }
-
-      this._vramAddress = (this._vramAddress & 0xfc1f) | (this._coarseY << 5);
     }
   }
 
-  private _adjustXandY() {
-    if (this._cycles % 8 === 0) {
-      this._incrementX();
-    }
+  private _copyX() {
+    this._vramAddress =
+      (this._vramAddress & 0xfbe0) | (this._tVramAddress & 0x041f);
+  }
 
-    if (this._coarseX >= 32) {
-      this._incrementY();
-    }
+  private _copyY() {
+    this._vramAddress =
+      (this._vramAddress & 0x841f) | (this._tVramAddress & 0x7be0);
   }
 
   public tick(): void {
-      // add a cycle to the PPU
+    // add a cycle to the PPU
+    this.addPpuCyclesInRun();
   }
 
-  public run(): number {
-    this._currentCyclesInRun = 0;
+  public run(): void {
+    this.tick();
 
-    if (this._scanlines === -1) {
-      if (this._cycles === 0) {
-        // Idle Cycle
-        this.addPpuCyclesInRun(1);
-      } else if (this._cycles === 1) {
-        this._clearVblank();
+    const isRenderingEnabled = this._regPPUMASK_showBackground;
+    const isPrerenderLine = this._scanlines === 261;
+    const isVisibleLine = this._scanlines < 240;
+    const isRenderLine = isPrerenderLine || isVisibleLine;
+    const isPrefetchCycle = this._cycles >= 321 && this._cycles <= 336;
+    const isVisibleCycle = this._cycles >= 1 && this._cycles <= 256;
+    const isFetchCycle = isPrefetchCycle || isVisibleCycle;
 
-        // FIXME: HACKKKKK!!!!
-        this._vramAddress = 0x2000;
-
-        this.addPpuCyclesInRun(1);
-      } else if (this._cycles >= 280 && this._cycles <= 304) {
-        // this._vramAddress =
-          // (this._vramAddress & 0xfbe0) | (this._tVramAddress & 0x041f);
-        this.addPpuCyclesInRun(1);
-      } else {
-        this.addPpuCyclesInRun(1);
+    if (isRenderingEnabled) {
+      if (isVisibleLine && isVisibleCycle) {
+        this._renderPixel();
       }
-    } else if (this._scanlines >= 0 && this._scanlines <= 239) {
-      if (this._cycles == 0) {
-        this.addPpuCyclesInRun(1);
-      } else if (this._cycles >= 1 && this._cycles <= 256) {
-        /**
-         * Here's how to actually process these cycles:
-         *
-         * Note that the vramAddress here is now set to the start of the nametable
-         * base address. The CPU can only manipulate the VRAM address during VBLANK.
-         *
-         * That is why it is not good to actually write to $2006 when the PPU is not
-         * in the VBLANK state because it can potentially disrupt this section of the
-         * routine.
-         *
-         * Anyway, to process the nametable and fill our frame-buffer, we will need to
-         * use 8 cycles per pattern tile in which we want to render.
-         *
-         * Then we do:
-         *
-         * 1. Fetch the pattern tile index at the nametable location. (2 cycles)
-         * 2. Calculate the attribute address by converting the
-         *    nametable location to attribute location. (2 cycles)
-         * 3. Increment the VRAM address within the same row.
-         * 4. Fetch the current low-byte of the pattern tile (8x1 row) (2 cycles)
-         * 5. Fetch the current high-byte of the pattern tile (8x1 row) (2 cycles)
-         *
-         * As we can see, each "row" of the pattern tile is processed in 8 cycles.
-         *
-         * Therefore, 32 different pattern tiles are evaluated in a per row basis for
-         * each scan line. (256 cycles / 8 cycles per row) = 32.
-         *
-         * Meaning, that for each scan line, it will visit that same pattern tile 8 times
-         * due to pattern tiles being 8x8 pixels.
-         */
+      if (isRenderLine && isFetchCycle) {
+        this._tileData <<= 4;
 
-        debugger;
         switch (this._cycles % 8) {
           case 1:
             this._fetchNametableByte();
-            this.addPpuCyclesInRun(2);
             break;
           case 3:
             this._fetchAttributeByte();
-            this.addPpuCyclesInRun(2);
             break;
           case 5:
             this._fetchTileLowByte();
-            this.addPpuCyclesInRun(2);
             break;
           case 7:
             this._fetchTileHighByte();
-            this.addPpuCyclesInRun(2);
-
-            const rowColorComponents: ColorComponent[] = this._mergeTileBytesToPixelColorComponents();
-            this._drawColorComponentsToFrameBuffer(rowColorComponents);
+          case 0:
+            this._storeTileData();
             break;
         }
-
-        this._adjustXandY();
-      } else if (this._cycles >= 257 && this._cycles <= 320) {
-        // Garbage fetch
-        this.addPpuCyclesInRun(2);
-      } else if (this._cycles >= 321 && this._cycles <= 336) {
-        this.addPpuCyclesInRun(2);
-      } else if (this._cycles >= 337 && this._cycles <= 340) {
-        this.addPpuCyclesInRun(1);
       }
-    } else if (this._scanlines === 240) {
-      this.addPpuCyclesInRun(1);
-    } else if (this._scanlines >= 241 && this._scanlines <= 260) {
-      if (this._scanlines === 241 && this._cycles === 0) {
-        // Idle cycle.
-        this.addPpuCyclesInRun(1);
-      } else if (this._scanlines === 241 && this._cycles === 1) {
-        this._setVblank();
-        this._requestNmiIfNeeded();
-        this.addPpuCyclesInRun(1);
-      } else {
-        this.addPpuCyclesInRun(1);
+      if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
+        this._copyY();
+      }
+
+      if (isRenderLine) {
+        if (isFetchCycle && this._cycles % 8 === 0) {
+          this._incrementX();
+        }
+        if (this._cycles === 256) {
+          this._incrementY();
+        }
+        if (this._cycles === 257) {
+          this._copyX();
+        }
       }
     }
-    return this._currentCyclesInRun;
+    if (this._scanlines === 241 && this._cycles === 1) {
+      this._setVblank();
+      this._requestNmiIfNeeded();
+    }
+    if (isPrerenderLine && this._cycles === 1) {
+      this._clearVblank();
+    }
   }
 }

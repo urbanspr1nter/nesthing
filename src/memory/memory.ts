@@ -46,6 +46,8 @@ export class Memory {
                 this._ppu.write$2000(value);
             } else if(decodedAddress === 0x2001) { 
                 this._ppu.write$2001(value);
+            } else if(decodedAddress === 0x2005) {
+                this._ppu.write$2005(value);
             } else if(decodedAddress === 0x2006) {
                 this._ppu.write$2006(value);
             } else if(decodedAddress === 0x2007) {

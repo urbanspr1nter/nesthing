@@ -151,8 +151,8 @@ export class Nes {
       // Run the PPU for the appropriate amount of cycles.
       let ppuCyclesToRun = cpuCyclesRan * 3;
       while (ppuCyclesToRun > 0) {
-        const ppuCyclesRan = this._ppu.run();
-        ppuCyclesToRun -= ppuCyclesRan;
+        this._ppu.run();
+        ppuCyclesToRun--;
       }
 
       this._cycles += cpuCyclesRan;
