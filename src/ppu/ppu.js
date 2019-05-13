@@ -20,13 +20,13 @@ var Ppu = /** @class */ (function () {
         this._totalCycles = 0;
         this._scanlines = 0;
         this._cycles = 0;
-        this._regPPUSTATUS = 0;
+        // this._regPPUSTATUS = 0;
         this._fineY = 0;
-        this._coarseX = 0;
         this._coarseY = 0;
         this._tileLowByte = 0;
         this._tileHighByte = 0;
-        this._tileData = 0;
+        this._tileData_0 = 0;
+        this._tileData_1 = 0;
         this._v = 0;
         this._t = 0;
         this._w = false;
@@ -106,8 +106,18 @@ var Ppu = /** @class */ (function () {
         this._regPPUMASK_emphasizeGreen = (dataByte & 0x40) === 0x40 ? true : false;
         this._regPPUMASK_emphasizeBlue = (dataByte & 0x80) === 0x80 ? true : false;
     };
+    Ppu.prototype.read$2002 = function () {
+        var bit_5 = this._regPPUSTATUS_spriteOverflow ? 1 : 0;
+        var bit_6 = this._regPPUSTATUS_spriteHit ? 1 : 0;
+        var bit_7 = this._regPPUSTATUS_vblankStarted ? 1 : 0;
+        this._regPPUSTATUS_vblankStarted = false;
+        this._w = false;
+        return bit_7 << 7 | bit_6 << 6 | bit_5 << 5;
+    };
     Ppu.prototype.write$2002 = function (dataByte) {
-        this._regPPUSTATUS = dataByte & 0xff;
+        this._regPPUSTATUS_spriteOverflow = (dataByte & 0x20) === 0x20 ? true : false;
+        this._regPPUSTATUS_spriteHit = (dataByte & 0x40) === 0x40 ? true : false;
+        this._regPPUSTATUS_vblankStarted = (dataByte & 0x80) === 0x80 ? true : false;
     };
     Ppu.prototype.write$2005 = function (dataByte) {
         if (!this._w) {
@@ -135,12 +145,6 @@ var Ppu = /** @class */ (function () {
         this._ppuMemory.set(this._v, dataByte);
         this.incrementVramAddress();
     };
-    Ppu.prototype.read$2002 = function () {
-        var currentStatus = this._regPPUSTATUS;
-        this._clearVblank();
-        this._w = false;
-        return currentStatus;
-    };
     Ppu.prototype.read$2007 = function () {
         var result = this._ppuDataReadBuffer;
         this._ppuDataReadBuffer = this._ppuMemory.get(this._v);
@@ -158,13 +162,13 @@ var Ppu = /** @class */ (function () {
         return false;
     };
     Ppu.prototype._setVblank = function () {
-        this._regPPUSTATUS = this._regPPUSTATUS | (0x1 << PpuStatusBits.Vblank);
+        this._regPPUSTATUS_vblankStarted = true;
     };
     Ppu.prototype._clearVblank = function () {
-        this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.Vblank);
+        this._regPPUSTATUS_vblankStarted = false;
     };
     Ppu.prototype._isVblank = function () {
-        return (this._regPPUSTATUS & (0x1 << PpuStatusBits.Vblank)) > 0x0;
+        return this._regPPUSTATUS_vblankStarted;
     };
     /**
      * An NMI can be PREVENTED if bit 7 of $2002 is off.
@@ -275,6 +279,7 @@ var Ppu = /** @class */ (function () {
         var data = 0x0;
         for (var i = 0; i < 8; i++) {
             var attributeByte = this._attributeByte;
+            debugger;
             var lowBit = (this._tileLowByte & 0x80) >> 7;
             var highBit = (this._tileHighByte & 0x80) >> 6;
             this._tileLowByte <<= 1;
@@ -282,18 +287,27 @@ var Ppu = /** @class */ (function () {
             data <<= 4;
             data |= attributeByte | lowBit | highBit;
         }
-        this._tileData |= data;
+        if (!this._tileDataToggle) {
+            this._tileData_0 |= data;
+        }
+        else {
+            this._tileData_1 |= data;
+        }
     };
     Ppu.prototype._renderPixel = function () {
         var x = this._cycles - 1;
         var y = this._scanlines;
         // First 32 bits are reserved for the first tiledata
         // AAAA AAAA LHLH LHLH LHLH LHLH  
-        var backgroundPixel = ((this._tileData >> 32) >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
+        var tileData = !this._tileDataToggle ? this._tileData_0 : this._tileData_1;
+        /*const backgroundPixel =
+          (tileData >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
+        */
+        var pixel = (tileData & 0xf0000000 >> 28);
         // Now need to obtain the palette and then reach for the color offset...
         // backgorund color:
-        console.log(backgroundPixel);
-        this._frameBuffer.draw(y, x, framebuffer_1.NesPpuPalette[utils_1.byteValue2HexString(backgroundPixel)]);
+        var colorByte = this._ppuMemory.get(0x3F00 + pixel);
+        this._frameBuffer.draw(y, x, framebuffer_1.NesPpuPalette[utils_1.byteValue2HexString(colorByte)]);
     };
     /*
     private _mergeTileLowAndHighBytesToRowBits(
@@ -338,7 +352,6 @@ var Ppu = /** @class */ (function () {
         else {
             this.incrementVramAddress();
         }
-        this._coarseX = this._v & 0x001f;
     };
     Ppu.prototype._incrementY = function () {
         if ((this._v & 0x7000) !== 0x7000) {
@@ -395,7 +408,12 @@ var Ppu = /** @class */ (function () {
                 this._renderPixel();
             }
             if (isRenderLine && isFetchCycle) {
-                this._tileData <<= 4;
+                if (!this._tileDataToggle) {
+                    this._tileData_0 <<= 4;
+                }
+                else {
+                    this._tileData_1 <<= 4;
+                }
                 switch (this._cycles % 8) {
                     case 1:
                         this._fetchNametableByte();
@@ -410,6 +428,7 @@ var Ppu = /** @class */ (function () {
                         this._fetchTileHighByte();
                     case 0:
                         this._storeTileData();
+                        this._tileDataToggle = !this._tileDataToggle;
                         break;
                 }
             }

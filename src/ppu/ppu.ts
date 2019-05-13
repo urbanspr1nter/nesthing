@@ -25,24 +25,23 @@ export class Ppu {
   private _oamMemory: OamMemory;
 
   private _ppuDataReadBuffer: number;
-  // private _tVramAddress: number;
-  // private _vramAddress: number;
-  // private _isSecondWrite: boolean;
 
   private _cycles: number;
   private _totalCycles: number;
   private _scanlines: number;
 
-  private _regPPUSTATUS: number;
+  // private _regPPUSTATUS: number;
 
   private _fineY: number;
-  private _coarseX: number;
   private _coarseY: number;
   private _ntByte: number;
   private _attributeByte: number;
   private _tileLowByte: number;
   private _tileHighByte: number;
-  private _tileData: number;
+
+  private _tileData_0: number;
+  private _tileData_1: number;
+  private _tileDataToggle: boolean;
 
   // Declare internal PPU variables
   private _v: number;
@@ -70,6 +69,11 @@ export class Ppu {
   private _regPPUMASK_emphasizeGreen: boolean;
   private _regPPUMASK_emphasizeBlue: boolean;
 
+  // Declare $2002/PPUSTATUS bits
+  private _regPPUSTATUS_spriteOverflow: boolean;
+  private _regPPUSTATUS_spriteHit: boolean;
+  private _regPPUSTATUS_vblankStarted: boolean;
+
   // Declare $2005/PPUSCROLL bits
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
@@ -85,15 +89,15 @@ export class Ppu {
     this._scanlines = 0;
     this._cycles = 0;
 
-    this._regPPUSTATUS = 0;
+    // this._regPPUSTATUS = 0;
 
     this._fineY = 0;
-    this._coarseX = 0;
     this._coarseY = 0;
 
     this._tileLowByte = 0;
     this._tileHighByte = 0;
-    this._tileData = 0;
+    this._tileData_0 = 0;
+    this._tileData_1 = 0;
 
     this._v = 0;
     this._t = 0;
@@ -190,8 +194,21 @@ export class Ppu {
     this._regPPUMASK_emphasizeBlue = (dataByte & 0x80) === 0x80 ? true : false;
   }
 
+  public read$2002() {
+    const bit_5 = this._regPPUSTATUS_spriteOverflow ? 1 : 0;
+    const bit_6 = this._regPPUSTATUS_spriteHit ? 1 : 0;
+    const bit_7 = this._regPPUSTATUS_vblankStarted ? 1 : 0;
+
+    this._regPPUSTATUS_vblankStarted = false;
+    this._w = false;
+
+    return bit_7 << 7 | bit_6 << 6 | bit_5 << 5;
+  }
+
   public write$2002(dataByte: number) {
-    this._regPPUSTATUS = dataByte & 0xff;
+    this._regPPUSTATUS_spriteOverflow = (dataByte & 0x20) === 0x20 ? true : false;
+    this._regPPUSTATUS_spriteHit = (dataByte & 0x40) === 0x40 ? true : false;
+    this._regPPUSTATUS_vblankStarted = (dataByte & 0x80) === 0x80 ? true : false;
   }
 
   public write$2005(dataByte: number) {
@@ -222,15 +239,6 @@ export class Ppu {
     this.incrementVramAddress();
   }
 
-  public read$2002() {
-    const currentStatus = this._regPPUSTATUS;
-
-    this._clearVblank();
-    this._w = false;
-
-    return currentStatus;
-  }
-
   public read$2007() {
     const result = this._ppuDataReadBuffer;
     this._ppuDataReadBuffer = this._ppuMemory.get(this._v);
@@ -254,15 +262,15 @@ export class Ppu {
   }
 
   private _setVblank() {
-    this._regPPUSTATUS = this._regPPUSTATUS | (0x1 << PpuStatusBits.Vblank);
+    this._regPPUSTATUS_vblankStarted = true;
   }
 
   private _clearVblank() {
-    this._regPPUSTATUS = this._regPPUSTATUS & ~(0x1 << PpuStatusBits.Vblank);
+    this._regPPUSTATUS_vblankStarted = false;
   }
 
   private _isVblank(): boolean {
-    return (this._regPPUSTATUS & (0x1 << PpuStatusBits.Vblank)) > 0x0;
+    return this._regPPUSTATUS_vblankStarted;
   }
 
   /**
@@ -403,6 +411,7 @@ export class Ppu {
     let data = 0x0;
     for (let i = 0; i < 8; i++) {
       const attributeByte = this._attributeByte;
+      debugger;
       const lowBit = (this._tileLowByte & 0x80) >> 7;
       const highBit = (this._tileHighByte & 0x80) >> 6;
 
@@ -413,7 +422,11 @@ export class Ppu {
       data |= attributeByte | lowBit | highBit;
     }
 
-    this._tileData |= data;
+    if(!this._tileDataToggle) {
+        this._tileData_0 |= data;
+    } else {
+        this._tileData_1 |= data;
+    }
   }
 
   private _renderPixel() {
@@ -422,17 +435,22 @@ export class Ppu {
 
     // First 32 bits are reserved for the first tiledata
     // AAAA AAAA LHLH LHLH LHLH LHLH  
-    const backgroundPixel =
-      ((this._tileData >> 32) >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
+
+    const tileData = !this._tileDataToggle ? this._tileData_0 : this._tileData_1;
+    /*const backgroundPixel =
+      (tileData >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
+    */
+   const pixel = (tileData & 0xf0000000 >> 28)
 
     // Now need to obtain the palette and then reach for the color offset...
 
     // backgorund color:
+    let colorByte = this._ppuMemory.get(0x3F00 + pixel);
 
     this._frameBuffer.draw(
       y,
       x,
-      NesPpuPalette[byteValue2HexString(backgroundPixel)]
+      NesPpuPalette[byteValue2HexString(colorByte)]
     );
   }
 
@@ -479,8 +497,6 @@ export class Ppu {
     } else {
       this.incrementVramAddress();
     }
-
-    this._coarseX = this._v & 0x001f;
   }
 
   private _incrementY(): void {
@@ -544,7 +560,11 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        this._tileData <<= 4;
+          if(!this._tileDataToggle) {
+            this._tileData_0 <<= 4;
+          } else {
+              this._tileData_1 <<= 4;
+          }
 
         switch (this._cycles % 8) {
           case 1:
@@ -560,6 +580,7 @@ export class Ppu {
             this._fetchTileHighByte();
           case 0:
             this._storeTileData();
+            this._tileDataToggle = !this._tileDataToggle;
             break;
         }
       }
