@@ -3,6 +3,7 @@ exports.__esModule = true;
 var oammemory_1 = require("../memory/oammemory");
 var ppu_helpers_1 = require("./ppu.helpers");
 var framebuffer_1 = require("../framebuffer/framebuffer");
+var utils_1 = require("../utils/ui/utils");
 // PPUSTATUS (0x2002)
 var PpuStatusBits;
 (function (PpuStatusBits) {
@@ -19,9 +20,6 @@ var Ppu = /** @class */ (function () {
         this._totalCycles = 0;
         this._scanlines = 0;
         this._cycles = 0;
-        this._vramAddress = 0;
-        this._tVramAddress = 0;
-        this._isSecondWrite = false;
         this._regPPUSTATUS = 0;
         this._fineY = 0;
         this._coarseX = 0;
@@ -29,9 +27,12 @@ var Ppu = /** @class */ (function () {
         this._tileLowByte = 0;
         this._tileHighByte = 0;
         this._tileData = 0;
+        this._v = 0;
+        this._t = 0;
+        this._w = false;
     }
     Ppu.prototype.vramAddress = function () {
-        return this._vramAddress;
+        return this._v;
     };
     /**
      * Gets the framebuffer
@@ -109,47 +110,45 @@ var Ppu = /** @class */ (function () {
         this._regPPUSTATUS = dataByte & 0xff;
     };
     Ppu.prototype.write$2005 = function (dataByte) {
-        if (!this._isSecondWrite) {
-            this._tVramAddress = (this._tVramAddress & 0xfffe0) | (dataByte >> 3);
+        if (!this._w) {
+            this._t = (this._t & 0xfffe0) | (dataByte >> 3);
             this._regPPUSCROLL_x = dataByte & 0x07;
-            this._isSecondWrite = true;
+            this._w = true;
         }
         else {
-            this._tVramAddress =
-                (this._tVramAddress & 0x8fff) | ((dataByte & 0x07) << 12);
-            this._tVramAddress =
-                (this._tVramAddress & 0xfc1f) | ((dataByte & 0xf8) << 2);
-            this._isSecondWrite = false;
+            this._t = (this._t & 0x8fff) | ((dataByte & 0x07) << 12);
+            this._t = (this._t & 0xfc1f) | ((dataByte & 0xf8) << 2);
+            this._w = false;
         }
     };
     Ppu.prototype.write$2006 = function (dataByte) {
-        if (!this._isSecondWrite) {
-            this._tVramAddress = dataByte;
-            this._isSecondWrite = true;
+        if (!this._w) {
+            this._t = dataByte;
+            this._w = true;
         }
         else {
-            this._vramAddress = ((this._tVramAddress << 8) | dataByte) & 0x3fff;
-            this._isSecondWrite = false;
+            this._v = ((this._t << 8) | dataByte) & 0x3fff;
+            this._w = false;
         }
     };
     Ppu.prototype.write$2007 = function (dataByte) {
-        this._ppuMemory.set(this._vramAddress, dataByte);
+        this._ppuMemory.set(this._v, dataByte);
         this.incrementVramAddress();
     };
     Ppu.prototype.read$2002 = function () {
         var currentStatus = this._regPPUSTATUS;
         this._clearVblank();
-        this._isSecondWrite = false;
+        this._w = false;
         return currentStatus;
     };
     Ppu.prototype.read$2007 = function () {
         var result = this._ppuDataReadBuffer;
-        this._ppuDataReadBuffer = this._ppuMemory.get(this._vramAddress);
+        this._ppuDataReadBuffer = this._ppuMemory.get(this._v);
         this.incrementVramAddress();
         return result;
     };
     Ppu.prototype.incrementVramAddress = function () {
-        this._vramAddress += this._regPPUCTRL_vramIncrement;
+        this._v += this._regPPUCTRL_vramIncrement;
     };
     Ppu.prototype.cpuNmiRequested = function () {
         if (this._cpuNmiRequested) {
@@ -211,25 +210,31 @@ var Ppu = /** @class */ (function () {
         return address;
     };
     Ppu.prototype._fetchNametableByte = function () {
-        var currentVramAddress = this._vramAddress;
+        var currentVramAddress = this._v;
         var ntAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
         this._ntByte = this._ppuMemory.get(ntAddress);
     };
     Ppu.prototype._fetchAttributeByte = function () {
-        var currentVramAddress = this._vramAddress;
-        var ntAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
-        var attributeAddress = this._convertNametableAddressToAttributeTableAddress(ntAddress);
-        this._attributeByte = this._ppuMemory.get(attributeAddress);
+        var currentVramAddress = this._v;
+        /*
+        const ntAddress =
+          getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
+        const attributeAddress = this._convertNametableAddressToAttributeTableAddress(
+          ntAddress
+        );*/
+        var attributeAddress = 0x23C0 | (this._v | 0x0C00) | ((this._v >> 4) & 0x38) | ((this._v >> 2) & 0x07);
+        var shift = ((this._v >> 4) & 4) | (this._v & 2);
+        this._attributeByte = ((this._ppuMemory.get(attributeAddress) >> shift) & 3) << 2;
     };
     Ppu.prototype._fetchTileLowByte = function () {
-        var fineY = (this._vramAddress >> 12) & 7;
-        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (this._vramAddress & 0x0fff);
+        var fineY = (this._v >> 12) & 7;
+        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (this._v & 0x0fff);
         var patternLowAddress = baseNtAddress + 0x10 * this._ntByte + fineY;
         this._tileLowByte = this._ppuMemory.get(patternLowAddress);
     };
     Ppu.prototype._fetchTileHighByte = function () {
-        var fineY = (this._vramAddress >> 12) & 7;
-        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (this._vramAddress & 0x0fff);
+        var fineY = (this._v >> 12) & 7;
+        var baseNtAddress = ppu_helpers_1.getBaseNametableAddress(this.read$2000()) | (this._v & 0x0fff);
         var patternHighAddress = baseNtAddress + 0x10 * this._ntByte + fineY + 8;
         this._tileHighByte = this._ppuMemory.get(patternHighAddress);
     };
@@ -282,10 +287,13 @@ var Ppu = /** @class */ (function () {
     Ppu.prototype._renderPixel = function () {
         var x = this._cycles - 1;
         var y = this._scanlines;
+        // First 32 bits are reserved for the first tiledata
+        // AAAA AAAA LHLH LHLH LHLH LHLH  
         var backgroundPixel = ((this._tileData >> 32) >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
         // Now need to obtain the palette and then reach for the color offset...
         // backgorund color:
-        this._frameBuffer.draw(y, x, framebuffer_1.NesPpuPalette["0" + backgroundPixel.toString(16)]);
+        console.log(backgroundPixel);
+        this._frameBuffer.draw(y, x, framebuffer_1.NesPpuPalette[utils_1.byteValue2HexString(backgroundPixel)]);
     };
     /*
     private _mergeTileLowAndHighBytesToRowBits(
@@ -324,22 +332,22 @@ var Ppu = /** @class */ (function () {
     }
   */
     Ppu.prototype._incrementX = function () {
-        if ((this._vramAddress & 0x001f) === 31) {
-            this._vramAddress &= 0xffe0; // wrap-back to 0.
+        if ((this._v & 0x001f) === 31) {
+            this._v &= 0xffe0; // wrap-back to 0.
         }
         else {
             this.incrementVramAddress();
         }
-        this._coarseX = this._vramAddress & 0x001f;
+        this._coarseX = this._v & 0x001f;
     };
     Ppu.prototype._incrementY = function () {
-        if ((this._vramAddress & 0x7000) !== 0x7000) {
+        if ((this._v & 0x7000) !== 0x7000) {
             // fine Y increment
-            this._vramAddress += 0x1000;
+            this._v += 0x1000;
         }
         else {
-            this._vramAddress = this._vramAddress & 0x8fff;
-            this._coarseY = (this._vramAddress & 0x3e0) >> 5;
+            this._v = this._v & 0x8fff;
+            this._coarseY = (this._v & 0x3e0) >> 5;
             if (this._coarseY === 29) {
                 this._coarseY = 0;
             }
@@ -349,7 +357,7 @@ var Ppu = /** @class */ (function () {
             else {
                 this._coarseY++;
             }
-            this._vramAddress = (this._vramAddress & 0xfc1f) | (this._coarseY << 5);
+            this._v = (this._v & 0xfc1f) | (this._coarseY << 5);
         }
         if (this._fineY < 7) {
             this._fineY++;
@@ -359,17 +367,15 @@ var Ppu = /** @class */ (function () {
             this._coarseY++;
             if (this._coarseY > 29) {
                 this._coarseY = 0;
-                this._vramAddress = this._vramAddress += 32;
+                this._v = this._v += 32;
             }
         }
     };
     Ppu.prototype._copyX = function () {
-        this._vramAddress =
-            (this._vramAddress & 0xfbe0) | (this._tVramAddress & 0x041f);
+        this._v = (this._v & 0xfbe0) | (this._t & 0x041f);
     };
     Ppu.prototype._copyY = function () {
-        this._vramAddress =
-            (this._vramAddress & 0x841f) | (this._tVramAddress & 0x7be0);
+        this._v = (this._v & 0x841f) | (this._t & 0x7be0);
     };
     Ppu.prototype.tick = function () {
         // add a cycle to the PPU
