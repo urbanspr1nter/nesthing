@@ -34,6 +34,15 @@ var Ppu = /** @class */ (function () {
     Ppu.prototype.vramAddress = function () {
         return this._v;
     };
+    Ppu.prototype.tVramAddress = function () {
+        return this._t;
+    };
+    Ppu.prototype.fineX = function () {
+        return this._x;
+    };
+    Ppu.prototype.vramAddressWriteToggle = function () {
+        return this._w;
+    };
     /**
      * Gets the framebuffer
      */
@@ -112,12 +121,14 @@ var Ppu = /** @class */ (function () {
         var bit_7 = this._regPPUSTATUS_vblankStarted ? 1 : 0;
         this._regPPUSTATUS_vblankStarted = false;
         this._w = false;
-        return bit_7 << 7 | bit_6 << 6 | bit_5 << 5;
+        return (bit_7 << 7) | (bit_6 << 6) | (bit_5 << 5);
     };
     Ppu.prototype.write$2002 = function (dataByte) {
-        this._regPPUSTATUS_spriteOverflow = (dataByte & 0x20) === 0x20 ? true : false;
+        this._regPPUSTATUS_spriteOverflow =
+            (dataByte & 0x20) === 0x20 ? true : false;
         this._regPPUSTATUS_spriteHit = (dataByte & 0x40) === 0x40 ? true : false;
-        this._regPPUSTATUS_vblankStarted = (dataByte & 0x80) === 0x80 ? true : false;
+        this._regPPUSTATUS_vblankStarted =
+            (dataByte & 0x80) === 0x80 ? true : false;
     };
     Ppu.prototype.write$2005 = function (dataByte) {
         if (!this._w) {
@@ -226,9 +237,13 @@ var Ppu = /** @class */ (function () {
         const attributeAddress = this._convertNametableAddressToAttributeTableAddress(
           ntAddress
         );*/
-        var attributeAddress = 0x23C0 | (this._v | 0x0C00) | ((this._v >> 4) & 0x38) | ((this._v >> 2) & 0x07);
+        var attributeAddress = 0x23c0 |
+            (this._v & 0x0c00) |
+            ((this._v >> 4) & 0x38) |
+            ((this._v >> 2) & 0x07);
         var shift = ((this._v >> 4) & 4) | (this._v & 2);
-        this._attributeByte = ((this._ppuMemory.get(attributeAddress) >> shift) & 3) << 2;
+        this._attributeByte =
+            ((this._ppuMemory.get(attributeAddress) >> shift) & 3) << 2;
     };
     Ppu.prototype._fetchTileLowByte = function () {
         var fineY = (this._v >> 12) & 7;
@@ -298,15 +313,14 @@ var Ppu = /** @class */ (function () {
         var x = this._cycles - 1;
         var y = this._scanlines;
         // First 32 bits are reserved for the first tiledata
-        // AAAA AAAA LHLH LHLH LHLH LHLH  
-        var tileData = !this._tileDataToggle ? this._tileData_0 : this._tileData_1;
-        /*const backgroundPixel =
-          (tileData >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
-        */
-        var pixel = (tileData & 0xf0000000 >> 28);
+        // AALH AALH AALH AALH AALH AALH
+        var tileData = !this._tileDataToggle
+            ? this._tileData_0
+            : this._tileData_1;
+        var pixel = (tileData >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
         // Now need to obtain the palette and then reach for the color offset...
         // backgorund color:
-        var colorByte = this._ppuMemory.get(0x3F00 + pixel);
+        var colorByte = this._ppuMemory.get(0x3f00 + pixel);
         this._frameBuffer.draw(y, x, framebuffer_1.NesPpuPalette[utils_1.byteValue2HexString(colorByte)]);
     };
     /*

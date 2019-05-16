@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { Nes, CpuRegisters } from "./nes/nes";
+import { Nes, CpuRegisters, PpuRegisters } from "./nes/nes";
 import "bulma/css/bulma.css";
 import { ColorComponent } from "./nes/common/interface";
 import FrameBufferView from "./components/FrameBufferView";
@@ -8,11 +8,13 @@ import CpuMemoryView from "./components/CpuMemoryView";
 import PpuMemoryView from "./components/PpuMemoryView";
 import CpuRegisterView from "./components/CpuRegisterView";
 import { buildRgbString } from "./utils/ui/utils";
+import PpuRegisterView from "./components/PpuRegisterView";
 
 interface NesState {
   cycles: number;
   cpuMemory: number[];
   cpuRegisters: CpuRegisters;
+  ppuRegisters: PpuRegisters;
   ppuMemory: number[];
   frameBuffer: ColorComponent[][];
   totalRunCycles: number;
@@ -38,6 +40,7 @@ class App extends Component<{}, NesState> {
       cycles: 100000,
       cpuMemory: this._nes.cpuMemory(),
       cpuRegisters: this._nes.cpuRegisters(),
+      ppuRegisters: this._nes.ppuRegisers(),
       ppuMemory: this._nes.ppuMemory(),
       frameBuffer: this._nes.frameBuffer(),
       totalRunCycles: 0,
@@ -68,6 +71,7 @@ class App extends Component<{}, NesState> {
       this.setState(
         {
           cpuRegisters: this._nes.cpuRegisters(),
+          ppuRegisters: this._nes.ppuRegisers(),
           cpuMemory: this._nes.cpuMemory(),
           ppuMemory: this._nes.ppuMemory(),
           frameBuffer: this._nes.frameBuffer(),
@@ -170,6 +174,9 @@ class App extends Component<{}, NesState> {
               </div>
               <div>
                 <CpuRegisterView data={this.state.cpuRegisters} />
+              </div>
+              <div>
+                <PpuRegisterView data={this.state.ppuRegisters} />
               </div>
               <div className="columns">
                 <div className="column">

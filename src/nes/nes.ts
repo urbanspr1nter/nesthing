@@ -17,6 +17,13 @@ export interface CpuRegisters {
   p: number;
 }
 
+export interface PpuRegisters {
+  v: number;
+  t: number;
+  x: number;
+  w: boolean;
+}
+
 export class Nes {
   private _memory: Memory;
   private _ppuMemory: PpuMemory;
@@ -55,23 +62,32 @@ export class Nes {
   }
 
   public cpuNmiRequested(): boolean {
-      return this._nmiTriggered;
+    return this._nmiTriggered;
   }
 
   public cpuTotalCycles(): number {
-      return this._cpu.totalCycles();
+    return this._cpu.totalCycles();
   }
 
   public scanlines(): number {
-      return this._ppu.getScanlines();
+    return this._ppu.getScanlines();
   }
 
   public ppuCycles(): number {
-      return this._ppu.getCycles();
+    return this._ppu.getCycles();
   }
 
   public logEntries(): string[] {
     return this._logger.entries;
+  }
+
+  public ppuRegisers(): PpuRegisters {
+    return {
+      v: this._ppu.vramAddress(),
+      t: this._ppu.tVramAddress(),
+      x: this._ppu.fineX(),
+      w: this._ppu.vramAddressWriteToggle()
+    };
   }
 
   public cpuRegisters(): CpuRegisters {
@@ -144,7 +160,7 @@ export class Nes {
       }
 
       const opCode = this._memory.get(this._cpu.getPC());
-      this._cpu.handleOp(opCode);  
+      this._cpu.handleOp(opCode);
 
       const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
 

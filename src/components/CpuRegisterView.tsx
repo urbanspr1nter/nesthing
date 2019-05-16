@@ -40,6 +40,7 @@ export default class CpuRegisterView extends React.Component<
 
     return (
       <div className="container" style={containerStyle}>
+        <h6 className="title is-6">CPU Registers</h6>
         <div className="container">
           <div className="columns" style={columnsStyle}>
             <div className="column">

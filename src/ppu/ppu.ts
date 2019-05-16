@@ -30,8 +30,6 @@ export class Ppu {
   private _totalCycles: number;
   private _scanlines: number;
 
-  // private _regPPUSTATUS: number;
-
   private _fineY: number;
   private _coarseY: number;
   private _ntByte: number;
@@ -106,6 +104,18 @@ export class Ppu {
 
   public vramAddress() {
     return this._v;
+  }
+
+  public tVramAddress() {
+    return this._t;
+  }
+
+  public fineX() {
+    return this._x;
+  }
+
+  public vramAddressWriteToggle() {
+    return this._w;
   }
 
   /**
@@ -202,13 +212,15 @@ export class Ppu {
     this._regPPUSTATUS_vblankStarted = false;
     this._w = false;
 
-    return bit_7 << 7 | bit_6 << 6 | bit_5 << 5;
+    return (bit_7 << 7) | (bit_6 << 6) | (bit_5 << 5);
   }
 
   public write$2002(dataByte: number) {
-    this._regPPUSTATUS_spriteOverflow = (dataByte & 0x20) === 0x20 ? true : false;
+    this._regPPUSTATUS_spriteOverflow =
+      (dataByte & 0x20) === 0x20 ? true : false;
     this._regPPUSTATUS_spriteHit = (dataByte & 0x40) === 0x40 ? true : false;
-    this._regPPUSTATUS_vblankStarted = (dataByte & 0x80) === 0x80 ? true : false;
+    this._regPPUSTATUS_vblankStarted =
+      (dataByte & 0x80) === 0x80 ? true : false;
   }
 
   public write$2005(dataByte: number) {
@@ -348,12 +360,16 @@ export class Ppu {
       ntAddress
     );*/
 
-    const attributeAddress = 0x23C0 | (this._v | 0x0C00) | ((this._v >> 4) & 0x38) | ((this._v >> 2) & 0x07);
+    const attributeAddress =
+      0x23c0 |
+      (this._v & 0x0c00) |
+      ((this._v >> 4) & 0x38) |
+      ((this._v >> 2) & 0x07);
 
+    const shift = ((this._v >> 4) & 4) | (this._v & 2);
 
-    const shift = ((this._v >> 4) & 4) | (this._v & 2)
-
-    this._attributeByte = ((this._ppuMemory.get(attributeAddress) >> shift) & 3) << 2;
+    this._attributeByte =
+      ((this._ppuMemory.get(attributeAddress) >> shift) & 3) << 2;
   }
 
   private _fetchTileLowByte(): void {
@@ -373,40 +389,6 @@ export class Ppu {
     this._tileHighByte = this._ppuMemory.get(patternHighAddress);
   }
 
-  /*
-  private _mergeTileBytesToPixelColorComponents(): ColorComponent[] {
-    const mergedRowBits: number[] = this._mergeTileLowAndHighBytesToRowBits(
-      this._tileLowByte,
-      this._tileHighByte
-    );
-    const attributeByte: number = this._attributeByte;
-
-    const ntAddress =
-      getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-    const hTileDelta = this._getHorizontalTileDelta(ntAddress);
-    const vTileDelta = this._getVerticalTileDelta(ntAddress);
-
-    const attributeGroupIndex = getAttributeGroupIndex(hTileDelta, vTileDelta);
-
-    const basePaletteAddress = getBasePaletteAddress(
-      attributeByte,
-      attributeGroupIndex
-    );
-
-    const pixelColors: ColorComponent[] = [];
-    for (let i = 0; i < mergedRowBits.length; i++) {
-      const paletteAddress = this._getPaletteAddress(
-        basePaletteAddress,
-        mergedRowBits[i]
-      );
-      const colorByte = this._ppuMemory.get(paletteAddress);
-      const colorComp = this._frameBuffer.getColor(colorByte);
-      pixelColors.push(colorComp);
-    }
-
-    return pixelColors;
-  }*/
-
   private _storeTileData() {
     let data = 0x0;
     for (let i = 0; i < 8; i++) {
@@ -422,10 +404,10 @@ export class Ppu {
       data |= attributeByte | lowBit | highBit;
     }
 
-    if(!this._tileDataToggle) {
-        this._tileData_0 |= data;
+    if (!this._tileDataToggle) {
+      this._tileData_0 |= data;
     } else {
-        this._tileData_1 |= data;
+      this._tileData_1 |= data;
     }
   }
 
@@ -434,63 +416,21 @@ export class Ppu {
     const y = this._scanlines;
 
     // First 32 bits are reserved for the first tiledata
-    // AAAA AAAA LHLH LHLH LHLH LHLH  
+    // AALH AALH AALH AALH AALH AALH
 
-    const tileData = !this._tileDataToggle ? this._tileData_0 : this._tileData_1;
-    /*const backgroundPixel =
-      (tileData >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
-    */
-   const pixel = (tileData & 0xf0000000 >> 28)
+    const tileData = !this._tileDataToggle
+      ? this._tileData_0
+      : this._tileData_1;
+    const pixel = (tileData >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
 
     // Now need to obtain the palette and then reach for the color offset...
 
     // backgorund color:
-    let colorByte = this._ppuMemory.get(0x3F00 + pixel);
+    let colorByte = this._ppuMemory.get(0x3f00 + pixel);
 
-    this._frameBuffer.draw(
-      y,
-      x,
-      NesPpuPalette[byteValue2HexString(colorByte)]
-    );
+    this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(colorByte)]);
   }
-
-  /*
-  private _mergeTileLowAndHighBytesToRowBits(
-    lowByte: number,
-    highByte: number
-  ): number[] {
-    let mask = 0x1;
-
-    const bits: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
-    for (let j = 0; j < 8; j++) {
-      const lowBit = (lowByte & (mask << j)) > 0 ? 1 : 0;
-      const highBit = (highByte & (mask << j)) > 0 ? 1 : 0;
-
-      const mergedBits = (highBit << 1) | lowBit;
-
-      bits[7 - j] = mergedBits;
-    }
-
-    return bits;
-  }*/
-
-  /*
-  private _drawColorComponentsToFrameBuffer(colors: ColorComponent[]) {
-    const ntAddress =
-      getBaseNametableAddress(this._regPPUCTRL) | (this._vramAddress & 0x0fff);
-    let fbTileRow = parseInt(((ntAddress % 0x2000) / 0x20).toString());
-    let fbTileCol = parseInt(((ntAddress % 0x2000) % 0x20).toString());
-
-    const fbCol = fbTileCol * 8;
-    const fbRow = fbTileRow * 8 + this._fineY;
-
-    let shift = 0;
-    for (let k = fbCol; k < fbCol + 8; k++) {
-      this._frameBuffer.draw(fbRow, k, colors[shift]);
-      shift++;
-    }
-  }
-*/
+  
   private _incrementX(): void {
     if ((this._v & 0x001f) === 31) {
       this._v &= 0xffe0; // wrap-back to 0.
@@ -560,11 +500,11 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-          if(!this._tileDataToggle) {
-            this._tileData_0 <<= 4;
-          } else {
-              this._tileData_1 <<= 4;
-          }
+        if (!this._tileDataToggle) {
+          this._tileData_0 <<= 4;
+        } else {
+          this._tileData_1 <<= 4;
+        }
 
         switch (this._cycles % 8) {
           case 1:
