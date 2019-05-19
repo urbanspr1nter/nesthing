@@ -1,34 +1,23 @@
 import { PpuMemory } from "../memory/ppumemory";
 import { OamMemory } from "../memory/oammemory";
 import { ColorComponent } from "../nes/common/interface";
-import {
-  getBaseNametableAddress,
-  getBasePaletteAddress,
-  getAttributeGroupIndex
-} from "./ppu.helpers";
-import { PpuRegister } from "./ppu.interface";
+import { getBaseNametableAddress } from "./ppu.helpers";
 import { FrameBuffer, NesPpuPalette } from "../framebuffer/framebuffer";
 import { byteValue2HexString } from "../utils/ui/utils";
 
-// PPUSTATUS (0x2002)
-export enum PpuStatusBits {
-  SpriteOverflow = 5,
-  SpriteZeroHit = 6,
-  Vblank = 7
-}
 
 export class Ppu {
   private _frameBuffer: FrameBuffer;
 
   private _cpuNmiRequested: boolean;
   private _ppuMemory: PpuMemory;
-  private _oamMemory: OamMemory;
 
   private _ppuDataReadBuffer: number;
 
   private _cycles: number;
-  private _totalCycles: number;
   private _scanlines: number;
+  private _frames: number;
+  private _evenFrame: boolean;
 
   private _fineY: number;
   private _coarseY: number;
@@ -36,10 +25,6 @@ export class Ppu {
   private _attributeByte: number;
   private _tileLowByte: number;
   private _tileHighByte: number;
-
-  private _tileData_0: number;
-  private _tileData_1: number;
-  private _tileDataToggle: boolean;
 
   // Declare internal PPU variables
   private _v: number;
@@ -76,30 +61,28 @@ export class Ppu {
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
+  private _pixelBits: number[];
+
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
 
     this._cpuNmiRequested = false;
     this._ppuMemory = ppuMemory;
-    this._oamMemory = new OamMemory();
 
-    this._totalCycles = 0;
     this._scanlines = 0;
     this._cycles = 0;
-
-    // this._regPPUSTATUS = 0;
 
     this._fineY = 0;
     this._coarseY = 0;
 
     this._tileLowByte = 0;
     this._tileHighByte = 0;
-    this._tileData_0 = 0;
-    this._tileData_1 = 0;
 
     this._v = 0;
     this._t = 0;
     this._w = false;
+
+    this._pixelBits = [];
   }
 
   public vramAddress() {
@@ -123,23 +106,6 @@ export class Ppu {
    */
   public frameBuffer(): ColorComponent[][] {
     return this._frameBuffer.buffer;
-  }
-
-  public addPpuCyclesInRun() {
-    this.addPpuCycle();
-  }
-
-  public addPpuCycle() {
-    this._cycles++;
-
-    if (this._cycles > 340) {
-      this._scanlines++;
-      this._cycles = 0;
-
-      if (this._scanlines > 261) {
-        this._scanlines = 0;
-      }
-    }
   }
 
   public getCycles(): number {
@@ -237,12 +203,21 @@ export class Ppu {
 
   public write$2006(dataByte: number) {
     if (!this._w) {
+      this._t = (this._t & 0x80ff) | ((dataByte & 0x3f) << 8);
+      this._w = true;
+    } else {
+      this._t = (this._t & 0xff00) | dataByte;
+      this._v = this._t;
+      this._w = false;
+    }
+    /*
+    if (!this._w) {
       this._t = dataByte;
       this._w = true;
     } else {
       this._v = ((this._t << 8) | dataByte) & 0x3fff;
       this._w = false;
-    }
+    }*/
   }
 
   public write$2007(dataByte: number) {
@@ -252,12 +227,27 @@ export class Ppu {
   }
 
   public read$2007() {
+    let value = this._ppuMemory.get(this._v);
+    if (this._v % 0x4000 < 0x3f00) {
+      const bufferedData = this._ppuDataReadBuffer;
+      this._ppuDataReadBuffer = value;
+      value = bufferedData;
+    } else {
+      this._ppuDataReadBuffer = this._ppuMemory.get(this._v - 0x1000);
+    }
+
+    this.incrementVramAddress();
+
+    return value;
+
+    /*
     const result = this._ppuDataReadBuffer;
     this._ppuDataReadBuffer = this._ppuMemory.get(this._v);
 
     this.incrementVramAddress();
 
     return result;
+    */
   }
 
   public incrementVramAddress() {
@@ -295,71 +285,15 @@ export class Ppu {
     this._cpuNmiRequested = this._regPPUCTRL_generateNmiAtVblankStart;
   }
 
-  private _getPaletteAddress(
-    basePaletteAddress: number,
-    colorIndex: number
-  ): number {
-    return basePaletteAddress + (colorIndex - 1);
-  }
-
-  private _getHorizontalTileDelta(nameTableAddress: number) {
-    return (nameTableAddress & 0x3e) >> 5 % 2;
-  }
-
-  private _getVerticalTileDelta(nameTableAddress: number) {
-    return nameTableAddress & 0x1f;
-  }
-
-  /**
-   * Converts an address from the name table to an attribute table address.
-   * @param ntAddress Attribute table address
-   */
-  private _convertNametableAddressToAttributeTableAddress(
-    ntAddress: number
-  ): number {
-    // Nametable address: 0010 NNYY YYYX XXXX
-    // Attribute Table Address: 0010 NN11 11YY YXXX
-
-    const yBits = ntAddress & 0x03e0; // 0000 0011 1110 0000
-    const xBits = ntAddress & 0x001f; // 0000 0000 0001 1111
-    const ntBits = ntAddress & 0x0c00; // 0000 1100 0000 0000
-    const base = 0x2000; // 0010 0000 0000 0000
-    const mask = 0x03c0; // 0000 0011 1100 0000
-
-    const topYBits = (yBits & 0x0380) >> 4; // 0000 0011 1000 0000 -> 0000 0000 0011 1000
-    const topXBits = (xBits & 0x001c) >> 2; // 0000 0000 0001 1100 -> 0000 0000 0000 0111
-
-    // Ex 0x2209
-    //   0010 0000 0000 0000 (0x2000)
-    // | 0000 0000 0000 0000 (NT BITS)
-    // | 0000 0011 1100 0000 (MASK => 0x03C0)
-    // | 0000 0000 0010 0000 (TOP Y)
-    // | 0000 0000 0000 0010 (TOP X)
-    // ------------------------
-    // > 0010 0011 1110 0010 => 0x23E2
-
-    const address = base | ntBits | mask | topYBits | topXBits;
-
-    return address;
-  }
-
   private _fetchNametableByte(): void {
     const currentVramAddress = this._v;
-    const ntAddress =
-      getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
+    /*const ntAddress =
+      getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);*/
+    const ntAddress = 0x2000 | (this._v & 0x0fff);
     this._ntByte = this._ppuMemory.get(ntAddress);
   }
 
   private _fetchAttributeByte(): void {
-    const currentVramAddress = this._v;
-
-    /*
-    const ntAddress =
-      getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);
-    const attributeAddress = this._convertNametableAddressToAttributeTableAddress(
-      ntAddress
-    );*/
-
     const attributeAddress =
       0x23c0 |
       (this._v & 0x0c00) |
@@ -374,100 +308,111 @@ export class Ppu {
 
   private _fetchTileLowByte(): void {
     const fineY = (this._v >> 12) & 7;
-    const baseNtAddress =
-      getBaseNametableAddress(this.read$2000()) | (this._v & 0x0fff);
-    const patternLowAddress = baseNtAddress + 0x10 * this._ntByte + fineY;
+    const patternTableBaseAddress = this
+      ._regPPUCTRL_backgroundPatternTableBaseAddress;
+    const patternLowAddress =
+      patternTableBaseAddress + 0x10 * this._ntByte + fineY;
     this._tileLowByte = this._ppuMemory.get(patternLowAddress);
   }
 
   private _fetchTileHighByte(): void {
     const fineY = (this._v >> 12) & 7;
-    const baseNtAddress =
-      getBaseNametableAddress(this.read$2000()) | (this._v & 0x0fff);
-    const patternHighAddress = baseNtAddress + 0x10 * this._ntByte + fineY + 8;
+    const patternTableBaseAddress = this
+      ._regPPUCTRL_backgroundPatternTableBaseAddress;
+    const patternHighAddress =
+      patternTableBaseAddress + 0x10 * this._ntByte + fineY + 8;
 
     this._tileHighByte = this._ppuMemory.get(patternHighAddress);
   }
 
+  /**
+   * After every 8 cycles for the PPU, the fetched Atrribute, Low Tile, and High Tile
+   * bytes are stored and reloaded into the registers. The upper bits of the tile shift
+   * registers are populated with this data. Meanwhile, the lower bits of the tile shift
+   * registeres are being accessed for rendering during every cycle.
+   */
   private _storeTileData() {
-    let data = 0x0;
     for (let i = 0; i < 8; i++) {
       const attributeByte = this._attributeByte;
-      debugger;
+
       const lowBit = (this._tileLowByte & 0x80) >> 7;
-      const highBit = (this._tileHighByte & 0x80) >> 6;
+      const highBit = (this._tileHighByte & 0x80) >> 7;
 
       this._tileLowByte <<= 1;
       this._tileHighByte <<= 1;
 
-      data <<= 4;
-      data |= attributeByte | lowBit | highBit;
-    }
-
-    if (!this._tileDataToggle) {
-      this._tileData_0 |= data;
-    } else {
-      this._tileData_1 |= data;
+      this._pixelBits.push(attributeByte >> 3);
+      this._pixelBits.push(attributeByte >> 2);
+      this._pixelBits.push(highBit);
+      this._pixelBits.push(lowBit);
     }
   }
 
+  /**
+   * Shift a title of 4 bits from the shift registers to form the background pixel needed
+   * to render onto the screen. During this, we are processing the lower databytes from the
+   * shift registers.
+   */
   private _renderPixel() {
     const x = this._cycles - 1;
     const y = this._scanlines;
 
-    // First 32 bits are reserved for the first tiledata
-    // AALH AALH AALH AALH AALH AALH
+    const attributeBits = (this._pixelBits[0] << 1) | this._pixelBits[1];
+    const highBit = this._pixelBits[2];
+    const lowBit = this._pixelBits[3];
 
-    const tileData = !this._tileDataToggle
-      ? this._tileData_0
-      : this._tileData_1;
-    const pixel = (tileData >> ((7 - this._regPPUSCROLL_x) * 4)) & 0x0f;
+    let paletteOffset = (highBit << 1) | lowBit;
 
-    // Now need to obtain the palette and then reach for the color offset...
+    let basePaletteAddress = 0x3f00;
+    switch (attributeBits) {
+      case 0x0:
+        basePaletteAddress = 0x3f01;
+        break;
+      case 0x1:
+        basePaletteAddress = 0x3f05;
+        break;
+      case 0x2:
+        basePaletteAddress = 0x3f09;
+        break;
+      case 0x3:
+        basePaletteAddress = 0x3f0d;
+        break;
+    }
 
-    // backgorund color:
-    let colorByte = this._ppuMemory.get(0x3f00 + pixel);
+    let colorByte = this._ppuMemory.get(
+      basePaletteAddress + (paletteOffset - 1)
+    );
 
     this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(colorByte)]);
   }
-  
+
   private _incrementX(): void {
     if ((this._v & 0x001f) === 31) {
       this._v &= 0xffe0; // wrap-back to 0.
+      //this._v ^= 0x0400;
     } else {
-      this.incrementVramAddress();
+      this._v++;
     }
   }
 
   private _incrementY(): void {
     if ((this._v & 0x7000) !== 0x7000) {
-      // fine Y increment
       this._v += 0x1000;
     } else {
       this._v = this._v & 0x8fff;
-      this._coarseY = (this._v & 0x3e0) >> 5;
 
-      if (this._coarseY === 29) {
-        this._coarseY = 0;
-      } else if (this._coarseY === 31) {
-        this._coarseY = 0;
+      let y = (this._v & 0x3e0) >> 5;
+      if (y === 29) {
+        y = 0;
+
+        // this._v ^= 0x0800;
+      } else if (y === 31) {
+        y = 0;
       } else {
-        this._coarseY++;
+        y++;
       }
 
-      this._v = (this._v & 0xfc1f) | (this._coarseY << 5);
-    }
-
-    if (this._fineY < 7) {
-      this._fineY++;
-    } else {
-      this._fineY = 0;
-      this._coarseY++;
-
-      if (this._coarseY > 29) {
-        this._coarseY = 0;
-        this._v = this._v += 32;
-      }
+      this._v = (this._v & 0xfc1f) | (y << 5);
     }
   }
 
@@ -479,13 +424,40 @@ export class Ppu {
     this._v = (this._v & 0x841f) | (this._t & 0x7be0);
   }
 
-  public tick(): void {
-    // add a cycle to the PPU
-    this.addPpuCyclesInRun();
+  private _tick(): void {
+    if (this._regPPUMASK_showBackground) {
+      if (!this._evenFrame && this._scanlines === 261 && this._cycles === 339) {
+        this._cycles = 0;
+        this._scanlines = 0;
+        this._frames++;
+        if (this._frames % 2) {
+          this._evenFrame = true;
+        } else {
+          this._evenFrame = false;
+        }
+        return;
+      }
+    }
+
+    this._cycles++;
+    if (this._cycles > 340) {
+      this._scanlines++;
+      this._cycles = 0;
+
+      if (this._scanlines > 261) {
+        this._scanlines = 0;
+        this._frames++;
+        if (this._frames % 2) {
+          this._evenFrame = true;
+        } else {
+          this._evenFrame = false;
+        }
+      }
+    }
   }
 
   public run(): void {
-    this.tick();
+    this._tick();
 
     const isRenderingEnabled = this._regPPUMASK_showBackground;
     const isPrerenderLine = this._scanlines === 261;
@@ -500,11 +472,10 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        if (!this._tileDataToggle) {
-          this._tileData_0 <<= 4;
-        } else {
-          this._tileData_1 <<= 4;
-        }
+        this._pixelBits.shift();
+        this._pixelBits.shift();
+        this._pixelBits.shift();
+        this._pixelBits.shift();
 
         switch (this._cycles % 8) {
           case 1:
@@ -518,12 +489,13 @@ export class Ppu {
             break;
           case 7:
             this._fetchTileHighByte();
+            break;
           case 0:
             this._storeTileData();
-            this._tileDataToggle = !this._tileDataToggle;
             break;
         }
       }
+
       if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
         this._copyY();
       }

@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, createContext } from "react";
 import { Nes, CpuRegisters, PpuRegisters } from "./nes/nes";
 import "bulma/css/bulma.css";
 import { ColorComponent } from "./nes/common/interface";
@@ -37,7 +37,7 @@ class App extends Component<{}, NesState> {
     this._nes = new Nes();
     this._canvas = null;
     this.state = {
-      cycles: 100000,
+      cycles: 107378,
       cpuMemory: this._nes.cpuMemory(),
       cpuRegisters: this._nes.cpuRegisters(),
       ppuRegisters: this._nes.ppuRegisers(),
@@ -98,7 +98,7 @@ class App extends Component<{}, NesState> {
           }
         }
       );
-    }, 1000);
+    }, 17);
   };
 
   handlePause = () => {
