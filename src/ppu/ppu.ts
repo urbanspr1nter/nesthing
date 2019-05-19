@@ -389,7 +389,7 @@ export class Ppu {
   private _incrementX(): void {
     if ((this._v & 0x001f) === 31) {
       this._v &= 0xffe0; // wrap-back to 0.
-      //this._v ^= 0x0400;
+      this._v ^= 0x0400;
     } else {
       this._v++;
     }
@@ -405,7 +405,7 @@ export class Ppu {
       if (y === 29) {
         y = 0;
 
-        // this._v ^= 0x0800;
+        this._v ^= 0x0800;
       } else if (y === 31) {
         y = 0;
       } else {
