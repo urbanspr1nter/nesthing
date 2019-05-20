@@ -111,3 +111,4 @@ typings/
 */**/tests/*.js
 */**/nes/*.js
 */**/nes/common/*.js
+*/**/nes/ppu/*.js

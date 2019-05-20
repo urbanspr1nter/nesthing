@@ -5,6 +5,33 @@ import { getBaseNametableAddress } from "./ppu.helpers";
 import { FrameBuffer, NesPpuPalette } from "../framebuffer/framebuffer";
 import { byteValue2HexString } from "../utils/ui/utils";
 
+class PixelBitsQueue {
+  private static _MAX_LENGTH = 64;
+  private _data: number[];
+
+  constructor() {
+    this._data = [];
+    for(let i = 0; i < PixelBitsQueue._MAX_LENGTH; i++) {
+      this._data[i] = 0;
+    }
+  }
+
+  public push = (bit: number): void => {
+    if(this._data.length === PixelBitsQueue._MAX_LENGTH) {
+      this._data = this._data.slice(1, 64).concat([bit]);
+    } else {
+      this._data.push(bit);
+    }
+  }
+
+  public shift4bits = (): void => {
+    this._data = this._data.slice(4);
+  }
+
+  public get4bits = (): number[] => {
+    return this._data.slice(0, 4);
+  }
+}
 
 export class Ppu {
   private _frameBuffer: FrameBuffer;
@@ -19,8 +46,6 @@ export class Ppu {
   private _frames: number;
   private _evenFrame: boolean;
 
-  private _fineY: number;
-  private _coarseY: number;
   private _ntByte: number;
   private _attributeByte: number;
   private _tileLowByte: number;
@@ -61,7 +86,7 @@ export class Ppu {
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
-  private _pixelBits: number[];
+  private _pixelBits: PixelBitsQueue;
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
@@ -72,9 +97,6 @@ export class Ppu {
     this._scanlines = 0;
     this._cycles = 0;
 
-    this._fineY = 0;
-    this._coarseY = 0;
-
     this._tileLowByte = 0;
     this._tileHighByte = 0;
 
@@ -82,7 +104,7 @@ export class Ppu {
     this._t = 0;
     this._w = false;
 
-    this._pixelBits = [];
+    this._pixelBits = new PixelBitsQueue();
   }
 
   public vramAddress() {
@@ -289,7 +311,7 @@ export class Ppu {
     const currentVramAddress = this._v;
     /*const ntAddress =
       getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);*/
-    const ntAddress = 0x2000 | (this._v & 0x0fff);
+    const ntAddress = 0x2000 | ((this._v) & 0x0fff);
     this._ntByte = this._ppuMemory.get(ntAddress);
   }
 
@@ -357,9 +379,15 @@ export class Ppu {
     const x = this._cycles - 1;
     const y = this._scanlines;
 
-    const attributeBits = (this._pixelBits[0] << 1) | this._pixelBits[1];
-    const highBit = this._pixelBits[2];
-    const lowBit = this._pixelBits[3];
+    if(x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
+      this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(0x3f00)]);
+      return;
+    }
+
+    const bits = this._pixelBits.get4bits();
+    const attributeBits = (bits[0] << 1) | bits[1];
+    const highBit = bits[2];
+    const lowBit = bits[3];
 
     let paletteOffset = (highBit << 1) | lowBit;
 
@@ -472,11 +500,7 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        this._pixelBits.shift();
-        this._pixelBits.shift();
-        this._pixelBits.shift();
-        this._pixelBits.shift();
-
+        this._pixelBits.shift4bits();
         switch (this._cycles % 8) {
           case 1:
             this._fetchNametableByte();
@@ -495,11 +519,9 @@ export class Ppu {
             break;
         }
       }
-
       if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
         this._copyY();
       }
-
       if (isRenderLine) {
         if (isFetchCycle && this._cycles % 8 === 0) {
           this._incrementX();

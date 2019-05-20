@@ -50,18 +50,35 @@ while(cpuIsRunning) {
 
 ## Interfacing Between the CPU and PPU
 
-
-THe PPU also interacts with the CPU through memory-mapped I/O. The PPU's registered as exposed at the CPU address space in addresses `$2000` to `$2007`, giving a total of 8 bytes for the CPU to communicate with the PPU.
-
-
-It is important to know that these registers just serve as an alias to the hardware registers to the PPU. So that means that if the CPU is writing to `$2006` with the databyte, the databyte will be stored directly in the PPU hardware register. 
-
-The PPU has several registers:
+Internally, the PPU has several hardware registers:
 
 `v` the VRAM register which is 14 bits wide.
 `t` the temporary VRAM register which is also 14 bits wide.
 `x` the fine x scroll register;
 `w` the second write toggle
+
+The CPU cannot interact with these registers to communicate with the PPU directly. An example of this is writing to PPU memory. This requires manipulation of the `v` register to set the proper VRAM address needed to place the data into the data bus to the PPU  memory.
+
+Instead of direct manipulation of the PPU hardware register, the CPU interacts with the PPU through memory-mapped I/O (MMIO). The PPU registers are exposed at the CPU addresses `$2000` to `$2007` in its address space. This gives a total of 8 bytes, or 8 mapped registers for the CPU to communicate with the PPU.
+
+To review, the memory layout of the NES is:
+
+|Address|Purpose|Width|
+|-------|-------|-----|
+|0000-07FF|2 KB RAM|2048 B|
+|0800-0FFF|Mirrors of RAM (0000-07FF)||
+|1000-17FF|Mirrors of RAM (0000-07FF)||
+|1800-1FFF|Mirrors of RAM (0000-07FF)||
+|**2000-2007**|**PPU Registers via MMIO**|**8 B**|
+|2008-3FFF|Mirrors of PPU Registers||
+|4000-4017|APU and I/O Registers|24 B|
+|4018-401F|APU and I/O Functionality that is normally disabled|8 B|
+|4020-FFFF|Mapped to Cartridge PRG ROM, PRG RAM, etc.|49120 B|
+
+As a quick summary, memory-mapped I/O is the method at which the NES uses to enable the interfacing between CPU and PPU. Through the access of specific addresses within the CPU address space, the CPU can read and write data to the PPU by accessing these registers.
+
+We can think of these memory-mapped I/O addresses as a "door" to the PPU hardware registers. It is ten important to keep in mind that CPU reads and writes to the addresses `$2000 - $2007` in its address space are simply forwarded to the PPU hardware registers and are reflected immediately within the PPU hardware registers. 
+
 
 ## Colors and Palette
 
@@ -177,3 +194,5 @@ Therefore, it is sufficient to say that a scanline, made up with 256 dots per sc
 1. NesDev Cycle Reference Chart. NesDev Wiki. https://wiki.nesdev.com/w/index.php/Cycle_reference_chart 
 2. Von Neumann Architecture. Wikipedia. https://en.wikipedia.org/wiki/Von_Neumann_architecture
 3. NesDev PPU Palettes. NesDev Wiki. (https://wiki.nesdev.com/w/index.php/PPU_palettes)
+4. Memory-mapped I/O. Wikipedia. [Source](https://en.wikipedia.org/wiki/Memory-mapped_I/O)
+5. NesDev CPU Memory Map. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/CPU_memory_map)

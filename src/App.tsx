@@ -37,7 +37,7 @@ class App extends Component<{}, NesState> {
     this._nes = new Nes();
     this._canvas = null;
     this.state = {
-      cycles: 107378,
+      cycles: 59666,
       cpuMemory: this._nes.cpuMemory(),
       cpuRegisters: this._nes.cpuRegisters(),
       ppuRegisters: this._nes.ppuRegisers(),
@@ -68,6 +68,22 @@ class App extends Component<{}, NesState> {
 
       const ctx = this._canvas.getContext("2d");
 
+      const frameBuffer = this._nes.frameBuffer();
+      for (let i = 0; i < 240; i++) {
+        for (let j = 0; j < 256; j++) {
+          if (!frameBuffer[i][j]) {
+            break;
+          }
+          ctx.strokeStyle = buildRgbString(frameBuffer[i][j]);
+
+          ctx.beginPath();
+          ctx.moveTo(j, i);
+          ctx.lineTo(j + 1, i + 1);
+          ctx.stroke();
+          ctx.closePath();
+        }
+      }
+
       this.setState(
         {
           cpuRegisters: this._nes.cpuRegisters(),
@@ -80,25 +96,8 @@ class App extends Component<{}, NesState> {
           scanline: this._nes.scanlines(),
           ppuCycles: this._nes.ppuCycles(),
           cpuCycles: this._nes.cpuTotalCycles(),
-        },
-        () => {
-          for (let i = 0; i < 240; i++) {
-            for (let j = 0; j < 256; j++) {
-              if (!this.state.frameBuffer[i][j]) {
-                break;
-              }
-              ctx.strokeStyle = buildRgbString(this.state.frameBuffer[i][j]);
-
-              ctx.beginPath();
-              ctx.moveTo(j, i);
-              ctx.lineTo(j + 1, i + 1);
-              ctx.stroke();
-              ctx.closePath();
-            }
-          }
-        }
-      );
-    }, 17);
+        });
+    }, 32);
   };
 
   handlePause = () => {
