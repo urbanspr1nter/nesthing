@@ -8,14 +8,14 @@ import * as fs from 'fs';
  */
 
  const bytes: number[] = [];
- const romContents = fs.readFileSync('../nes/DK.nes');
+ const romContents = fs.readFileSync('../nes/MARIO.nes');
  romContents.forEach(value => {
      bytes.push(value);
  });
 
  const result = {
-     name: 'DK.nes',
+     name: 'MARIO.nes',
      raw: bytes
  };
 
- fs.writeFileSync('../nes/rom.json', JSON.stringify(result));
+ fs.writeFileSync('../nes/mario.json', JSON.stringify(result));

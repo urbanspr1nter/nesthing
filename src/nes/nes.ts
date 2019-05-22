@@ -3,10 +3,9 @@ import { Ppu } from "../ppu/ppu";
 import { ColorComponent } from "./common/interface";
 import { Cpu } from "../cpu/cpu";
 import { PpuMemory } from "../memory/ppumemory";
-import * as rom from "./rom.json";
+import * as rom from "./mario.json";
 import { LogUtil } from "../cpu/log.util";
-
-const ROM_FILE = "./DK.nes";
+import { CartLoader } from "./cart-loader";
 
 export interface CpuRegisters {
   pc: number;
@@ -106,36 +105,8 @@ export class Nes {
     const romBytes: number[] = [];
 
     const romContents = rom.raw;
-    romContents.forEach(value => {
-      romBytes.push(value);
-    });
-
-    let currentAddress = 0x8000;
-    // Load PRG ROM from 0x8000 -> 0xBFFF
-    for (
-      let i = 0;
-      i < romBytes.length && currentAddress < 0xc000;
-      i++, currentAddress++
-    ) {
-      this._memory.set(currentAddress, romBytes[i]);
-    }
-
-    // Load PRG ROM from 0xC000 -> 0xFFFF (Mirror of 0x8000->0xBFFF)
-    currentAddress = 0xc000;
-    for (
-      let i = 0;
-      i < romBytes.length && currentAddress <= 0xffff;
-      i++, currentAddress++
-    ) {
-      this._memory.set(currentAddress, romBytes[i]);
-    }
-
-    // Load the CHR ROM
-    let chrRomAddress = 0x4000;
-    for (let i = 0x0000; i <= 0x1fff; i++) {
-      this._ppuMemory.set(i, romBytes[chrRomAddress]);
-      chrRomAddress++;
-    }
+    const cartLoader = new CartLoader(romContents);
+    cartLoader.loadCartridgeData(this._memory, this._ppuMemory);
 
     // Initialize the nametables to $00
     let ntStartAddress = 0x2000;

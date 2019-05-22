@@ -17,14 +17,14 @@ var Memory = /** @class */ (function () {
     function Memory(ppu) {
         var _this = this;
         this.set = function (address, value) {
-            value = value & 0xFF;
+            value = value & 0xff;
             if (address < 0x2000) {
-                _this._memory[address & 0x07FF] = value;
-                _this._memory[(address | 0x0800) & 0x0FFF] = value;
-                _this._memory[(address | 0x1000) & 0x17FF] = value;
-                _this._memory[(address | 0x1800) & 0x1FFF] = value;
+                _this._memory[address & 0x07ff] = value;
+                _this._memory[(address | 0x0800) & 0x0fff] = value;
+                _this._memory[(address | 0x1000) & 0x17ff] = value;
+                _this._memory[(address | 0x1800) & 0x1fff] = value;
             }
-            else if (address >= 0x2000 && address <= 0x3FFF) {
+            else if (address >= 0x2000 && address <= 0x3fff) {
                 // PPU registers
                 var decodedAddress = (0x20 << 8) | (address & 0x0007);
                 if (decodedAddress === 0x2000) {
@@ -32,6 +32,12 @@ var Memory = /** @class */ (function () {
                 }
                 else if (decodedAddress === 0x2001) {
                     _this._ppu.write$2001(value);
+                }
+                else if (decodedAddress === 0x2003) {
+                    _this._ppu.write$2003(value);
+                }
+                else if (decodedAddress === 0x2004) {
+                    _this._ppu.write$2004(value);
                 }
                 else if (decodedAddress === 0x2005) {
                     _this._ppu.write$2005(value);
@@ -47,20 +53,23 @@ var Memory = /** @class */ (function () {
                 }
             }
             else {
-                _this._memory[address & 0xFFFF] = value;
+                _this._memory[address & 0xffff] = value;
             }
         };
         this.get = function (address) {
             if (address < 0x2000) {
-                return _this._memory[address & 0x07FF];
+                return _this._memory[address & 0x07ff];
             }
-            else if (address >= 0x2000 && address <= 0x3FFF) {
+            else if (address >= 0x2000 && address <= 0x3fff) {
                 var decodedAddress = (0x20 << 8) | (address & 0x0007);
                 if (decodedAddress === 0x2000) {
                     return _this._ppu.read$2000();
                 }
                 else if (decodedAddress === 0x2002) {
                     return _this._ppu.read$2002();
+                }
+                else if (decodedAddress === 0x2004) {
+                    return _this._ppu.read$2004();
                 }
                 else if (decodedAddress === 0x2006) {
                     // Not available for reading!
@@ -72,13 +81,13 @@ var Memory = /** @class */ (function () {
                     return _this._memory[decodedAddress];
                 }
             }
-            return _this._memory[address & 0xFFFF] & 0xFF;
+            return _this._memory[address & 0xffff] & 0xff;
         };
         this._memory = [];
         this._ppu = ppu;
         // Blank out the memory
-        for (var i = 0; i <= 0xFFFF; i++) {
-            this._memory[i] = 0xFF;
+        for (var i = 0; i <= 0xffff; i++) {
+            this._memory[i] = 0xff;
         }
     }
     Object.defineProperty(Memory.prototype, "bits", {

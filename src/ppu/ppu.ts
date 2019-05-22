@@ -82,11 +82,19 @@ export class Ppu {
   private _regPPUSTATUS_spriteHit: boolean;
   private _regPPUSTATUS_vblankStarted: boolean;
 
+  // Declare $2003/OAMADDR bits
+  private _regOAMADDR_address: number;
+
+  // Declare $2004/OAMDATA bits
+  private _regOAMDATA_data: number;
+
   // Declare $2005/PPUSCROLL bits
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
   private _pixelBits: PixelBitsQueue;
+
+  private _oam: number[];
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
@@ -105,6 +113,11 @@ export class Ppu {
     this._w = false;
 
     this._pixelBits = new PixelBitsQueue();
+
+    this._oam = [];
+    for(let i = 0; i <= 0xFF; i++) {
+      this._oam[i] = 0x0;
+    }
   }
 
   public vramAddress() {
@@ -145,7 +158,7 @@ export class Ppu {
     this._regPPUCTRL_spritePatternTableBaseAddress =
       (dataByte & 0x08) === 0x0 ? 0x0 : 0x1000;
     this._regPPUCTRL_backgroundPatternTableBaseAddress =
-      (dataByte & 0x10) === 0x0 ? 0x0 : 0x1000;
+      (dataByte & 0x10) === 0x0 ? 0x0000 : 0x1000;
     this._regPPUCTRL_spriteSizeLarge = (dataByte & 0x20) === 0x0 ? false : true;
     this._regPPUCTRL_masterSlaveSelect =
       (dataByte & 0x40) === 0x0 ? false : true;
@@ -211,6 +224,21 @@ export class Ppu {
       (dataByte & 0x80) === 0x80 ? true : false;
   }
 
+  public write$2003(dataByte: number) {
+    this._regOAMADDR_address = dataByte;
+  }
+
+  public read$2004() {
+    return this._oam[this._regOAMADDR_address];
+  }
+
+  public write$2004(dataByte: number) {
+    this._oam[this._regOAMADDR_address & 0xFF] = dataByte;
+
+    this._regOAMADDR_address++;
+    this._regOAMADDR_address &= 0xFF;
+  }
+
   public write$2005(dataByte: number) {
     if (!this._w) {
       this._t = (this._t & 0xfffe0) | (dataByte >> 3);
@@ -224,6 +252,7 @@ export class Ppu {
   }
 
   public write$2006(dataByte: number) {
+    /*
     if (!this._w) {
       this._t = (this._t & 0x80ff) | ((dataByte & 0x3f) << 8);
       this._w = true;
@@ -231,15 +260,16 @@ export class Ppu {
       this._t = (this._t & 0xff00) | dataByte;
       this._v = this._t;
       this._w = false;
-    }
-    /*
+    }*/
+    
+    
     if (!this._w) {
       this._t = dataByte;
       this._w = true;
     } else {
       this._v = ((this._t << 8) | dataByte) & 0x3fff;
       this._w = false;
-    }*/
+    }
   }
 
   public write$2007(dataByte: number) {
@@ -333,7 +363,7 @@ export class Ppu {
     const patternTableBaseAddress = this
       ._regPPUCTRL_backgroundPatternTableBaseAddress;
     const patternLowAddress =
-      patternTableBaseAddress + 0x10 * this._ntByte + fineY;
+      patternTableBaseAddress + (0x10 * this._ntByte) + fineY;
     this._tileLowByte = this._ppuMemory.get(patternLowAddress);
   }
 
@@ -342,7 +372,7 @@ export class Ppu {
     const patternTableBaseAddress = this
       ._regPPUCTRL_backgroundPatternTableBaseAddress;
     const patternHighAddress =
-      patternTableBaseAddress + 0x10 * this._ntByte + fineY + 8;
+    patternTableBaseAddress + (0x10 * this._ntByte) + fineY + 8;
 
     this._tileHighByte = this._ppuMemory.get(patternHighAddress);
   }

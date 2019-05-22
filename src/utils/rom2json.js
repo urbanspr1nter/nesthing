@@ -9,12 +9,12 @@ var fs = require("fs");
  * }
  */
 var bytes = [];
-var romContents = fs.readFileSync('../nes/DK.nes');
+var romContents = fs.readFileSync('../nes/MARIO.nes');
 romContents.forEach(function (value) {
     bytes.push(value);
 });
 var result = {
-    name: 'DK.nes',
+    name: 'MARIO.nes',
     raw: bytes
 };
-fs.writeFileSync('../nes/rom.json', JSON.stringify(result));
+fs.writeFileSync('../nes/mario.json', JSON.stringify(result));

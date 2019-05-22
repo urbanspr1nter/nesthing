@@ -30,6 +30,7 @@ class App extends Component<{}, NesState> {
   private _nes: Nes;
   private _canvas: HTMLCanvasElement | null;
   private _runInterval: NodeJS.Timeout;
+  private _screenInterval: NodeJS.Timeout;
 
   constructor(props: any) {
     super(props);
@@ -37,7 +38,7 @@ class App extends Component<{}, NesState> {
     this._nes = new Nes();
     this._canvas = null;
     this.state = {
-      cycles: 59666,
+      cycles: 29833,
       cpuMemory: this._nes.cpuMemory(),
       cpuRegisters: this._nes.cpuRegisters(),
       ppuRegisters: this._nes.ppuRegisers(),
@@ -61,21 +62,19 @@ class App extends Component<{}, NesState> {
   };
 
   runCycles = (e: React.SyntheticEvent) => {
-    const cycles = this.state.cycles;
-
-    this._runInterval = setInterval(() => {
-      this._nes.run(cycles);
-
+    const runConsole = () => {
+      const frameBuffer = this._nes.frameBuffer();
       const ctx = this._canvas.getContext("2d");
 
-      const frameBuffer = this._nes.frameBuffer();
+      this._nes.run(29780);
+
       for (let i = 0; i < 240; i++) {
         for (let j = 0; j < 256; j++) {
           if (!frameBuffer[i][j]) {
             break;
           }
           ctx.strokeStyle = buildRgbString(frameBuffer[i][j]);
-
+  
           ctx.beginPath();
           ctx.moveTo(j, i);
           ctx.lineTo(j + 1, i + 1);
@@ -97,7 +96,9 @@ class App extends Component<{}, NesState> {
           ppuCycles: this._nes.ppuCycles(),
           cpuCycles: this._nes.cpuTotalCycles(),
         });
-    }, 32);
+    };
+
+    this._runInterval = setInterval(runConsole, 2);
   };
 
   handlePause = () => {
