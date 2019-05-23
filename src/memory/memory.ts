@@ -48,8 +48,8 @@ export class Memory {
         this._ppu.write$2001(value);
       } else if (decodedAddress === 0x2003) {
         this._ppu.write$2003(value);
-      } else if(decodedAddress === 0x2004) {
-          this._ppu.write$2004(value);
+      } else if (decodedAddress === 0x2004) {
+        this._ppu.write$2004(value);
       } else if (decodedAddress === 0x2005) {
         this._ppu.write$2005(value);
       } else if (decodedAddress === 0x2006) {
@@ -59,6 +59,8 @@ export class Memory {
       } else {
         this._memory[decodedAddress] = value;
       }
+    } else if (address === 0x4014) {
+      return this._ppu.write$4014(value);
     } else {
       this._memory[address & 0xffff] = value;
     }
@@ -74,7 +76,7 @@ export class Memory {
       } else if (decodedAddress === 0x2002) {
         return this._ppu.read$2002();
       } else if (decodedAddress === 0x2004) {
-          return this._ppu.read$2004();
+        return this._ppu.read$2004();
       } else if (decodedAddress === 0x2006) {
         // Not available for reading!
       } else if (decodedAddress === 0x2007) {

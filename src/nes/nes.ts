@@ -36,11 +36,12 @@ export class Nes {
   constructor() {
     this._logger = new LogUtil(10000);
     this._ppuMemory = new PpuMemory();
-
     this._ppu = new Ppu(this._ppuMemory);
     this._memory = new Memory(this._ppu);
     this._cpu = new Cpu(this._memory, this._logger);
 
+    this._ppu.setCpuMemory(this._memory);
+    this._ppu.setCpu(this._cpu);
     this._initialize();
 
     this._cpu.debugMode(false);
@@ -124,14 +125,18 @@ export class Nes {
     while (this._cycles <= cpuCycles) {
       const beginCpuCycles = this._cpu.getCurrentCycles();
 
-      // If we are entering in VBLANK, Enter NMI handling routine!
-      this._nmiTriggered = this._ppu.cpuNmiRequested();
-      if (this._nmiTriggered) {
-        this._cpu.setupNmi();
-      }
+      if(this._cpu.stallCycles() > 0) {
+        this._cpu.runStallCycle();
+      } else {
+        // If we are entering in VBLANK, Enter NMI handling routine!
+        this._nmiTriggered = this._ppu.cpuNmiRequested();
+        if (this._nmiTriggered) {
+          this._cpu.setupNmi();
+        }
 
-      const opCode = this._memory.get(this._cpu.getPC());
-      this._cpu.handleOp(opCode);
+        const opCode = this._memory.get(this._cpu.getPC());
+        this._cpu.handleOp(opCode);  
+      }
 
       const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
 

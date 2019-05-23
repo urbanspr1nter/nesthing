@@ -21,6 +21,9 @@ export class Cpu {
 
   private _currentCycles: number;
 
+  // Cycles to stall
+  private _stallCycles: number;
+
   // Registers
   private _regA: ByteRegister;
   private _regX: ByteRegister;
@@ -51,6 +54,16 @@ export class Cpu {
     this._regP = new ByteRegister(0x00);
 
     this._interrupt = InterruptRequestType.None;
+
+    this._stallCycles = 0;
+  }
+
+  public setStallCycles(cycles: number) {
+    this._stallCycles = cycles;
+  }
+
+  public stallCycles(): number {
+    return this._stallCycles;
   }
 
   public totalCycles(): number {
@@ -4126,11 +4139,12 @@ export class Cpu {
     }
   }
 
-  public handleOp(opCode: number) {
-    const logEntry = this.getLogEntry(opCode);
-    //this._logger.log(logEntry);
-    //console.log(logEntry);
+  public runStallCycle() {
+    this._stallCycles--;
+    this._currentCycles++;
+  }
 
+  public handleOp(opCode: number) {
     switch (opCode) {
       case 0x00:
         this.brk(opCode);

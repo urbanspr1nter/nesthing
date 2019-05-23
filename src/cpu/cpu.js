@@ -18,7 +18,14 @@ var Cpu = /** @class */ (function () {
         this._regSP = new byte_register_1.ByteRegister(0x00);
         this._regP = new byte_register_1.ByteRegister(0x00);
         this._interrupt = cpu_interface_1.InterruptRequestType.None;
+        this._stallCycles = 0;
     }
+    Cpu.prototype.setStallCycles = function (cycles) {
+        this._stallCycles = cycles;
+    };
+    Cpu.prototype.stallCycles = function () {
+        return this._stallCycles;
+    };
     Cpu.prototype.totalCycles = function () {
         return this._currentCycles;
     };
@@ -3271,10 +3278,11 @@ var Cpu = /** @class */ (function () {
             this.clearStatusBit(cpu_interface_1.StatusBitPositions.Zero);
         }
     };
+    Cpu.prototype.runStallCycle = function () {
+        this._stallCycles--;
+        this._currentCycles++;
+    };
     Cpu.prototype.handleOp = function (opCode) {
-        var logEntry = this.getLogEntry(opCode);
-        //this._logger.log(logEntry);
-        //console.log(logEntry);
         switch (opCode) {
             case 0x00:
                 this.brk(opCode);

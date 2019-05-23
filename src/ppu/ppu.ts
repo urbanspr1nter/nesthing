@@ -4,6 +4,8 @@ import { ColorComponent } from "../nes/common/interface";
 import { getBaseNametableAddress } from "./ppu.helpers";
 import { FrameBuffer, NesPpuPalette } from "../framebuffer/framebuffer";
 import { byteValue2HexString } from "../utils/ui/utils";
+import { Memory } from "../memory/memory";
+import { Cpu } from "../cpu/cpu";
 
 class PixelBitsQueue {
   private static _MAX_LENGTH = 64;
@@ -33,6 +35,13 @@ class PixelBitsQueue {
   }
 }
 
+interface SpriteData {
+  DataQueue: PixelBitsQueue;
+  PositionX: number;
+  Priority: number;
+  BaseOamAddress: number; 
+}
+
 export class Ppu {
   private _frameBuffer: FrameBuffer;
 
@@ -45,6 +54,7 @@ export class Ppu {
   private _scanlines: number;
   private _frames: number;
   private _evenFrame: boolean;
+  private _spriteCount: number;
 
   private _ntByte: number;
   private _attributeByte: number;
@@ -82,6 +92,9 @@ export class Ppu {
   private _regPPUSTATUS_spriteHit: boolean;
   private _regPPUSTATUS_vblankStarted: boolean;
 
+  private _cpuMemory: Memory;
+  private _cpu: Cpu;
+
   // Declare $2003/OAMADDR bits
   private _regOAMADDR_address: number;
 
@@ -93,8 +106,10 @@ export class Ppu {
   private _regPPUSCROLL_y: number;
 
   private _pixelBits: PixelBitsQueue;
+  private _spriteBits: PixelBitsQueue;
 
   private _oam: number[];
+  private _sprites: SpriteData[];
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
@@ -112,12 +127,28 @@ export class Ppu {
     this._t = 0;
     this._w = false;
 
+    this._spriteCount = 0;
+
     this._pixelBits = new PixelBitsQueue();
+    this._spriteBits = new PixelBitsQueue();
 
     this._oam = [];
     for(let i = 0; i <= 0xFF; i++) {
       this._oam[i] = 0x0;
     }
+
+    this._sprites = [];
+    for(let i = 0; i < 32; i++) {
+      this._sprites.push(null);
+    }
+  }
+
+  public setCpuMemory(memory: Memory) {
+    this._cpuMemory = memory;
+  }
+
+  public setCpu(cpu: Cpu) {
+    this._cpu = cpu;
   }
 
   public vramAddress() {
@@ -302,6 +333,23 @@ export class Ppu {
     */
   }
 
+  public write$4014(dataByte: number) {
+    let cpuAddress = (dataByte << 8) & 0xFFFF;
+    for(let i = 0; i <= 0xFF; i++) {
+      this._oam[this._regOAMADDR_address] = this._cpuMemory.get(cpuAddress);
+      this._regOAMADDR_address++;
+      cpuAddress++;
+    }
+    
+    // stall CPU for 514 cycles if odd, 513 is even.
+    let stallCycles = 513;
+    if(this._cpu.totalCycles() % 2 === 1) {
+      stallCycles++;
+    }
+
+    this._cpu.setStallCycles(stallCycles);
+  }
+
   public incrementVramAddress() {
     this._v += this._regPPUCTRL_vramIncrement;
   }
@@ -409,6 +457,8 @@ export class Ppu {
     const x = this._cycles - 1;
     const y = this._scanlines;
 
+
+    // BACKGROUND
     if(x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
       this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(0x3f00)]);
       return;
@@ -418,6 +468,11 @@ export class Ppu {
     const attributeBits = (bits[0] << 1) | bits[1];
     const highBit = bits[2];
     const lowBit = bits[3];
+
+    const backgroundPixel = attributeBits << 2 | highBit << 1 | lowBit;
+
+  
+
 
     let paletteOffset = (highBit << 1) | lowBit;
 
@@ -442,6 +497,32 @@ export class Ppu {
     );
 
     this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(colorByte)]);
+  }
+
+  private _getSpritePixel(): number[] {
+    if(!this._regPPUMASK_showSprites) {
+      return [0, 0];
+    }
+
+    for(let i = 0; i < this._spriteCount; i++) {
+      let offset = this._cycles - 1 - this._sprites[i].PositionX;
+      if(offset < 0 || offset > 7) {
+        continue;
+      }
+      offset = 7 - offset;
+      let dataQueueNumber: number[] = [];
+      for(let j = 0; j < offset; j++) {
+        dataQueueNumber = this._sprites[i].DataQueue.get4bits();
+      }
+      const color = dataQueueNumber[0] << 3 | dataQueueNumber[1] << 2 | dataQueueNumber[1] << 1 | dataQueueNumber[0];
+      if(color % 4 === 0) {
+        continue;
+      }
+
+      return [i, color];
+    }
+
+    return [0,0];
   }
 
   private _incrementX(): void {
@@ -480,6 +561,75 @@ export class Ppu {
 
   private _copyY() {
     this._v = (this._v & 0x841f) | (this._t & 0x7be0);
+  }
+
+  private _fetchSpritePattern(baseOamAddress: number, row: number): PixelBitsQueue {
+    const tileByte = this._oam[baseOamAddress * 4 + 1];
+    const attributes = this._oam[baseOamAddress * 4 + 2];
+
+    let address = 0;
+
+    if(!this._regPPUCTRL_spriteSizeLarge) {
+      if((attributes & 0x80) === 0x80) {
+        row = 7 - row;
+      }
+      address = this._regPPUCTRL_spritePatternTableBaseAddress + (tileByte * 0x10) + row;
+    }
+
+    let lowTileByte = this._ppuMemory.get(address);
+    let highTileByte = this._ppuMemory.get(address + 8);
+
+    const dataBits = new PixelBitsQueue();
+
+    for(let i = 0; i < 8; i++) {
+      const attributePalette = (attributes & 3);
+      const p1 = (lowTileByte & 0x80) >> 7;
+      const p2 = (highTileByte & 0x80) >> 7;
+
+      lowTileByte <<= 1;
+      highTileByte <<= 1;
+
+      dataBits.push((attributePalette & 2) >> 1);
+      dataBits.push(attributePalette & 1);
+      dataBits.push(p2);
+      dataBits.push(p1);
+    }
+
+    return dataBits;
+  }
+
+  private _evaluateSprites() {
+    const height = this._regPPUCTRL_spriteSizeLarge ? 16 : 8;
+    let spriteCount = 0;
+
+    for(let i = 0; i < 64; i++) {
+      const y = this._oam[i * 4 + 0];
+      const attribute = this._oam[i * 4 + 2];
+      const x = this._oam[i * 4 + 3];
+
+      const row = this._scanlines - y;
+      if(row < 0 || row >= height) {
+        continue;
+      }
+
+      if(spriteCount < 8) {
+        this._sprites[spriteCount] = {
+          DataQueue: this._fetchSpritePattern(i, row),
+          BaseOamAddress: i,
+          PositionX: x,
+          Priority: (attribute >> 5) & 1
+        };
+      }
+
+      spriteCount++;
+    }
+
+    if(spriteCount > 8) {
+      spriteCount = 8;
+      this._regPPUSTATUS_spriteOverflow = true;
+    }
+
+    this._spriteCount = 8;
   }
 
   private _tick(): void {
@@ -564,6 +714,17 @@ export class Ppu {
         }
       }
     }
+
+    if(isRenderingEnabled) {
+      if(this._cycles === 257) {
+        if(isVisibleLine) {
+          this._evaluateSprites();
+        } else {
+          this._spriteCount = 0;
+        }
+      }
+    }
+
     if (this._scanlines === 241 && this._cycles === 1) {
       this._setVblank();
       this._requestNmiIfNeeded();

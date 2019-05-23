@@ -52,6 +52,9 @@ var Memory = /** @class */ (function () {
                     _this._memory[decodedAddress] = value;
                 }
             }
+            else if (address === 0x4014) {
+                return _this._ppu.write$4014(value);
+            }
             else {
                 _this._memory[address & 0xffff] = value;
             }
