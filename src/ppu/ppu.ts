@@ -507,6 +507,15 @@ export class Ppu {
     attributeBits = (color & 12) >> 2;
     paletteOffset = color & 3;
 
+    let basePaletteAddress = this._getBasePaletteAddress(attributeBits);
+    let colorByte = this._ppuMemory.get(
+      basePaletteAddress + (paletteOffset - 1)
+    );
+
+    this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(colorByte)]);
+  }
+
+  private _getBasePaletteAddress(attributeBits: number) {
     let basePaletteAddress = 0x3f00;
     switch (attributeBits) {
       case 0x0:
@@ -523,11 +532,7 @@ export class Ppu {
         break;
     }
 
-    let colorByte = this._ppuMemory.get(
-      basePaletteAddress + (paletteOffset - 1)
-    );
-
-    this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(colorByte)]);
+    return basePaletteAddress;
   }
 
   private _getSpritePixel(): number[] {
