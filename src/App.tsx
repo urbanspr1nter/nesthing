@@ -66,7 +66,7 @@ class App extends Component<{}, NesState> {
       const frameBuffer = this._nes.frameBuffer();
       const ctx = this._canvas.getContext("2d");
 
-      this._nes.run(29780);
+      this._nes.run(1000000);
 
       for (let i = 0; i < 240; i++) {
         for (let j = 0; j < 256; j++) {
@@ -98,7 +98,7 @@ class App extends Component<{}, NesState> {
         });
     };
 
-    this._runInterval = setInterval(runConsole, 2);
+    this._runInterval = setInterval(runConsole, 20);
   };
 
   handlePause = () => {
