@@ -3,9 +3,10 @@ import { Ppu } from "../ppu/ppu";
 import { ColorComponent } from "./common/interface";
 import { Cpu } from "../cpu/cpu";
 import { PpuMemory } from "../memory/ppumemory";
-import * as rom from "./mario.json";
 import { LogUtil } from "../cpu/log.util";
 import { CartLoader } from "./cart-loader";
+
+const rom = require("./mario.json");
 
 export interface CpuRegisters {
   pc: number;
@@ -54,11 +55,11 @@ export class Nes {
   }
 
   public cpuMemory(): number[] {
-    return this._memory.bits;
+    return this._memory.bits();
   }
 
   public ppuMemory(): number[] {
-    return this._ppuMemory.bits;
+    return this._ppuMemory.bits();
   }
 
   public cpuNmiRequested(): boolean {
@@ -78,7 +79,7 @@ export class Nes {
   }
 
   public logEntries(): string[] {
-    return this._logger.entries;
+    return this._logger.entries();
   }
 
   public ppuRegisers(): PpuRegisters {

@@ -1,6 +1,6 @@
 import { ColorComponent } from "../nes/common/interface";
-import * as ColorPalette from "../utils/colors.json";
 
+const ColorPalette = require("../utils/colors.json");
 export const NesPpuPalette: { [id: string]: ColorComponent } = ColorPalette;
 
 const TOTAL_SCANLINES = 240;
@@ -14,7 +14,7 @@ export class FrameBuffer {
     this._initializeFrameBuffer();
   }
 
-  public get buffer(): ColorComponent[][] {
+  public buffer(): ColorComponent[][] {
     return this._frameBuffer;
   }
 

@@ -93,13 +93,9 @@ var Memory = /** @class */ (function () {
             this._memory[i] = 0xff;
         }
     }
-    Object.defineProperty(Memory.prototype, "bits", {
-        get: function () {
-            return this._memory;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    Memory.prototype.bits = function () {
+        return this._memory;
+    };
     return Memory;
 }());
 exports.Memory = Memory;

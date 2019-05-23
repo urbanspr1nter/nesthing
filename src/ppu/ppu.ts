@@ -183,7 +183,7 @@ export class Ppu {
    * Gets the framebuffer
    */
   public frameBuffer(): ColorComponent[][] {
-    return this._frameBuffer.buffer;
+    return this._frameBuffer.buffer();
   }
 
   public getCycles(): number {
@@ -479,9 +479,15 @@ export class Ppu {
     const highBit = bits[2];
     const lowBit = bits[3];
 
-    const backgroundPixel = (attributeBits << 2) | (highBit << 1) | lowBit;
-    const spritePixel = this._getSpritePixel();
+    let backgroundPixel = (attributeBits << 2) | (highBit << 1) | lowBit;
+    let spritePixel = this._getSpritePixel();
 
+    if (x < 8 && this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
+      backgroundPixel = 0;
+    }
+    if (x < 8 && this._regPPUMASK_showSpritesLeftMost8pxOfScreen) {
+      spritePixel[1] = 0;
+    }
     const b = backgroundPixel % 4 !== 0;
     const s = spritePixel[1] % 4 !== 0;
     let color;
@@ -710,7 +716,8 @@ export class Ppu {
   public run(): void {
     this._tick();
 
-    const isRenderingEnabled = this._regPPUMASK_showBackground;
+    const isRenderingEnabled =
+      this._regPPUMASK_showBackground || this._regPPUMASK_showSprites;
     const isPrerenderLine = this._scanlines === 261;
     const isVisibleLine = this._scanlines < 240;
     const isRenderLine = isPrerenderLine || isVisibleLine;

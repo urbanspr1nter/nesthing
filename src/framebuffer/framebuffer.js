@@ -9,13 +9,9 @@ var FrameBuffer = /** @class */ (function () {
     function FrameBuffer() {
         this._initializeFrameBuffer();
     }
-    Object.defineProperty(FrameBuffer.prototype, "buffer", {
-        get: function () {
-            return this._frameBuffer;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    FrameBuffer.prototype.buffer = function () {
+        return this._frameBuffer;
+    };
     FrameBuffer.prototype.draw = function (row, column, color) {
         if (!this._frameBuffer[row]) {
             return;

@@ -12,7 +12,7 @@ export class PpuMemory {
         }
     }
 
-    get bits(): number[] {
+    public bits(): number[] {
         return this._memory;
     }
 

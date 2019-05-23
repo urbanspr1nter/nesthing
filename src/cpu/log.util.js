@@ -12,13 +12,9 @@ var LogUtil = /** @class */ (function () {
         this._buffer.push(entry);
         return this._buffer;
     };
-    Object.defineProperty(LogUtil.prototype, "entries", {
-        get: function () {
-            return this._buffer;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    LogUtil.prototype.entries = function () {
+        return this._buffer;
+    };
     LogUtil.prototype._flush = function () {
         this._buffer = [];
     };

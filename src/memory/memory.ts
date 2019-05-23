@@ -28,7 +28,7 @@ export class Memory {
     }
   }
 
-  get bits(): number[] {
+  public bits(): number[] {
     return this._memory;
   }
 

@@ -16,7 +16,7 @@ export class LogUtil {
         return this._buffer;
     }
 
-    get entries() {
+    public entries() {
         return this._buffer;
     }
 

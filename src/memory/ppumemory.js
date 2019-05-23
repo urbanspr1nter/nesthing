@@ -16,13 +16,9 @@ var PpuMemory = /** @class */ (function () {
             this._memory[i] = 0xFF;
         }
     }
-    Object.defineProperty(PpuMemory.prototype, "bits", {
-        get: function () {
-            return this._memory;
-        },
-        enumerable: true,
-        configurable: true
-    });
+    PpuMemory.prototype.bits = function () {
+        return this._memory;
+    };
     return PpuMemory;
 }());
 exports.PpuMemory = PpuMemory;
