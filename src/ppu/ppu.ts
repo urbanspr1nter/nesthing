@@ -482,6 +482,8 @@ export class Ppu {
     let backgroundPixel = (attributeBits << 2) | (highBit << 1) | lowBit;
     let spritePixel = this._getSpritePixel();
 
+    let basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
+
     if (x < 8 && this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
       backgroundPixel = 0;
     }
@@ -494,26 +496,37 @@ export class Ppu {
 
     if (!b && !s) {
       color = 0;
+      attributeBits = (color & 12) >> 2;
+
+      basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
     } else if (!b && s) {
       color = spritePixel[1] | 0x10;
+      attributeBits = (color & 12) >> 2;
+
+      basePaletteAddress = this._getBasePaletteAddress(attributeBits, false);
     } else if (b && !s) {
       color = backgroundPixel;
+      attributeBits = (color & 12) >> 2;
+
+      basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
     } else {
       if (this._sprites[spritePixel[0]].BaseOamAddress === 0 && x < 255) {
         this._regPPUSTATUS_spriteHit = true;
       }
       if (this._sprites[spritePixel[0]].Priority === 0) {
         color = spritePixel[1] | 0x10;
+        attributeBits = (color & 12) >> 2;
+        basePaletteAddress = this._getBasePaletteAddress(attributeBits, false);
       } else {
         color = backgroundPixel;
+        attributeBits = (color & 12) >> 2;
+        basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
       }
     }
 
     let paletteOffset = (highBit << 1) | lowBit;
-    attributeBits = (color & 12) >> 2;
     paletteOffset = color & 3;
 
-    let basePaletteAddress = this._getBasePaletteAddress(attributeBits);
     let colorByte = this._ppuMemory.get(
       basePaletteAddress + (paletteOffset - 1)
     );
@@ -521,24 +534,46 @@ export class Ppu {
     this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(colorByte)]);
   }
 
-  private _getBasePaletteAddress(attributeBits: number) {
-    let basePaletteAddress = 0x3f00;
-    switch (attributeBits) {
-      case 0x0:
-        basePaletteAddress = 0x3f01;
-        break;
-      case 0x1:
-        basePaletteAddress = 0x3f05;
-        break;
-      case 0x2:
-        basePaletteAddress = 0x3f09;
-        break;
-      case 0x3:
-        basePaletteAddress = 0x3f0d;
-        break;
+  private _getBasePaletteAddress(attributeBits: number, isBg: boolean) {
+
+    if(isBg) {
+      let basePaletteAddress = 0x3f00;
+      switch (attributeBits) {
+        case 0x0:
+          basePaletteAddress = 0x3f01;
+          break;
+        case 0x1:
+          basePaletteAddress = 0x3f05;
+          break;
+        case 0x2:
+          basePaletteAddress = 0x3f09;
+          break;
+        case 0x3:
+          basePaletteAddress = 0x3f0d;
+          break;
+      }
+  
+      return basePaletteAddress;
+    } else {
+      let basePaletteAddress = 0x3f10;
+      switch (attributeBits) {
+        case 0x0:
+          basePaletteAddress = 0x3f11;
+          break;
+        case 0x1:
+          basePaletteAddress = 0x3f15;
+          break;
+        case 0x2:
+          basePaletteAddress = 0x3f19;
+          break;
+        case 0x3:
+          basePaletteAddress = 0x3f1d;
+          break;
+      }
+  
+      return basePaletteAddress;
     }
 
-    return basePaletteAddress;
   }
 
   private _getSpritePixel(): number[] {
