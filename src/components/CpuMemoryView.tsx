@@ -1,5 +1,5 @@
 import React from "react";
-import { shortValue2HexString, byteValue2HexString } from "../utils/ui/utils";
+import { shortValue2HexString, byteValue2HexString } from "../nes/utils";
 
 interface CpuMemoryViewProps {
   data: number[];

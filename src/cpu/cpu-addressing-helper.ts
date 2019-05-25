@@ -1,4 +1,4 @@
-import { Memory } from "../memory/memory";
+import { Memory } from "../nes/memory";
 import { ByteRegister, DoubleByteRegister } from "./register.interface";
 
 export class CpuAddressingHelper {

@@ -8,7 +8,7 @@ import * as fs from 'fs';
  */
 
  const bytes: number[] = [];
- const romContents = fs.readFileSync('../nes/MARIO.nes');
+ const romContents = fs.readFileSync('./MARIO.nes');
  romContents.forEach(value => {
      bytes.push(value);
  });

@@ -1,6 +1,6 @@
 import React from "react";
 import { CpuRegisters } from "../nes/nes";
-import { byteValue2HexString, shortValue2HexString } from "../utils/ui/utils";
+import { byteValue2HexString, shortValue2HexString } from "../nes/utils";
 
 interface CpuRegisterViewProps {
   data: CpuRegisters;

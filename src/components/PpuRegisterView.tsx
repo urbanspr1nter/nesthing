@@ -1,6 +1,6 @@
 import React from "react";
 import { PpuRegisters } from "../nes/nes";
-import { shortValue2HexString, byteValue2HexString } from "../utils/ui/utils";
+import { shortValue2HexString } from "../nes/utils";
 
 interface PpuRegisterViewProps {
   data: PpuRegisters;

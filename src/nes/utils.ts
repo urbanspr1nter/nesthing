@@ -1,4 +1,4 @@
-import { ColorComponent } from "../../framebuffer/framebuffer";
+import { ColorComponent } from "./framebuffer";
 
 export const byteValue2HexString = (byteValue: number): string => {
   let hex = byteValue.toString(16).toUpperCase();
