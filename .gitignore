@@ -108,10 +108,4 @@ typings/
 # DynamoDB Local files
 .dynamodb/
 
-*/**/tests/*.js
-*/**/framebuffer/*.js
-*/**/nes/*.js
-*/**/nes/common/*.js
-*/**/ppu/*.js
-*/**/utils/*.js
-*/**/utils/ui/*.js
+*/**/nes/dist
