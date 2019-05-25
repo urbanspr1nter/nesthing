@@ -32,9 +32,11 @@ class Bits {
   };
 
   public shift = (n: number): void => {
+    /*
     for(let i = 0; i < n; i++) {
       this._data.shift();
-    }
+    }*/
+    this._data = this._data.slice(n);
   };
 
   public getBits = (n: number): number[] => {
@@ -543,13 +545,13 @@ export class Ppu {
       }
     }
 
-    let attributeBits = (color as number & 12) >> 2;
+    let attributeBits = ((color as number) & 12) >> 2;
     basePaletteAddress = this._getBasePaletteAddress(
       attributeBits,
       usingBackgroundPixel
     );
 
-    let paletteOffset = color as number & 3;
+    let paletteOffset = (color as number) & 3;
     let colorByte = this._ppuMemory.get(
       basePaletteAddress + (paletteOffset - 1)
     );

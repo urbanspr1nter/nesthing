@@ -81,37 +81,32 @@ class App extends Component<{}, NesState> {
       const frameBuffer = this._nes.frameBuffer();
       const ctx = this._canvas.getContext("2d");
 
-      let start = performance.now();
+      // let start = performance.now();
       this._nes.run(29833);
       // console.log(`EXEC TIME TIME - ${performance.now() - start}`);
       this.processFrame(ctx, frameBuffer);
-
     };
 
     const run = () => {
       setTimeout(() => {
         requestAnimationFrame(renderFrame);
         run();
+
+        this.setState(
+          {
+            cpuRegisters: this._nes.cpuRegisters(),
+            ppuRegisters: this._nes.ppuRegisers(),
+            cpuMemory: this._nes.cpuMemory(),
+            ppuMemory: this._nes.ppuMemory(),
+            isRunning: true,
+            nmiIrq: this._nes.cpuNmiRequested(),
+            scanline: this._nes.scanlines(),
+            ppuCycles: this._nes.ppuCycles(),
+            cpuCycles: this._nes.cpuTotalCycles(),
+          });
       }, 16);
     };
 
-    const runConsole = () => {
-      this.setState(
-        {
-          cpuRegisters: this._nes.cpuRegisters(),
-          ppuRegisters: this._nes.ppuRegisers(),
-          cpuMemory: this._nes.cpuMemory(),
-          ppuMemory: this._nes.ppuMemory(),
-          frameBuffer: this._nes.frameBuffer(),
-          isRunning: true,
-          nmiIrq: this._nes.cpuNmiRequested(),
-          scanline: this._nes.scanlines(),
-          ppuCycles: this._nes.ppuCycles(),
-          cpuCycles: this._nes.cpuTotalCycles(),
-        });
-    };
-
-    this._runInterval = setInterval(runConsole, 16);
     run();
   };
 

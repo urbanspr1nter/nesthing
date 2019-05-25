@@ -26,10 +26,6 @@ export class FrameBuffer {
     this._frameBuffer[row][column] = color;
   }
 
-  public getColor(colorByte: number): ColorComponent {
-    return NesPpuPalette[colorByte];
-  }
-
   /**
    * Initializes the frame buffer.
    *
