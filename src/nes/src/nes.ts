@@ -106,21 +106,16 @@ export class Nes {
     }
   }
 
-  public run(cpuCycles: number) {
+  public run(cyclesToRun: number): number {
     /**
      * The general approach to this run loop is to simulate both the CPU, PPU and APU
      * all running at the same time. Each piece of hardware will run for the necessary amount of
      * cycles.
      */
-    let start = performance.now();
-    let cpuTime = 0;
-    let ppuTime = 0;
-    while (this._cycles <= cpuCycles) {
-      start = performance.now();
-
+    while(this._cycles <= cyclesToRun) {
       const beginCpuCycles = this._cpu.getCurrentCycles();
 
-      if(this._cpu.stallCycles() > 0) {
+      if (this._cpu.stallCycles() > 0) {
         this._cpu.runStallCycle();
       } else {
         // If we are entering in VBLANK, Enter NMI handling routine!
@@ -128,30 +123,26 @@ export class Nes {
         if (this._nmiTriggered) {
           this._cpu.setupNmi();
         }
-
+  
         const opCode = this._memory.get(this._cpu.getPC());
-        this._cpu.handleOp(opCode);  
+        this._cpu.handleOp(opCode);
       }
-
+  
       const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
-
-      cpuTime += (performance.now() - start);
-
-      // Run the PPU for the appropriate amount of cycles.
-      start = performance.now();
+  
       let ppuCyclesToRun = cpuCyclesRan * 3;
       while (ppuCyclesToRun > 0) {
         this._ppu.run();
         ppuCyclesToRun--;
       }
-      ppuTime += (performance.now() - start);
-
+  
       this._cycles += cpuCyclesRan;
     }
 
-    console.log(`----> CPU Time = ${cpuTime}, PPU Time = ${ppuTime}.`);
-
+    const cyclesRan = this._cycles;
     this._cycles = 0;
+
+    return cyclesRan;
   }
 
   private _initialize() {

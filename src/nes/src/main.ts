@@ -9,11 +9,12 @@ context.fillRect(0, 0, 256, 240);
 
 const nes = new Nes();
 
-function processFrame(frameBuffer) {
+let currentCycles = 0;
+function drawFrame(frameBuffer) {
     for (let i = 0; i < 240; i++) {
         for (let j = 0; j < 256; j++) {
             if (!frameBuffer[i][j]) {
-            break;
+                break;
             }
             context.strokeStyle = buildRgbString(frameBuffer[i][j]);
 
@@ -27,20 +28,18 @@ function processFrame(frameBuffer) {
 }
 
 function renderFrame() {
-    let frameBuffer = nes.frameBuffer();
-    let start = performance.now();
-    nes.run(29833);
-    console.log(`1. EXEC TIME TIME - ${performance.now() - start}`);
-    start = performance.now();
-    processFrame(frameBuffer);
-    console.log(`2. RENDER TIME - ${performance.now() - start}`);
+    currentCycles += nes.run(7459);
+    if(currentCycles >= 29833) {
+        currentCycles = 0;
+        drawFrame(nes.frameBuffer());
+    }
 }
 
 function run() {
     setTimeout(function() { 
         requestAnimationFrame(renderFrame); 
         run(); 
-    }, 16);
+    }, 4);
 }
 
-run();
+setTimeout(run, 1000);
