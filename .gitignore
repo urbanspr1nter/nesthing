@@ -112,3 +112,4 @@ typings/
 */**/nes/*.js
 */**/nes/common/*.js
 */**/ppu/*.js
+*/**/utils/*.js

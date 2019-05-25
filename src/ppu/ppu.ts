@@ -125,7 +125,6 @@ export class Ppu {
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
-  // private _backgroundTile: bigint;
   private _backgroundBits: Bits;
 
   private _oam: number[];
@@ -151,7 +150,6 @@ export class Ppu {
     this._w = false;
 
     this._spriteCount = 0;
-    // this._backgroundTile = 0n;
     this._backgroundBits = new Bits(BitWidth.Int64);
     this._initializeOam();
     this._initializeSprites();
@@ -469,8 +467,6 @@ export class Ppu {
       this._tileLowByte <<= 1;
       this._tileHighByte <<= 1;
 
-      //this._backgroundTile <<= 4n;
-      //this._backgroundTile |= BigInt(attributeByte) | BigInt(highBit) | BigInt(lowBit);
       this._backgroundBits.push(attributeByte >> 3);
       this._backgroundBits.push(attributeByte >> 2);
       this._backgroundBits.push(highBit);
@@ -485,7 +481,6 @@ export class Ppu {
     }
 
     const bits = this._backgroundBits.getBits(4);
-    // backgroundPixel = this._backgroundTile >>  BigInt(((7 - this._regPPUSCROLL_x) * 4));
 
     const attributeBits = (bits[0] << 1) | bits[1];
     const highBit = bits[2];
@@ -808,7 +803,6 @@ export class Ppu {
       }
       if (isRenderLine && isFetchCycle) {
         this._backgroundBits.shift(4);
-        // this._backgroundTile <<= 4n;
         switch (this._cycles % 8) {
           case 1:
             this._fetchNametableByte();
