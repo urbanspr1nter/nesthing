@@ -1,11 +1,8 @@
-import React, { Component, createContext } from "react";
+import React, { Component } from "react";
 import { Nes, CpuRegisters, PpuRegisters } from "./nes/nes";
 import "bulma/css/bulma.css";
-import { ColorComponent } from "./nes/common/interface";
-import FrameBufferView from "./components/FrameBufferView";
+import { ColorComponent } from "./framebuffer/framebuffer";
 import MainTitle from "./components/MainTitle";
-import CpuMemoryView from "./components/CpuMemoryView";
-import PpuMemoryView from "./components/PpuMemoryView";
 import CpuRegisterView from "./components/CpuRegisterView";
 import { buildRgbString } from "./utils/ui/utils";
 import PpuRegisterView from "./components/PpuRegisterView";
@@ -16,7 +13,6 @@ interface NesState {
   cpuRegisters: CpuRegisters;
   ppuRegisters: PpuRegisters;
   ppuMemory: number[];
-  frameBuffer: ColorComponent[][];
   totalRunCycles: number;
   isRunning: boolean;
   nmiIrq: boolean;
@@ -42,7 +38,6 @@ class App extends Component<{}, NesState> {
       cpuRegisters: this._nes.cpuRegisters(),
       ppuRegisters: this._nes.ppuRegisers(),
       ppuMemory: this._nes.ppuMemory(),
-      frameBuffer: this._nes.frameBuffer(),
       totalRunCycles: 0,
       isRunning: false,
       nmiIrq: false,
@@ -81,10 +76,12 @@ class App extends Component<{}, NesState> {
       const frameBuffer = this._nes.frameBuffer();
       const ctx = this._canvas.getContext("2d");
 
-      // let start = performance.now();
+      let start = performance.now();
       this._nes.run(29833);
-      // console.log(`EXEC TIME TIME - ${performance.now() - start}`);
+      console.log(`1. EXEC TIME TIME - ${performance.now() - start}`);
+      start = performance.now();
       this.processFrame(ctx, frameBuffer);
+      console.log(`2. RENDER TIME - ${performance.now() - start}`);
     };
 
     const run = () => {
@@ -137,9 +134,6 @@ class App extends Component<{}, NesState> {
         <MainTitle />
         <div className={"container"} id="screen">
           <div className="columns">
-            <div className="column">
-              <FrameBufferView data={this.state.frameBuffer} />
-            </div>
             <div className="column">
               <canvas
                 id="canvas"
@@ -203,19 +197,6 @@ class App extends Component<{}, NesState> {
                   CPU Cycles: {this.state.cpuCycles}
                 </div>
               </div>
-              <div>
-                <textarea
-                  className="textarea has-fixed-size"
-                  placeholder="Notes"
-                  rows={8}
-                  defaultValue={localStorage.getItem("nesthing.notes")}
-                  onChange={this.onNotesChanged}
-                />
-              </div>
-            </div>
-            <div className="column">
-              <CpuMemoryView data={this.state.cpuMemory} />
-              <PpuMemoryView data={this.state.ppuMemory} />
             </div>
           </div>
         </div>

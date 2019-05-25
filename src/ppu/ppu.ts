@@ -1,6 +1,9 @@
 import { PpuMemory } from "../memory/ppumemory";
-import { ColorComponent } from "../nes/common/interface";
-import { FrameBuffer, NesPpuPalette } from "../framebuffer/framebuffer";
+import {
+  FrameBuffer,
+  NesPpuPalette,
+  ColorComponent
+} from "../framebuffer/framebuffer";
 import { Memory } from "../memory/memory";
 import { Cpu } from "../cpu/cpu";
 
@@ -32,7 +35,7 @@ class Bits {
   };
 
   public shift = (n: number): void => {
-    for(let i = 0; i < n; i++) {
+    for (let i = 0; i < n; i++) {
       this._data.shift();
     }
   };
@@ -505,8 +508,6 @@ export class Ppu {
     let backgroundPixel = this._getBackgroundPixel();
     let spritePixel = this._getSpritePixel();
 
-    let basePaletteAddress;
-
     if (x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
       backgroundPixel = 0;
     }
@@ -543,13 +544,13 @@ export class Ppu {
       }
     }
 
-    let attributeBits = ((color as number) & 12) >> 2;
-    basePaletteAddress = this._getBasePaletteAddress(
+    const attributeBits = (color & 12) >> 2;
+    const basePaletteAddress = this._getBasePaletteAddress(
       attributeBits,
       usingBackgroundPixel
     );
 
-    let paletteOffset = (color as number) & 3;
+    let paletteOffset = color & 3;
     let colorByte = this._ppuMemory.get(
       basePaletteAddress + (paletteOffset - 1)
     );

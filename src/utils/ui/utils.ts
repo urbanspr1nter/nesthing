@@ -1,4 +1,4 @@
-import { ColorComponent } from "../../nes/common/interface";
+import { ColorComponent } from "../../framebuffer/framebuffer";
 
 export const byteValue2HexString = (byteValue: number): string => {
   let hex = byteValue.toString(16).toUpperCase();
@@ -21,5 +21,5 @@ export const shortValue2HexString = (byteValue: number): string => {
 };
 
 export const buildRgbString = (color: ColorComponent): string => {
-  return `rgba(${color.r}, ${color.g}, ${color.b})`;
+  return 'rgba(' + color.r + ', ' + color.g + ', ' + color.b + ')';
 };

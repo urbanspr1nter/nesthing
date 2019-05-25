@@ -1,6 +1,6 @@
 import "bulma/css/bulma.css";
 import React from "react";
-import { ColorComponent } from "../nes/common/interface";
+import { ColorComponent } from "../framebuffer/framebuffer";
 import { buildRgbString } from "../utils/ui/utils";
 
 interface FrameBufferViewProps {
