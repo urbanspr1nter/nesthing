@@ -1,5 +1,5 @@
 import { ByteRegister, DoubleByteRegister } from "./register.interface";
-import { Memory } from "../nes/memory";
+import { Memory } from "./memory";
 import {
   AddressingModes,
   IrqVectorLocation,

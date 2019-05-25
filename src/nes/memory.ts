@@ -1,4 +1,4 @@
-import { Ppu } from "../ppu/ppu";
+import { Ppu } from "./ppu";
 
 /**
  * CPU MEMORY MAP

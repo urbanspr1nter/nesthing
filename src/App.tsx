@@ -43,7 +43,7 @@ class App extends Component<{}, NesState> {
       nmiIrq: false,
       scanline: this._nes.scanlines(),
       ppuCycles: this._nes.ppuCycles(),
-      cpuCycles: this._nes.cpuTotalCycles(),
+      cpuCycles: this._nes.cpuTotalCycles()
     };
   }
 
@@ -54,7 +54,10 @@ class App extends Component<{}, NesState> {
     this._canvas.getContext("2d").fillRect(0, 0, 256, 240);
   };
 
-  processFrame = (ctx: CanvasRenderingContext2D, frameBuffer: ColorComponent[][]) => {
+  processFrame = (
+    ctx: CanvasRenderingContext2D,
+    frameBuffer: ColorComponent[][]
+  ) => {
     for (let i = 0; i < 240; i++) {
       for (let j = 0; j < 256; j++) {
         if (!frameBuffer[i][j]) {
@@ -69,7 +72,7 @@ class App extends Component<{}, NesState> {
         ctx.closePath();
       }
     }
-  }
+  };
 
   runCycles = (e: React.SyntheticEvent) => {
     const renderFrame = () => {
@@ -89,18 +92,17 @@ class App extends Component<{}, NesState> {
         requestAnimationFrame(renderFrame);
         run();
 
-        this.setState(
-          {
-            cpuRegisters: this._nes.cpuRegisters(),
-            ppuRegisters: this._nes.ppuRegisers(),
-            cpuMemory: this._nes.cpuMemory(),
-            ppuMemory: this._nes.ppuMemory(),
-            isRunning: true,
-            nmiIrq: this._nes.cpuNmiRequested(),
-            scanline: this._nes.scanlines(),
-            ppuCycles: this._nes.ppuCycles(),
-            cpuCycles: this._nes.cpuTotalCycles(),
-          });
+        this.setState({
+          cpuRegisters: this._nes.cpuRegisters(),
+          ppuRegisters: this._nes.ppuRegisers(),
+          cpuMemory: this._nes.cpuMemory(),
+          ppuMemory: this._nes.ppuMemory(),
+          isRunning: true,
+          nmiIrq: this._nes.cpuNmiRequested(),
+          scanline: this._nes.scanlines(),
+          ppuCycles: this._nes.ppuCycles(),
+          cpuCycles: this._nes.cpuTotalCycles()
+        });
       }, 16);
     };
 
@@ -115,18 +117,16 @@ class App extends Component<{}, NesState> {
 
   setCycles = (e: React.SyntheticEvent<HTMLInputElement>) => {
     const target = e.target as HTMLInputElement;
-    this.setState(
-      {
-        cycles: parseInt(target.value)
-      }
-    );
+    this.setState({
+      cycles: parseInt(target.value)
+    });
   };
 
   onNotesChanged = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const target = e.target as HTMLTextAreaElement;
 
     localStorage.setItem("nesthing.notes", target.value);
-  }
+  };
 
   render = () => {
     return (
@@ -183,19 +183,19 @@ class App extends Component<{}, NesState> {
               </div>
               <div className="columns">
                 <div className="column">
-                  <span className={`tag ${this.state.nmiIrq? 'is-warning' : 'is-light'}`}>NMI</span>                  
+                  <span
+                    className={`tag ${
+                      this.state.nmiIrq ? "is-warning" : "is-light"
+                    }`}
+                  >
+                    NMI
+                  </span>
                 </div>
-                <div className="column">
-                  Scanline: {this.state.scanline}
-                </div>
-                <div className="column">
-                  PPU Cycles: {this.state.ppuCycles}
-                </div>
+                <div className="column">Scanline: {this.state.scanline}</div>
+                <div className="column">PPU Cycles: {this.state.ppuCycles}</div>
               </div>
               <div className="columns">
-                <div className="column">
-                  CPU Cycles: {this.state.cpuCycles}
-                </div>
+                <div className="column">CPU Cycles: {this.state.cpuCycles}</div>
               </div>
             </div>
           </div>

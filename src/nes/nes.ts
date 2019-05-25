@@ -1,7 +1,7 @@
 import { Memory } from "./memory";
-import { Ppu } from "../ppu/ppu";
+import { Ppu } from "./ppu";
 import { ColorComponent } from "./framebuffer";
-import { Cpu } from "../cpu/cpu";
+import { Cpu } from "./cpu";
 import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 
