@@ -1,5 +1,5 @@
-import { Memory } from "../memory/memory";
-import { PpuMemory } from "../memory/ppumemory";
+import { Memory } from "./memory";
+import { PpuMemory } from "./ppumemory";
 
 // iNES file format
 // (0-3) 4E 45 53 1A

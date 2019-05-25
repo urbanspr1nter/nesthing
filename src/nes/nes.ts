@@ -1,8 +1,8 @@
-import { Memory } from "../memory/memory";
+import { Memory } from "./memory";
 import { Ppu } from "../ppu/ppu";
 import { ColorComponent } from "../framebuffer/framebuffer";
 import { Cpu } from "../cpu/cpu";
-import { PpuMemory } from "../memory/ppumemory";
+import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 
 const rom = require("./mario.json");

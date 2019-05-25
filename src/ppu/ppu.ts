@@ -1,10 +1,10 @@
-import { PpuMemory } from "../memory/ppumemory";
+import { PpuMemory } from "../nes/ppumemory";
 import {
   FrameBuffer,
   NesPpuPalette,
   ColorComponent
 } from "../framebuffer/framebuffer";
-import { Memory } from "../memory/memory";
+import { Memory } from "../nes/memory";
 import { Cpu } from "../cpu/cpu";
 
 enum BitWidth {
