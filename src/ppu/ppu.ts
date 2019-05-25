@@ -32,11 +32,9 @@ class Bits {
   };
 
   public shift = (n: number): void => {
-    /*
     for(let i = 0; i < n; i++) {
       this._data.shift();
-    }*/
-    this._data = this._data.slice(n);
+    }
   };
 
   public getBits = (n: number): number[] => {
