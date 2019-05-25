@@ -27,12 +27,7 @@ export class FrameBuffer {
   }
 
   public getColor(colorByte: number): ColorComponent {
-    let key = colorByte.toString(16).toUpperCase();
-    if (key.length < 2) {
-      key = `0${key}`;
-    }
-
-    return NesPpuPalette[key];
+    return NesPpuPalette[colorByte];
   }
 
   /**

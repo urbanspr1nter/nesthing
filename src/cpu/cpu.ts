@@ -1,5 +1,4 @@
-import { ByteRegister } from "./byte-register";
-import { DoubleByteRegister } from "./double-byte-register";
+import { ByteRegister, DoubleByteRegister } from "./register.interface";
 import { Memory } from "../memory/memory";
 import {
   AddressingModes,
@@ -306,8 +305,8 @@ export class Cpu {
   }
 
   public interruptReset(): void {
-    const currPcLow = this._regPC.get() & 0xFF;
-    const currPcHigh = (this._regPC.get() >> 8) & 0xFF;
+    const currPcLow = this._regPC.get() & 0xff;
+    const currPcHigh = (this._regPC.get() >> 8) & 0xff;
 
     this.stackPush(currPcHigh);
     this.stackPush(currPcLow);
@@ -427,8 +426,8 @@ export class Cpu {
   }
 
   public setupNmi() {
-    const currPcLow = this._regPC.get() & 0xFF;
-    const currPcHigh = (this._regPC.get() >> 8) & 0xFF;
+    const currPcLow = this._regPC.get() & 0xff;
+    const currPcHigh = (this._regPC.get() >> 8) & 0xff;
 
     this.stackPush(currPcHigh);
     this.stackPush(currPcLow);
@@ -817,7 +816,7 @@ export class Cpu {
   }
 
   public bcs(opCode: number) {
-    if(this._regPC.get() === 0xF211) {
+    if (this._regPC.get() === 0xf211) {
     }
     this._regPC.add(1);
     switch (opCode) {

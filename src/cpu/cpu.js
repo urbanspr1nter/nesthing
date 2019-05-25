@@ -1,7 +1,6 @@
 "use strict";
 exports.__esModule = true;
-var byte_register_1 = require("./byte-register");
-var double_byte_register_1 = require("./double-byte-register");
+var register_interface_1 = require("./register.interface");
 var cpu_interface_1 = require("./cpu.interface");
 var cpu_addressing_helper_1 = require("./cpu-addressing-helper");
 var Cpu = /** @class */ (function () {
@@ -9,12 +8,12 @@ var Cpu = /** @class */ (function () {
         this._currentCycles = 0;
         this._memory = memory;
         this._addressingHelper = new cpu_addressing_helper_1.CpuAddressingHelper(this._memory);
-        this._regA = new byte_register_1.ByteRegister(0x00);
-        this._regX = new byte_register_1.ByteRegister(0x00);
-        this._regY = new byte_register_1.ByteRegister(0x00);
-        this._regPC = new double_byte_register_1.DoubleByteRegister(0x00);
-        this._regSP = new byte_register_1.ByteRegister(0x00);
-        this._regP = new byte_register_1.ByteRegister(0x00);
+        this._regA = new register_interface_1.ByteRegister(0x00);
+        this._regX = new register_interface_1.ByteRegister(0x00);
+        this._regY = new register_interface_1.ByteRegister(0x00);
+        this._regPC = new register_interface_1.DoubleByteRegister(0x00);
+        this._regSP = new register_interface_1.ByteRegister(0x00);
+        this._regP = new register_interface_1.ByteRegister(0x00);
         this._interrupt = cpu_interface_1.InterruptRequestType.None;
         this._stallCycles = 0;
     }
@@ -233,8 +232,8 @@ var Cpu = /** @class */ (function () {
         this.interruptReset();
     };
     Cpu.prototype.interruptReset = function () {
-        var currPcLow = this._regPC.get() & 0xFF;
-        var currPcHigh = (this._regPC.get() >> 8) & 0xFF;
+        var currPcLow = this._regPC.get() & 0xff;
+        var currPcHigh = (this._regPC.get() >> 8) & 0xff;
         this.stackPush(currPcHigh);
         this.stackPush(currPcLow);
         this.stackPush(this._regP.get());
@@ -334,8 +333,8 @@ var Cpu = /** @class */ (function () {
         }
     };
     Cpu.prototype.setupNmi = function () {
-        var currPcLow = this._regPC.get() & 0xFF;
-        var currPcHigh = (this._regPC.get() >> 8) & 0xFF;
+        var currPcLow = this._regPC.get() & 0xff;
+        var currPcHigh = (this._regPC.get() >> 8) & 0xff;
         this.stackPush(currPcHigh);
         this.stackPush(currPcLow);
         this.stackPush(this._regP.get());
@@ -618,7 +617,7 @@ var Cpu = /** @class */ (function () {
         }
     };
     Cpu.prototype.bcs = function (opCode) {
-        if (this._regPC.get() === 0xF211) {
+        if (this._regPC.get() === 0xf211) {
         }
         this._regPC.add(1);
         switch (opCode) {

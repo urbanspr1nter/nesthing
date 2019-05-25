@@ -19,11 +19,7 @@ var FrameBuffer = /** @class */ (function () {
         this._frameBuffer[row][column] = color;
     };
     FrameBuffer.prototype.getColor = function (colorByte) {
-        var key = colorByte.toString(16).toUpperCase();
-        if (key.length < 2) {
-            key = "0" + key;
-        }
-        return exports.NesPpuPalette[key];
+        return exports.NesPpuPalette[colorByte];
     };
     /**
      * Initializes the frame buffer.
