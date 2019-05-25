@@ -3,7 +3,7 @@ import {
   FrameBuffer,
   NesPpuPalette,
   ColorComponent
-} from "../framebuffer/framebuffer";
+} from "../nes/framebuffer";
 import { Memory } from "../nes/memory";
 import { Cpu } from "../cpu/cpu";
 

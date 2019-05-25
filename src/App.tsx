@@ -1,10 +1,10 @@
 import React, { Component } from "react";
 import { Nes, CpuRegisters, PpuRegisters } from "./nes/nes";
 import "bulma/css/bulma.css";
-import { ColorComponent } from "./framebuffer/framebuffer";
+import { ColorComponent } from "./nes/framebuffer";
 import MainTitle from "./components/MainTitle";
 import CpuRegisterView from "./components/CpuRegisterView";
-import { buildRgbString } from "./utils/ui/utils";
+import { buildRgbString } from "./nes/utils";
 import PpuRegisterView from "./components/PpuRegisterView";
 
 interface NesState {
