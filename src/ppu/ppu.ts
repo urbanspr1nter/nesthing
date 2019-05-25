@@ -1,14 +1,16 @@
 import { PpuMemory } from "../memory/ppumemory";
-import { OamMemory } from "../memory/oammemory";
 import { ColorComponent } from "../nes/common/interface";
-import { getBaseNametableAddress } from "./ppu.helpers";
 import { FrameBuffer, NesPpuPalette } from "../framebuffer/framebuffer";
-import { byteValue2HexString } from "../utils/ui/utils";
 import { Memory } from "../memory/memory";
 import { Cpu } from "../cpu/cpu";
 
-class PixelBitsQueue {
-  private _MAX_LENGTH = 64;
+enum BitWidth {
+  Int32 = 32,
+  Int64 = 64
+}
+
+class Bits {
+  private _MAX_LENGTH = BitWidth.Int64;
   private _data: number[];
 
   constructor(max_length?: number) {
@@ -29,40 +31,51 @@ class PixelBitsQueue {
     }
   };
 
-  public shift4bits = (): void => {
-    this._data = this._data.slice(4);
+  public shift = (n: number): void => {
+    for(let i = 0; i < n; i++) {
+      this._data.shift();
+    }
   };
 
-  public get4bits = (): number[] => {
-    return this._data.slice(0, 4);
+  public getBits = (n: number): number[] => {
+    return this._data.slice(0, n);
   };
 
-  public get4BitsOffset = (offset: number): number[] => {
-    return this._data.slice(offset, offset + 4);
+  public getBitsOffset = (offset: number, length: number): number[] => {
+    return this._data.slice(offset, offset + length);
+  };
+
+  public value = (): number => {
+    let value = 0;
+
+    for (let i = 0; i < this._MAX_LENGTH; i++) {
+      const bit = this.getBitsOffset(i, 1)[0];
+      value |= bit << (this._MAX_LENGTH - 1 - i);
+    }
+
+    return value;
   };
 }
 
 interface SpriteData {
-  DataQueue: PixelBitsQueue;
+  DataQueue: Bits;
   PositionX: number;
   Priority: number;
   BaseOamAddress: number;
 }
 
+const MAX_SPRITES_PER_SCANLINE = 8;
+
 export class Ppu {
   private _frameBuffer: FrameBuffer;
-
   private _cpuNmiRequested: boolean;
   private _ppuMemory: PpuMemory;
-
   private _ppuDataReadBuffer: number;
-
   private _cycles: number;
   private _scanlines: number;
   private _frames: number;
   private _evenFrame: boolean;
   private _spriteCount: number;
-
   private _ntByte: number;
   private _attributeByte: number;
   private _tileLowByte: number;
@@ -112,11 +125,11 @@ export class Ppu {
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
-  private _pixelBits: PixelBitsQueue;
-  private _spriteBits: PixelBitsQueue;
+  // private _backgroundTile: bigint;
+  private _backgroundBits: Bits;
 
   private _oam: number[];
-  private _sprites: SpriteData[];
+  private _onScreenSprites: SpriteData[];
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
@@ -127,6 +140,9 @@ export class Ppu {
     this._scanlines = 0;
     this._cycles = 0;
 
+    // Initialize background bytes.
+    this._ntByte = 0;
+    this._attributeByte = 0;
     this._tileLowByte = 0;
     this._tileHighByte = 0;
 
@@ -135,21 +151,26 @@ export class Ppu {
     this._w = false;
 
     this._spriteCount = 0;
+    // this._backgroundTile = 0n;
+    this._backgroundBits = new Bits(BitWidth.Int64);
+    this._initializeOam();
+    this._initializeSprites();
+  }
 
-    this._pixelBits = new PixelBitsQueue(64);
-    this._spriteBits = new PixelBitsQueue(32);
-
+  private _initializeOam() {
     this._oam = [];
     for (let i = 0; i <= 0xff; i++) {
       this._oam[i] = 0x0;
     }
+  }
 
-    this._sprites = [];
+  private _initializeSprites() {
+    this._onScreenSprites = [];
     for (let i = 0; i < 8; i++) {
-      this._sprites.push({
+      this._onScreenSprites.push({
         BaseOamAddress: 0,
         PositionX: 0,
-        DataQueue: new PixelBitsQueue(32),
+        DataQueue: new Bits(BitWidth.Int32),
         Priority: 0
       });
     }
@@ -295,16 +316,6 @@ export class Ppu {
   }
 
   public write$2006(dataByte: number) {
-    /*
-    if (!this._w) {
-      this._t = (this._t & 0x80ff) | ((dataByte & 0x3f) << 8);
-      this._w = true;
-    } else {
-      this._t = (this._t & 0xff00) | dataByte;
-      this._v = this._t;
-      this._w = false;
-    }*/
-
     if (!this._w) {
       this._t = dataByte;
       this._w = true;
@@ -316,7 +327,6 @@ export class Ppu {
 
   public write$2007(dataByte: number) {
     this._ppuMemory.set(this._v, dataByte);
-
     this.incrementVramAddress();
   }
 
@@ -396,10 +406,17 @@ export class Ppu {
     this._cpuNmiRequested = this._regPPUCTRL_generateNmiAtVblankStart;
   }
 
+  /**
+   * Fetches a nametable byte based off of the current VRAM address, and
+   * stores it for processing in further cycles.
+   *
+   * The nametable address is calculated by the following:
+   *
+   * The last 12 bits of the VRAM address will indicate the offset from the
+   * nametable. We can then start at 0x2000 and bitwise-OR with the 12-bit VRAM
+   * address.
+   */
   private _fetchNametableByte(): void {
-    const currentVramAddress = this._v;
-    /*const ntAddress =
-      getBaseNametableAddress(this.read$2000()) | (currentVramAddress & 0x0fff);*/
     const ntAddress = 0x2000 | (this._v & 0x0fff);
     this._ntByte = this._ppuMemory.get(ntAddress);
   }
@@ -442,7 +459,7 @@ export class Ppu {
    * registers are populated with this data. Meanwhile, the lower bits of the tile shift
    * registeres are being accessed for rendering during every cycle.
    */
-  private _storeTileData() {
+  private _storeBackgroundTileData() {
     for (let i = 0; i < 8; i++) {
       const attributeByte = this._attributeByte;
 
@@ -452,15 +469,35 @@ export class Ppu {
       this._tileLowByte <<= 1;
       this._tileHighByte <<= 1;
 
-      this._pixelBits.push(attributeByte >> 3);
-      this._pixelBits.push(attributeByte >> 2);
-      this._pixelBits.push(highBit);
-      this._pixelBits.push(lowBit);
+      //this._backgroundTile <<= 4n;
+      //this._backgroundTile |= BigInt(attributeByte) | BigInt(highBit) | BigInt(lowBit);
+      this._backgroundBits.push(attributeByte >> 3);
+      this._backgroundBits.push(attributeByte >> 2);
+      this._backgroundBits.push(highBit);
+      this._backgroundBits.push(lowBit);
     }
   }
 
+  private _getBackgroundPixel() {
+    let backgroundPixel = 0;
+    if (!this._regPPUMASK_showBackground) {
+      return backgroundPixel;
+    }
+
+    const bits = this._backgroundBits.getBits(4);
+    // backgroundPixel = this._backgroundTile >>  BigInt(((7 - this._regPPUSCROLL_x) * 4));
+
+    const attributeBits = (bits[0] << 1) | bits[1];
+    const highBit = bits[2];
+    const lowBit = bits[3];
+
+    backgroundPixel = (attributeBits << 2) | (highBit << 1) | lowBit;
+
+    return backgroundPixel;
+  }
+
   /**
-   * Shift a title of 4 bits from the shift registers to form the background pixel needed
+   * Shift a tile of 4 bits from the shift registers to form the background pixel needed
    * to render onto the screen. During this, we are processing the lower databytes from the
    * shift registers.
    */
@@ -468,112 +505,61 @@ export class Ppu {
     const x = this._cycles - 1;
     const y = this._scanlines;
 
-    // BACKGROUND
-    if (x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
-      this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(0x3f00)]);
-      return;
-    }
+    let attributeBits;
+    let usingBackgroundPixel = false;
 
-    const bits = this._pixelBits.get4bits();
-    let attributeBits = (bits[0] << 1) | bits[1];
-    const highBit = bits[2];
-    const lowBit = bits[3];
-
-    let backgroundPixel = (attributeBits << 2) | (highBit << 1) | lowBit;
+    let backgroundPixel = this._getBackgroundPixel();
     let spritePixel = this._getSpritePixel();
 
-    let basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
+    let basePaletteAddress;
 
-    if (x < 8 && this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
+    if (x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
       backgroundPixel = 0;
     }
-    if (x < 8 && this._regPPUMASK_showSpritesLeftMost8pxOfScreen) {
+    if (x < 8 && !this._regPPUMASK_showSpritesLeftMost8pxOfScreen) {
       spritePixel[1] = 0;
     }
+
     const b = backgroundPixel % 4 !== 0;
     const s = spritePixel[1] % 4 !== 0;
-    let color;
 
+    let color;
     if (!b && !s) {
       color = 0;
-      attributeBits = (color & 12) >> 2;
-
-      basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
+      usingBackgroundPixel = true;
     } else if (!b && s) {
       color = spritePixel[1] | 0x10;
-      attributeBits = (color & 12) >> 2;
-
-      basePaletteAddress = this._getBasePaletteAddress(attributeBits, false);
+      usingBackgroundPixel = false;
     } else if (b && !s) {
       color = backgroundPixel;
-      attributeBits = (color & 12) >> 2;
-
-      basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
+      usingBackgroundPixel = true;
     } else {
-      if (this._sprites[spritePixel[0]].BaseOamAddress === 0 && x < 255) {
+      if (
+        this._onScreenSprites[spritePixel[0]].BaseOamAddress === 0 &&
+        x < 255
+      ) {
         this._regPPUSTATUS_spriteHit = true;
       }
-      if (this._sprites[spritePixel[0]].Priority === 0) {
+      if (this._onScreenSprites[spritePixel[0]].Priority === 0) {
         color = spritePixel[1] | 0x10;
-        attributeBits = (color & 12) >> 2;
-        basePaletteAddress = this._getBasePaletteAddress(attributeBits, false);
+        usingBackgroundPixel = false;
       } else {
         color = backgroundPixel;
-        attributeBits = (color & 12) >> 2;
-        basePaletteAddress = this._getBasePaletteAddress(attributeBits, true);
+        usingBackgroundPixel = true;
       }
     }
 
-    let paletteOffset = (highBit << 1) | lowBit;
-    paletteOffset = color & 3;
+    attributeBits = (color as number & 12) >> 2;
+    basePaletteAddress = this._getBasePaletteAddress(
+      attributeBits,
+      usingBackgroundPixel
+    );
 
+    let paletteOffset = color as number & 3;
     let colorByte = this._ppuMemory.get(
       basePaletteAddress + (paletteOffset - 1)
     );
-
-    this._frameBuffer.draw(y, x, NesPpuPalette[byteValue2HexString(colorByte)]);
-  }
-
-  private _getBasePaletteAddress(attributeBits: number, isBg: boolean) {
-
-    if(isBg) {
-      let basePaletteAddress = 0x3f00;
-      switch (attributeBits) {
-        case 0x0:
-          basePaletteAddress = 0x3f01;
-          break;
-        case 0x1:
-          basePaletteAddress = 0x3f05;
-          break;
-        case 0x2:
-          basePaletteAddress = 0x3f09;
-          break;
-        case 0x3:
-          basePaletteAddress = 0x3f0d;
-          break;
-      }
-  
-      return basePaletteAddress;
-    } else {
-      let basePaletteAddress = 0x3f10;
-      switch (attributeBits) {
-        case 0x0:
-          basePaletteAddress = 0x3f11;
-          break;
-        case 0x1:
-          basePaletteAddress = 0x3f15;
-          break;
-        case 0x2:
-          basePaletteAddress = 0x3f19;
-          break;
-        case 0x3:
-          basePaletteAddress = 0x3f1d;
-          break;
-      }
-  
-      return basePaletteAddress;
-    }
-
+    this._frameBuffer.draw(y, x, NesPpuPalette[colorByte]);
   }
 
   private _getSpritePixel(): number[] {
@@ -582,13 +568,16 @@ export class Ppu {
     }
 
     for (let i = 0; i < this._spriteCount; i++) {
-      let offset = this._cycles - 1 - this._sprites[i].PositionX;
+      let offset = this._cycles - 1 - this._onScreenSprites[i].PositionX;
       if (offset < 0 || offset > 7) {
         continue;
       }
       offset = 7 - offset;
       let dataQueueNumber: number[] = [];
-      dataQueueNumber = this._sprites[i].DataQueue.get4BitsOffset(offset * 4);
+      dataQueueNumber = this._onScreenSprites[i].DataQueue.getBitsOffset(
+        (7 - offset) * 4,
+        4
+      );
 
       const color =
         (dataQueueNumber[0] << 3) |
@@ -643,35 +632,56 @@ export class Ppu {
     this._v = (this._v & 0x841f) | (this._t & 0x7be0);
   }
 
-  private _fetchSpritePattern(
-    baseOamAddress: number,
-    row: number
-  ): PixelBitsQueue {
-    const tileByte = this._oam[baseOamAddress * 4 + 1];
+  private _fetchSpritePattern(baseOamAddress: number, row: number): Bits {
+    let tileByte = this._oam[baseOamAddress * 4 + 1];
     const attributes = this._oam[baseOamAddress * 4 + 2];
 
     let address = 0;
-
     if (!this._regPPUCTRL_spriteSizeLarge) {
       if ((attributes & 0x80) === 0x80) {
         row = 7 - row;
       }
-      address =
-        this._regPPUCTRL_spritePatternTableBaseAddress + tileByte * 0x10 + row;
+      const baseTableMultiplier = this
+        ._regPPUCTRL_spritePatternTableBaseAddress;
+      address = baseTableMultiplier * 0x1000 + tileByte * 0x10 + row;
+    } else {
+      if ((attributes & 0x80) === 0x80) {
+        row = 15 - row;
+      }
+
+      const baseTableMultiplier = tileByte & 1;
+      tileByte &= 0xfe;
+
+      if (row > 7) {
+        tileByte++;
+        row -= 8;
+      }
+      address = baseTableMultiplier * 0x1000 + tileByte * 0x10 + row;
     }
 
     let lowTileByte = this._ppuMemory.get(address);
     let highTileByte = this._ppuMemory.get(address + 8);
 
-    const dataBits = new PixelBitsQueue(32);
+    const dataBits = new Bits(BitWidth.Int32);
 
     for (let i = 0; i < 8; i++) {
       const attributePalette = attributes & 3;
-      const p1 = (lowTileByte & 0x80) >> 7;
-      const p2 = (highTileByte & 0x80) >> 7;
 
-      lowTileByte <<= 1;
-      highTileByte <<= 1;
+      let p1;
+      let p2;
+      if ((attributes & 0x40) === 0x40) {
+        p1 = lowTileByte & 1;
+        p2 = highTileByte & 1;
+
+        lowTileByte >>= 1;
+        highTileByte >>= 1;
+      } else {
+        p1 = (lowTileByte & 0x80) >> 7;
+        p2 = (highTileByte & 0x80) >> 7;
+
+        lowTileByte <<= 1;
+        highTileByte <<= 1;
+      }
 
       dataBits.push((attributePalette & 2) >> 1);
       dataBits.push(attributePalette & 1);
@@ -697,7 +707,7 @@ export class Ppu {
       }
 
       if (spriteCount < 8) {
-        this._sprites[spriteCount] = {
+        this._onScreenSprites[spriteCount] = {
           DataQueue: this._fetchSpritePattern(i, row),
           BaseOamAddress: i,
           PositionX: x,
@@ -708,16 +718,48 @@ export class Ppu {
       spriteCount++;
     }
 
-    if (spriteCount > 8) {
-      spriteCount = 8;
+    if (spriteCount > MAX_SPRITES_PER_SCANLINE) {
+      spriteCount = MAX_SPRITES_PER_SCANLINE;
       this._regPPUSTATUS_spriteOverflow = true;
     }
 
-    this._spriteCount = 8;
+    this._spriteCount = spriteCount;
+  }
+
+  /**
+   * Given the attribute bits AB, determine the base palette address
+   * from the background, or sprite.
+   *
+   * @param attributeBits attribute bits
+   * @param isBackgroundPixel is this a background pixel?
+   */
+  private _getBasePaletteAddress(
+    attributeBits: number,
+    isBackgroundPixel: boolean
+  ) {
+    const offset = isBackgroundPixel ? 0 : 0x10;
+
+    let basePaletteAddress = 0x3f00;
+    switch (attributeBits) {
+      case 0x0:
+        basePaletteAddress = 0x3f01;
+        break;
+      case 0x1:
+        basePaletteAddress = 0x3f05;
+        break;
+      case 0x2:
+        basePaletteAddress = 0x3f09;
+        break;
+      case 0x3:
+        basePaletteAddress = 0x3f0d;
+        break;
+    }
+
+    return basePaletteAddress + offset;
   }
 
   private _tick(): void {
-    if (this._regPPUMASK_showBackground) {
+    if (this._regPPUMASK_showBackground || this._regPPUMASK_showSprites) {
       if (!this._evenFrame && this._scanlines === 261 && this._cycles === 339) {
         this._cycles = 0;
         this._scanlines = 0;
@@ -765,7 +807,8 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        this._pixelBits.shift4bits();
+        this._backgroundBits.shift(4);
+        // this._backgroundTile <<= 4n;
         switch (this._cycles % 8) {
           case 1:
             this._fetchNametableByte();
@@ -780,7 +823,7 @@ export class Ppu {
             this._fetchTileHighByte();
             break;
           case 0:
-            this._storeTileData();
+            this._storeBackgroundTileData();
             break;
         }
       }

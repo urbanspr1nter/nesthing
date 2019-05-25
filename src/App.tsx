@@ -23,7 +23,6 @@ interface NesState {
   scanline: number;
   ppuCycles: number;
   cpuCycles: number;
-  logBuffer: string[];
 }
 
 class App extends Component<{}, NesState> {
@@ -50,7 +49,6 @@ class App extends Component<{}, NesState> {
       scanline: this._nes.scanlines(),
       ppuCycles: this._nes.ppuCycles(),
       cpuCycles: this._nes.cpuTotalCycles(),
-      logBuffer: this._nes.logEntries()
     };
   }
 
@@ -61,28 +59,43 @@ class App extends Component<{}, NesState> {
     this._canvas.getContext("2d").fillRect(0, 0, 256, 240);
   };
 
+  processFrame = (ctx: CanvasRenderingContext2D, frameBuffer: ColorComponent[][]) => {
+    for (let i = 0; i < 240; i++) {
+      for (let j = 0; j < 256; j++) {
+        if (!frameBuffer[i][j]) {
+          break;
+        }
+        ctx.strokeStyle = buildRgbString(frameBuffer[i][j]);
+
+        ctx.beginPath();
+        ctx.moveTo(j, i);
+        ctx.lineTo(j + 1, i + 1);
+        ctx.stroke();
+        ctx.closePath();
+      }
+    }
+  }
+
   runCycles = (e: React.SyntheticEvent) => {
-    const runConsole = () => {
+    const renderFrame = () => {
       const frameBuffer = this._nes.frameBuffer();
       const ctx = this._canvas.getContext("2d");
 
+      let start = performance.now();
       this._nes.run(29833);
+      console.log(`EXEC TIME TIME - ${performance.now() - start}`);
+      this.processFrame(ctx, frameBuffer);
 
-      for (let i = 0; i < 240; i++) {
-        for (let j = 0; j < 256; j++) {
-          if (!frameBuffer[i][j]) {
-            break;
-          }
-          ctx.strokeStyle = buildRgbString(frameBuffer[i][j]);
-  
-          ctx.beginPath();
-          ctx.moveTo(j, i);
-          ctx.lineTo(j + 1, i + 1);
-          ctx.stroke();
-          ctx.closePath();
-        }
-      }
+    };
 
+    const run = () => {
+      setTimeout(() => {
+        requestAnimationFrame(renderFrame);
+        run();
+      }, 16);
+    };
+
+    const runConsole = () => {
       this.setState(
         {
           cpuRegisters: this._nes.cpuRegisters(),
@@ -98,7 +111,8 @@ class App extends Component<{}, NesState> {
         });
     };
 
-    this._runInterval = setInterval(runConsole, 20);
+    this._runInterval = setInterval(runConsole, 16);
+    run();
   };
 
   handlePause = () => {

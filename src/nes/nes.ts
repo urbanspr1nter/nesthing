@@ -3,7 +3,6 @@ import { Ppu } from "../ppu/ppu";
 import { ColorComponent } from "./common/interface";
 import { Cpu } from "../cpu/cpu";
 import { PpuMemory } from "../memory/ppumemory";
-import { LogUtil } from "../cpu/log.util";
 import { CartLoader } from "./cart-loader";
 
 const rom = require("./mario.json");
@@ -32,20 +31,15 @@ export class Nes {
   private _nmiTriggered: boolean;
   private _cycles: number;
 
-  private _logger: LogUtil;
-
   constructor() {
-    this._logger = new LogUtil(10000);
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
     this._memory = new Memory(this._ppu);
-    this._cpu = new Cpu(this._memory, this._logger);
+    this._cpu = new Cpu(this._memory);
 
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
-
-    this._cpu.debugMode(false);
 
     this._cycles = 0;
   }
@@ -77,11 +71,6 @@ export class Nes {
   public ppuCycles(): number {
     return this._ppu.getCycles();
   }
-
-  public logEntries(): string[] {
-    return this._logger.entries();
-  }
-
   public ppuRegisers(): PpuRegisters {
     return {
       v: this._ppu.vramAddress(),
@@ -123,7 +112,12 @@ export class Nes {
      * all running at the same time. Each piece of hardware will run for the necessary amount of
      * cycles.
      */
+    let start = performance.now();
+    let cpuTime = 0;
+    let ppuTime = 0;
     while (this._cycles <= cpuCycles) {
+      start = performance.now();
+
       const beginCpuCycles = this._cpu.getCurrentCycles();
 
       if(this._cpu.stallCycles() > 0) {
@@ -141,15 +135,21 @@ export class Nes {
 
       const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
 
+      cpuTime += (performance.now() - start);
+
       // Run the PPU for the appropriate amount of cycles.
+      start = performance.now();
       let ppuCyclesToRun = cpuCyclesRan * 3;
       while (ppuCyclesToRun > 0) {
         this._ppu.run();
         ppuCyclesToRun--;
       }
+      ppuTime += (performance.now() - start);
 
       this._cycles += cpuCyclesRan;
     }
+
+    console.log(`----> CPU Time = ${cpuTime}, PPU Time = ${ppuTime}.`);
 
     this._cycles = 0;
   }
@@ -157,6 +157,5 @@ export class Nes {
   private _initialize() {
     this.loadRom();
     this._cpu.powerUp();
-    this._cpu.debugMode(true);
   }
 }

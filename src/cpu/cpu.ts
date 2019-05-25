@@ -12,10 +12,8 @@ import {
   InterruptRequestType
 } from "./cpu.interface";
 import { CpuAddressingHelper } from "./cpu-addressing-helper";
-import { LogUtil } from "./log.util";
 
 export class Cpu {
-  private _dbg: boolean;
   private _memory: Memory;
   private _addressingHelper: CpuAddressingHelper;
 
@@ -35,14 +33,9 @@ export class Cpu {
   // Helpers
   private _interrupt: InterruptRequestType;
 
-  private _logger: LogUtil;
-
-  constructor(memory: Memory, logger: LogUtil) {
-    this._dbg = true;
-
+  constructor(memory: Memory) {
     this._currentCycles = 0;
 
-    this._logger = logger;
     this._memory = memory;
     this._addressingHelper = new CpuAddressingHelper(this._memory);
 
@@ -68,10 +61,6 @@ export class Cpu {
 
   public totalCycles(): number {
     return this._currentCycles;
-  }
-
-  public debugMode(value: boolean): void {
-    this._dbg = value;
   }
 
   private _memWrite(address: number, data: number) {

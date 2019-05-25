@@ -5,10 +5,8 @@ var double_byte_register_1 = require("./double-byte-register");
 var cpu_interface_1 = require("./cpu.interface");
 var cpu_addressing_helper_1 = require("./cpu-addressing-helper");
 var Cpu = /** @class */ (function () {
-    function Cpu(memory, logger) {
-        this._dbg = true;
+    function Cpu(memory) {
         this._currentCycles = 0;
-        this._logger = logger;
         this._memory = memory;
         this._addressingHelper = new cpu_addressing_helper_1.CpuAddressingHelper(this._memory);
         this._regA = new byte_register_1.ByteRegister(0x00);
@@ -28,9 +26,6 @@ var Cpu = /** @class */ (function () {
     };
     Cpu.prototype.totalCycles = function () {
         return this._currentCycles;
-    };
-    Cpu.prototype.debugMode = function (value) {
-        this._dbg = value;
     };
     Cpu.prototype._memWrite = function (address, data) {
         this._memory.set(address, data);
