@@ -458,9 +458,9 @@ export class Ppu {
    * registeres are being accessed for rendering during every cycle.
    */
   private _storeBackgroundTileData() {
-    for (let i = 0; i < 8; i++) {
-      const attributeByte = this._attributeByte;
+    const attributeByte = this._attributeByte;
 
+    for (let i = 0; i < 8; i++) {
       const lowBit = (this._tileLowByte & 0x80) >> 7;
       const highBit = (this._tileHighByte & 0x80) >> 7;
 
@@ -500,7 +500,6 @@ export class Ppu {
     const x = this._cycles - 1;
     const y = this._scanlines;
 
-    let attributeBits;
     let usingBackgroundPixel = false;
 
     let backgroundPixel = this._getBackgroundPixel();
@@ -544,7 +543,7 @@ export class Ppu {
       }
     }
 
-    attributeBits = (color as number & 12) >> 2;
+    let attributeBits = (color as number & 12) >> 2;
     basePaletteAddress = this._getBasePaletteAddress(
       attributeBits,
       usingBackgroundPixel
@@ -554,6 +553,7 @@ export class Ppu {
     let colorByte = this._ppuMemory.get(
       basePaletteAddress + (paletteOffset - 1)
     );
+
     this._frameBuffer.draw(y, x, NesPpuPalette[colorByte]);
   }
 

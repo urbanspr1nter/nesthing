@@ -109,6 +109,7 @@ typings/
 .dynamodb/
 
 */**/tests/*.js
+*/**/framebuffer/*.js
 */**/nes/*.js
 */**/nes/common/*.js
 */**/ppu/*.js

@@ -83,7 +83,7 @@ class App extends Component<{}, NesState> {
 
       let start = performance.now();
       this._nes.run(29833);
-      console.log(`EXEC TIME TIME - ${performance.now() - start}`);
+      // console.log(`EXEC TIME TIME - ${performance.now() - start}`);
       this.processFrame(ctx, frameBuffer);
 
     };

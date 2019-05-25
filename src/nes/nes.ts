@@ -149,7 +149,7 @@ export class Nes {
       this._cycles += cpuCyclesRan;
     }
 
-    console.log(`----> CPU Time = ${cpuTime}, PPU Time = ${ppuTime}.`);
+    // console.log(`----> CPU Time = ${cpuTime}, PPU Time = ${ppuTime}.`);
 
     this._cycles = 0;
   }

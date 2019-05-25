@@ -1,7 +1,7 @@
 import { ColorComponent } from "../nes/common/interface";
 
-const ColorPalette = require("../utils/colors.json");
-export const NesPpuPalette: { [id: string]: ColorComponent } = ColorPalette;
+const ColorPalette = require("./colors.json");
+export const NesPpuPalette: ColorComponent[] = ColorPalette;
 
 const TOTAL_SCANLINES = 240;
 const TOTAL_DOTS = 256;
