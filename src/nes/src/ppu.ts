@@ -1,9 +1,5 @@
 import { PpuMemory } from "./ppumemory";
-import {
-  FrameBuffer,
-  NesPpuPalette,
-  ColorComponent
-} from "./framebuffer";
+import { FrameBuffer, NesPpuPalette, ColorComponent } from "./framebuffer";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 
@@ -128,7 +124,7 @@ export class Ppu {
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
-  private _backgroundBits: Bits;
+  private _backgroundTile: bigint;
 
   private _oam: number[];
   private _onScreenSprites: SpriteData[];
@@ -153,7 +149,7 @@ export class Ppu {
     this._w = false;
 
     this._spriteCount = 0;
-    this._backgroundBits = new Bits(BitWidth.Int64);
+    this._backgroundTile = BigInt.asUintN(64, BigInt("0"));
     this._initializeOam();
     this._initializeSprites();
   }
@@ -463,18 +459,21 @@ export class Ppu {
   private _storeBackgroundTileData() {
     const attributeByte = this._attributeByte;
 
+    let tileData: number = 0;
     for (let i = 0; i < 8; i++) {
       const lowBit = (this._tileLowByte & 0x80) >> 7;
-      const highBit = (this._tileHighByte & 0x80) >> 7;
+      const highBit = (this._tileHighByte & 0x80) >> 6;
 
       this._tileLowByte <<= 1;
       this._tileHighByte <<= 1;
 
-      this._backgroundBits.push(attributeByte >> 3);
-      this._backgroundBits.push(attributeByte >> 2);
-      this._backgroundBits.push(highBit);
-      this._backgroundBits.push(lowBit);
+      tileData <<= 4;
+      tileData |= attributeByte | highBit | lowBit;
     }
+
+    this._backgroundTile =
+      BigInt.asUintN(64, this._backgroundTile) |
+      BigInt.asUintN(32, BigInt(tileData));
   }
 
   private _getBackgroundPixel() {
@@ -483,15 +482,16 @@ export class Ppu {
       return backgroundPixel;
     }
 
-    const bits = this._backgroundBits.getBits(4);
+    backgroundPixel = Number(
+      BigInt.asUintN(
+        32,
+        BigInt.asUintN(64, BigInt(this._backgroundTile)) >>
+          BigInt.asUintN(32, BigInt("32"))
+      )
+    );
+    backgroundPixel >>= 28;
 
-    const attributeBits = (bits[0] << 1) | bits[1];
-    const highBit = bits[2];
-    const lowBit = bits[3];
-
-    backgroundPixel = (attributeBits << 2) | (highBit << 1) | lowBit;
-
-    return backgroundPixel;
+    return backgroundPixel & 0x0f;
   }
 
   /**
@@ -803,7 +803,9 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        this._backgroundBits.shift(4);
+        this._backgroundTile =
+          BigInt.asUintN(64, this._backgroundTile) <<
+          BigInt.asUintN(64, BigInt("4"));
         switch (this._cycles % 8) {
           case 1:
             this._fetchNametableByte();
