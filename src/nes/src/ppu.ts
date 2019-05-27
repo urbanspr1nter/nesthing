@@ -3,61 +3,8 @@ import { FrameBuffer, NesPpuPalette, ColorComponent } from "./framebuffer";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 
-enum BitWidth {
-  Int32 = 32,
-  Int64 = 64
-}
-
-class Bits {
-  private _MAX_LENGTH = BitWidth.Int64;
-  private _data: number[];
-
-  constructor(max_length?: number) {
-    this._data = [];
-    if (max_length) {
-      this._MAX_LENGTH = max_length;
-    }
-    for (let i = 0; i < this._MAX_LENGTH; i++) {
-      this._data[i] = 0;
-    }
-  }
-
-  public push = (bit: number): void => {
-    if (this._data.length === this._MAX_LENGTH) {
-      this._data = this._data.slice(1, this._MAX_LENGTH).concat([bit]);
-    } else {
-      this._data.push(bit);
-    }
-  };
-
-  public shift = (n: number): void => {
-    for (let i = 0; i < n; i++) {
-      this._data.shift();
-    }
-  };
-
-  public getBits = (n: number): number[] => {
-    return this._data.slice(0, n);
-  };
-
-  public getBitsOffset = (offset: number, length: number): number[] => {
-    return this._data.slice(offset, offset + length);
-  };
-
-  public value = (): number => {
-    let value = 0;
-
-    for (let i = 0; i < this._MAX_LENGTH; i++) {
-      const bit = this.getBitsOffset(i, 1)[0];
-      value |= bit << (this._MAX_LENGTH - 1 - i);
-    }
-
-    return value;
-  };
-}
-
 interface SpriteData {
-  DataQueue: Bits;
+  Data: number;
   PositionX: number;
   Priority: number;
   BaseOamAddress: number;
@@ -167,7 +114,7 @@ export class Ppu {
       this._onScreenSprites.push({
         BaseOamAddress: 0,
         PositionX: 0,
-        DataQueue: new Bits(BitWidth.Int32),
+        Data: 0,
         Priority: 0
       });
     }
@@ -569,17 +516,9 @@ export class Ppu {
         continue;
       }
       offset = 7 - offset;
-      let dataQueueNumber: number[] = [];
-      dataQueueNumber = this._onScreenSprites[i].DataQueue.getBitsOffset(
-        (7 - offset) * 4,
-        4
-      );
 
       const color =
-        (dataQueueNumber[0] << 3) |
-        (dataQueueNumber[1] << 2) |
-        (dataQueueNumber[2] << 1) |
-        dataQueueNumber[3];
+        (this._onScreenSprites[i].Data >> (offset * 4)) & 0x0f;
       if (color % 4 === 0) {
         continue;
       }
@@ -628,7 +567,7 @@ export class Ppu {
     this._v = (this._v & 0x841f) | (this._t & 0x7be0);
   }
 
-  private _fetchSpritePattern(baseOamAddress: number, row: number): Bits {
+  private _fetchSpritePattern(baseOamAddress: number, row: number): number {
     let tileByte = this._oam[baseOamAddress * 4 + 1];
     const attributes = this._oam[baseOamAddress * 4 + 2];
 
@@ -658,7 +597,7 @@ export class Ppu {
     let lowTileByte = this._ppuMemory.get(address);
     let highTileByte = this._ppuMemory.get(address + 8);
 
-    const dataBits = new Bits(BitWidth.Int32);
+    let data = 0;
 
     for (let i = 0; i < 8; i++) {
       const attributePalette = attributes & 3;
@@ -679,13 +618,11 @@ export class Ppu {
         highTileByte <<= 1;
       }
 
-      dataBits.push((attributePalette & 2) >> 1);
-      dataBits.push(attributePalette & 1);
-      dataBits.push(p2);
-      dataBits.push(p1);
+      data <<= 4;
+      data |= ((attributePalette << 2) | (p2 << 1) | p1);
     }
 
-    return dataBits;
+    return data;
   }
 
   private _evaluateSprites() {
@@ -704,7 +641,7 @@ export class Ppu {
 
       if (spriteCount < 8) {
         this._onScreenSprites[spriteCount] = {
-          DataQueue: this._fetchSpritePattern(i, row),
+          Data: this._fetchSpritePattern(i, row),
           BaseOamAddress: i,
           PositionX: x,
           Priority: (attribute >> 5) & 1
