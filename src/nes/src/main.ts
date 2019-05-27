@@ -30,7 +30,7 @@ for (let i = 0; i < HEIGHT; i++) {
 
 let currentCycles = 0;
 function drawFrame(frameBuffer: string[][]) {
-  const start = performance.now();
+  // const start = performance.now();
   for (let i = 0; i < HEIGHT; i++) {
     for (let j = 0; j < WIDTH; j++) {
       if (!frameBuffer[i][j]) {
@@ -55,7 +55,7 @@ function drawFrame(frameBuffer: string[][]) {
     backContext.closePath();
   }
 
-  console.log(`RENDER TIME: ${performance.now() - start}`);
+  // console.log(`RENDER TIME: ${performance.now() - start}`);
 }
 
 function renderFrame() {
