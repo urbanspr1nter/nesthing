@@ -1,5 +1,5 @@
-const ColorPalette = require("./colors.json");
-export const NesPpuPalette: ColorComponent[] = ColorPalette;
+import { buildRgbString } from "./utils";
+import { PpuPalette } from "./colors";
 
 const TOTAL_SCANLINES = 240;
 const TOTAL_DOTS = 256;
@@ -12,17 +12,17 @@ export interface ColorComponent {
 }
 
 export class FrameBuffer {
-  private _frameBuffer: ColorComponent[][];
+  private _frameBuffer: string[][];
 
   constructor() {
     this._initializeFrameBuffer();
   }
 
-  public buffer(): ColorComponent[][] {
+  public buffer(): string[][] {
     return this._frameBuffer;
   }
 
-  public draw(row: number, column: number, color: ColorComponent): void {
+  public draw(row: number, column: number, color: string): void {
     if (!this._frameBuffer[row]) {
       return;
     }
@@ -45,7 +45,7 @@ export class FrameBuffer {
     for (let i = 0; i < TOTAL_SCANLINES; i++) {
       this._frameBuffer.push([]);
       for (let j = 0; j < TOTAL_DOTS; j++) {
-        this._frameBuffer[i].push(DEFAULT_COLOR);
+        this._frameBuffer[i].push("#000088");
       }
     }
   }

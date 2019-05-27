@@ -1,5 +1,6 @@
 import { PpuMemory } from "./ppumemory";
-import { FrameBuffer, NesPpuPalette, ColorComponent } from "./framebuffer";
+import { FrameBuffer } from "./framebuffer";
+import { PpuPalette } from "./colors";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 
@@ -147,7 +148,7 @@ export class Ppu {
   /**
    * Gets the framebuffer
    */
-  public frameBuffer(): ColorComponent[][] {
+  public frameBuffer(): string[][] {
     return this._frameBuffer.buffer();
   }
 
@@ -502,7 +503,7 @@ export class Ppu {
       basePaletteAddress + (paletteOffset - 1)
     );
 
-    this._frameBuffer.draw(y, x, NesPpuPalette[colorByte]);
+    this._frameBuffer.draw(y, x, PpuPalette[colorByte]);
   }
 
   private _getSpritePixel(): number[] {
@@ -517,8 +518,7 @@ export class Ppu {
       }
       offset = 7 - offset;
 
-      const color =
-        (this._onScreenSprites[i].Data >> (offset * 4)) & 0x0f;
+      const color = (this._onScreenSprites[i].Data >> (offset * 4)) & 0x0f;
       if (color % 4 === 0) {
         continue;
       }
@@ -619,7 +619,7 @@ export class Ppu {
       }
 
       data <<= 4;
-      data |= ((attributePalette << 2) | (p2 << 1) | p1);
+      data |= (attributePalette << 2) | (p2 << 1) | p1;
     }
 
     return data;

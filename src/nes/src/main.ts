@@ -1,5 +1,4 @@
 import { Nes } from "./nes";
-import { buildRgbString } from "./utils";
 
 const WIDTH = 256;
 const HEIGHT = 240;
@@ -13,20 +12,16 @@ const backContext = backCanvas.getContext("2d");
 const canvas = document.getElementById("main") as HTMLCanvasElement;
 const context = canvas.getContext("2d");
 
-context.fillStyle = "rgb(0, 0, 192)";
-context.fillRect(0, 0, WIDTH, HEIGHT);
-
 const nes = new Nes();
 
 let currentCycles = 0;
-function drawFrame(frameBuffer) {
+function drawFrame(frameBuffer: string[][]) {
   for (let i = 0; i < HEIGHT; i++) {
     for (let j = 0; j < WIDTH; j++) {
       if (!frameBuffer[i][j]) {
         break;
       }
-      backContext.strokeStyle = buildRgbString(frameBuffer[i][j]);
-
+      backContext.strokeStyle = frameBuffer[i][j];
       backContext.beginPath();
       backContext.moveTo(j, i);
       backContext.lineTo(j + 1, i + 1);
@@ -37,11 +32,13 @@ function drawFrame(frameBuffer) {
 }
 
 function renderFrame() {
-  currentCycles += nes.run(1000);
+  currentCycles += nes.run(7459);
   if (currentCycles >= 29833) {
+    const start = performance.now();
     currentCycles = 0;
     drawFrame(nes.frameBuffer());
-    context.drawImage(backCanvas, 0, 0, WIDTH, HEIGHT)
+    context.drawImage(backCanvas, 0, 0)
+    console.log(`RENDER TIME: ${performance.now() - start}`);
   }
 }
 

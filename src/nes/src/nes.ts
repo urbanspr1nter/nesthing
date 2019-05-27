@@ -1,6 +1,5 @@
 import { Memory } from "./memory";
 import { Ppu } from "./ppu";
-import { ColorComponent } from "./framebuffer";
 import { Cpu } from "./cpu";
 import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
@@ -44,7 +43,7 @@ export class Nes {
     this._cycles = 0;
   }
 
-  public frameBuffer(): ColorComponent[][] {
+  public frameBuffer(): string[][] {
     return this._ppu.frameBuffer();
   }
 
