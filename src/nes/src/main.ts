@@ -2,6 +2,7 @@ import { Nes } from "./nes";
 
 const WIDTH = 256;
 const HEIGHT = 240;
+const TOTAL_PIXELS = 256 * 240;
 
 const backCanvas = document.createElement("canvas");
 const backContext = backCanvas.getContext("2d", {
@@ -19,8 +20,6 @@ const prevBuffer = {
   buffer: [] as string[][]
 };
 
-const pixelCache: { [id: string]: HTMLCanvasElement } = {};
-
 for (let i = 0; i < HEIGHT; i++) {
   prevBuffer.buffer[i] = [];
   for (let j = 0; j < WIDTH; j++) {
@@ -30,7 +29,7 @@ for (let i = 0; i < HEIGHT; i++) {
 
 let currentCycles = 0;
 function drawFrame(frameBuffer: string[][]) {
-  // const start = performance.now();
+  //const start = performance.now();
   for (let i = 0; i < HEIGHT; i++) {
     for (let j = 0; j < WIDTH; j++) {
       if (!frameBuffer[i][j]) {
@@ -44,22 +43,19 @@ function drawFrame(frameBuffer: string[][]) {
         continue;
       }
 
-      prevBuffer.buffer[i][j] = frameBuffer[i][j];
-
-      backContext.strokeStyle = frameBuffer[i][j];
-      backContext.beginPath();
-      backContext.moveTo(j, i);
-      backContext.lineTo(j + 1, i);
-      backContext.stroke();
+      backContext.fillStyle = frameBuffer[i][j];
+      backContext.fillRect(j, i, 1, 1);
     }
-    backContext.closePath();
   }
 
-  // console.log(`RENDER TIME: ${performance.now() - start}`);
+  //console.log(`RENDER TIME: ${performance.now() - start}`);
 }
 
 function renderFrame() {
+  //const start = performance.now();
   currentCycles += nes.run(1865);
+  //console.log(`EXEC TIME: ${performance.now() - start}`);
+
   if (currentCycles >= 29833) {
     currentCycles = 0;
     requestAnimationFrame(() => {
