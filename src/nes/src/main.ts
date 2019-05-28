@@ -4,15 +4,9 @@ const WIDTH = 256;
 const HEIGHT = 240;
 const TOTAL_PIXELS = 256 * 240;
 
-const backCanvas = document.createElement("canvas");
-const backContext = backCanvas.getContext("2d", {
-  alpha: false
-});
-backCanvas.width = WIDTH;
-backCanvas.height = HEIGHT;
-
 const canvas = document.getElementById("main") as HTMLCanvasElement;
-const context = canvas.getContext("2d");
+const context = canvas.getContext("2d", { alpha : false });
+context.imageSmoothingEnabled = false;
 
 const nes = new Nes();
 
@@ -29,7 +23,7 @@ for (let i = 0; i < HEIGHT; i++) {
 
 let currentCycles = 0;
 function drawFrame(frameBuffer: string[][]) {
-  //const start = performance.now();
+  const start = performance.now();
   for (let i = 0; i < HEIGHT; i++) {
     for (let j = 0; j < WIDTH; j++) {
       if (!frameBuffer[i][j]) {
@@ -43,12 +37,12 @@ function drawFrame(frameBuffer: string[][]) {
         continue;
       }
 
-      backContext.fillStyle = frameBuffer[i][j];
-      backContext.fillRect(j, i, 1, 1);
+      context.fillStyle = frameBuffer[i][j];
+      context.fillRect(j, i, 1, 1);
     }
   }
 
-  //console.log(`RENDER TIME: ${performance.now() - start}`);
+  console.log(`RENDER TIME: ${performance.now() - start}`);
 }
 
 function renderFrame() {
@@ -60,7 +54,7 @@ function renderFrame() {
     currentCycles = 0;
     requestAnimationFrame(() => {
       drawFrame(nes.frameBuffer());
-      context.putImageData(backContext.getImageData(0, 0, 256, 240), 0, 0);
+      //context.putImageData(backContext.getImageData(0, 0, 256, 240), 0, 0);
     });
   }
 }
