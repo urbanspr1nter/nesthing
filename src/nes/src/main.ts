@@ -36,7 +36,8 @@ function drawFrame(frameBuffer: string[][]) {
       ) {
         continue;
       }
-
+      
+      prevBuffer.buffer[i][j] = frameBuffer[i][j];
       context.fillStyle = frameBuffer[i][j];
       context.fillRect(j, i, 1, 1);
     }
