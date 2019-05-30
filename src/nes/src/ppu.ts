@@ -416,7 +416,7 @@ export class Ppu {
       this._tileHighByte <<= 1;
 
       tileData <<= 4;
-      tileData |= attributeByte | highBit | lowBit;
+      tileData |= (attributeByte | highBit | lowBit);
     }
 
     this._backgroundTile =
@@ -430,16 +430,12 @@ export class Ppu {
       return backgroundPixel;
     }
 
-    backgroundPixel = Number(
-      BigInt.asUintN(
-        32,
-        BigInt.asUintN(64, BigInt(this._backgroundTile)) >>
-          BigInt.asUintN(32, BigInt("32"))
-      )
+    let shifted = Number(
+      BigInt.asUintN(64, BigInt(this._backgroundTile)) >>
+        BigInt.asUintN(64, BigInt(60))
     );
-    backgroundPixel >>= 28;
 
-    return backgroundPixel & 0x0f;
+    return shifted;
   }
 
   /**

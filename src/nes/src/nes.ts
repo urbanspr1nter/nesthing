@@ -111,7 +111,12 @@ export class Nes {
      * all running at the same time. Each piece of hardware will run for the necessary amount of
      * cycles.
      */
+
+     // let cpuTime = 0;
+     // let ppuTime = 0;
     while(this._cycles <= cyclesToRun) {
+      // let start = performance.now();
+
       const beginCpuCycles = this._cpu.getCurrentCycles();
 
       if (this._cpu.stallCycles() > 0) {
@@ -128,18 +133,25 @@ export class Nes {
       }
   
       const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
-  
+      
+      // cpuTime += (performance.now() - start);
+      // start = performance.now();
+
       let ppuCyclesToRun = cpuCyclesRan * 3;
       while (ppuCyclesToRun > 0) {
         this._ppu.run();
         ppuCyclesToRun--;
       }
+
+      // ppuTime += (performance.now() - start);
   
       this._cycles += cpuCyclesRan;
     }
 
     const cyclesRan = this._cycles;
     this._cycles = 0;
+
+    // console.log(`CPU TIME: ${cpuTime}, PPU TIME: ${ppuTime}, TOTAL TIME: ${cpuTime + ppuTime}`);
 
     return cyclesRan;
   }

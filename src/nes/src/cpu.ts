@@ -259,7 +259,6 @@ export class Cpu {
     if (adc) {
       return first + second + carry > 0xff;
     } else {
-      // return (first + second + carry) >= 0x0 && (first + second) <= 0xFF;
       return !(first < second);
     }
   }
