@@ -416,7 +416,7 @@ export class Ppu {
       this._tileHighByte <<= 1;
 
       tileData <<= 4;
-      tileData |= (attributeByte | highBit | lowBit);
+      tileData |= attributeByte | highBit | lowBit;
     }
 
     this._backgroundTile =
@@ -596,7 +596,7 @@ export class Ppu {
       let p2;
       if ((attributes & 0x40) === 0x40) {
         p1 = lowTileByte & 1;
-        p2 = highTileByte & 1;
+        p2 = (highTileByte & 1) << 1;
 
         lowTileByte >>= 1;
         highTileByte >>= 1;
@@ -609,7 +609,7 @@ export class Ppu {
       }
 
       data <<= 4;
-      data |= (attributePalette | p2 | p1);
+      data |= attributePalette | p2 | p1;
     }
 
     return data;
@@ -713,82 +713,84 @@ export class Ppu {
     }
   }
 
+  private _processTick(): void {
+    const isRenderingEnabled =
+      this._regPPUMASK_showBackground || this._regPPUMASK_showSprites;
+    const isPrerenderLine = this._scanlines === 261;
+    const isVisibleLine = this._scanlines < 240;
+    const isRenderLine = isPrerenderLine || isVisibleLine;
+    const isPrefetchCycle = this._cycles >= 321 && this._cycles <= 336;
+    const isVisibleCycle = this._cycles >= 1 && this._cycles <= 256;
+    const isFetchCycle = isPrefetchCycle || isVisibleCycle;
+
+    if (isRenderingEnabled) {
+      if (isVisibleLine && isVisibleCycle) {
+        this._renderPixel();
+      }
+      if (isRenderLine && isFetchCycle) {
+        this._backgroundTile = BigInt.asUintN(
+          64,
+          this._backgroundTile << BigInt(4)
+        );
+        switch (this._cycles % 8) {
+          case 1:
+            this._fetchNametableByte();
+            break;
+          case 3:
+            this._fetchAttributeByte();
+            break;
+          case 5:
+            this._fetchTileLowByte();
+            break;
+          case 7:
+            this._fetchTileHighByte();
+            break;
+          case 0:
+            this._storeBackgroundTileData();
+            break;
+        }
+      }
+      if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
+        this._copyY();
+      }
+      if (isRenderLine) {
+        if (isFetchCycle && this._cycles % 8 === 0) {
+          this._incrementX();
+        }
+        if (this._cycles === 256) {
+          this._incrementY();
+        }
+        if (this._cycles === 257) {
+          this._copyX();
+        }
+      }
+    }
+
+    if (isRenderingEnabled) {
+      if (this._cycles === 257) {
+        if (isVisibleLine) {
+          this._evaluateSprites();
+        } else {
+          this._spriteCount = 0;
+        }
+      }
+    }
+
+    if (this._scanlines === 241 && this._cycles === 1) {
+      this._setVblank();
+      this._requestNmiIfNeeded();
+    }
+    if (isPrerenderLine && this._cycles === 1) {
+      this._clearVblank();
+    }
+  }
+
   public run(ticks: number): void {
     let currentTicks = 0;
 
-    while(currentTicks < ticks) {
+    while (currentTicks < ticks) {
       this._tick();
-
-      const isRenderingEnabled =
-        this._regPPUMASK_showBackground || this._regPPUMASK_showSprites;
-      const isPrerenderLine = this._scanlines === 261;
-      const isVisibleLine = this._scanlines < 240;
-      const isRenderLine = isPrerenderLine || isVisibleLine;
-      const isPrefetchCycle = this._cycles >= 321 && this._cycles <= 336;
-      const isVisibleCycle = this._cycles >= 1 && this._cycles <= 256;
-      const isFetchCycle = isPrefetchCycle || isVisibleCycle;
-  
-      if (isRenderingEnabled) {
-        if (isVisibleLine && isVisibleCycle) {
-          this._renderPixel();
-        }
-        if (isRenderLine && isFetchCycle) {
-          this._backgroundTile = BigInt.asUintN(
-            64,
-            this._backgroundTile << BigInt(4)
-          );
-          switch (this._cycles % 8) {
-            case 1:
-              this._fetchNametableByte();
-              break;
-            case 3:
-              this._fetchAttributeByte();
-              break;
-            case 5:
-              this._fetchTileLowByte();
-              break;
-            case 7:
-              this._fetchTileHighByte();
-              break;
-            case 0:
-              this._storeBackgroundTileData();
-              break;
-          }
-        }
-        if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
-          this._copyY();
-        }
-        if (isRenderLine) {
-          if (isFetchCycle && this._cycles % 8 === 0) {
-            this._incrementX();
-          }
-          if (this._cycles === 256) {
-            this._incrementY();
-          }
-          if (this._cycles === 257) {
-            this._copyX();
-          }
-        }
-      }
-  
-      if (isRenderingEnabled) {
-        if (this._cycles === 257) {
-          if (isVisibleLine) {
-            this._evaluateSprites();
-          } else {
-            this._spriteCount = 0;
-          }
-        }
-      }
-  
-      if (this._scanlines === 241 && this._cycles === 1) {
-        this._setVblank();
-        this._requestNmiIfNeeded();
-      }
-      if (isPrerenderLine && this._cycles === 1) {
-        this._clearVblank();
-      }
-
+      this._processTick();
       currentTicks++;
     }
   }
