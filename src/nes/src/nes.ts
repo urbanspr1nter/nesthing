@@ -45,38 +45,81 @@ export class Nes {
 
     this._cycles = 0;
 
-    document.addEventListener('keypress', (e) => {
-      const map: { [id: number]: boolean } = {};
-      if(e.key === 'Enter') {
+    document.addEventListener("keydown", (e) => {
+      const map: { [id: number]: boolean } = {
+        0: false,
+        1: false,
+        2: false,
+        3: false,
+        4: false,
+        5: false,
+        6: false,
+        7: false
+    };
+
+      if(e.key === 'h') {
         map[Buttons.Start] = true;
       } 
-
-      else if(e.key === 'g') {
+      if(e.key === 'g') {
         map[Buttons.Select] = true;
       }
-
-      else if(e.key === 'j') {
+      if(e.key === 'j') {
         map[Buttons.A] = true;
       } 
-
-      else if(e.key === 'k') {
+      if(e.key === 'k') {
         map[Buttons.B] = true;
       } 
-
-      else if(e.key === 's') {
+      if(e.key === 's') {
         map[Buttons.Down] = true;
       } 
-
-      else if(e.key === 'w') {
+      if(e.key === 'w') {
         map[Buttons.Up] = true;
       }
-
-      else if(e.key === 'a') {
+      if(e.key === 'a') {
         map[Buttons.Left] = true;
       }
-
-      else if(e.key === 'd') {
+      if(e.key === 'd') {
         map[Buttons.Right] = true;
+      }
+
+      this._controller.setButtons(map);
+    });
+
+    document.addEventListener("keyup", (e) => {
+      const map: { [id: number]: boolean } = {
+        0: false,
+        1: false,
+        2: false,
+        3: false,
+        4: false,
+        5: false,
+        6: false,
+        7: false
+    };
+
+      if(e.key === 'h') {
+        map[Buttons.Start] = false;
+      } 
+      if(e.key === 'g') {
+        map[Buttons.Select] = false;
+      }
+      if(e.key === 'j') {
+        map[Buttons.A] = false;
+      } 
+      if(e.key === 'k') {
+        map[Buttons.B] = false;
+      } 
+      if(e.key === 's') {
+        map[Buttons.Down] = false;
+      } 
+      if(e.key === 'w') {
+        map[Buttons.Up] = false;
+      }
+      if(e.key === 'a') {
+        map[Buttons.Left] = false;
+      }
+      if(e.key === 'd') {
+        map[Buttons.Right] = false;
       }
 
       this._controller.setButtons(map);

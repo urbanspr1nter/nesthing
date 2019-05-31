@@ -15,13 +15,7 @@ export class Controller {
     private _index: number;
 
     constructor() {
-        this._buttonMap = {};
-        this._strobe = 0;
-        this._index = 0;
-    }
-
-    public setButtons = (map: { [id: number]: boolean }) => {
-       const defaultMap = {
+        this._buttonMap = {
             0: false,
             1: false,
             2: false,
@@ -31,7 +25,13 @@ export class Controller {
             6: false,
             7: false
         };
-        this._buttonMap = {...defaultMap, ...map };
+
+        this._strobe = 0;
+        this._index = 0;
+    }
+
+    public setButtons = (map: { [id: number]: boolean }) => {
+        this._buttonMap = map;
     }
 
     public write = (value: number) => {

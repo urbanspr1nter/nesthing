@@ -43,9 +43,9 @@ function drawFrame(frameBuffer: string[][]) {
 }
 
 function renderFrame() {
-  // const start = performance.now();
+  //const start = performance.now();
   currentCycles += nes.run(1865);
-  // console.log(`EXEC TIME: ${performance.now() - start}`);
+  //console.log(`EXEC TIME: ${performance.now() - start}`);
 
   if (currentCycles >= 29833) {
     currentCycles = 0;
