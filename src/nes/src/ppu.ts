@@ -420,8 +420,7 @@ export class Ppu {
     }
 
     this._backgroundTile =
-      BigInt.asUintN(64, this._backgroundTile) |
-      BigInt.asUintN(32, BigInt(tileData));
+      this._backgroundTile | BigInt.asUintN(32, BigInt(tileData));
   }
 
   private _getBackgroundPixel() {
@@ -430,12 +429,7 @@ export class Ppu {
       return backgroundPixel;
     }
 
-    let shifted = Number(
-      BigInt.asUintN(64, BigInt(this._backgroundTile)) >>
-        BigInt.asUintN(64, BigInt(60))
-    );
-
-    return shifted;
+    return Number(this._backgroundTile >> BigInt(60));
   }
 
   /**
@@ -595,9 +589,8 @@ export class Ppu {
 
     let data = 0;
 
+    const attributePalette = (attributes & 3) << 2;
     for (let i = 0; i < 8; i++) {
-      const attributePalette = attributes & 3;
-
       let p1;
       let p2;
       if ((attributes & 0x40) === 0x40) {
@@ -608,14 +601,14 @@ export class Ppu {
         highTileByte >>= 1;
       } else {
         p1 = (lowTileByte & 0x80) >> 7;
-        p2 = (highTileByte & 0x80) >> 7;
+        p2 = (highTileByte & 0x80) >> 6;
 
         lowTileByte <<= 1;
         highTileByte <<= 1;
       }
 
       data <<= 4;
-      data |= (attributePalette << 2) | (p2 << 1) | p1;
+      data |= (attributePalette | p2 | p1);
     }
 
     return data;
@@ -736,9 +729,10 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        this._backgroundTile =
-          BigInt.asUintN(64, this._backgroundTile) <<
-          BigInt.asUintN(64, BigInt("4"));
+        this._backgroundTile = BigInt.asUintN(
+          64,
+          this._backgroundTile << BigInt(4)
+        );
         switch (this._cycles % 8) {
           case 1:
             this._fetchNametableByte();
