@@ -3,6 +3,7 @@ import { Ppu } from "./ppu";
 import { Cpu } from "./cpu";
 import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
+import { Controller, Buttons } from "./controller";
 
 const rom = require("./mario.json");
 
@@ -29,11 +30,13 @@ export class Nes {
   private _cpu: Cpu;
   private _nmiTriggered: boolean;
   private _cycles: number;
+  private _controller: Controller;
 
   constructor() {
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
-    this._memory = new Memory(this._ppu);
+    this._controller = new Controller();
+    this._memory = new Memory(this._ppu, this._controller);
     this._cpu = new Cpu(this._memory);
 
     this._ppu.setCpuMemory(this._memory);
@@ -41,6 +44,43 @@ export class Nes {
     this._initialize();
 
     this._cycles = 0;
+
+    document.addEventListener('keypress', (e) => {
+      const map: { [id: number]: boolean } = {};
+      if(e.key === 'Enter') {
+        map[Buttons.Start] = true;
+      } 
+
+      else if(e.key === 'g') {
+        map[Buttons.Select] = true;
+      }
+
+      else if(e.key === 'j') {
+        map[Buttons.A] = true;
+      } 
+
+      else if(e.key === 'k') {
+        map[Buttons.B] = true;
+      } 
+
+      else if(e.key === 's') {
+        map[Buttons.Down] = true;
+      } 
+
+      else if(e.key === 'w') {
+        map[Buttons.Up] = true;
+      }
+
+      else if(e.key === 'a') {
+        map[Buttons.Left] = true;
+      }
+
+      else if(e.key === 'd') {
+        map[Buttons.Right] = true;
+      }
+
+      this._controller.setButtons(map);
+    });
   }
 
   public frameBuffer(): string[][] {

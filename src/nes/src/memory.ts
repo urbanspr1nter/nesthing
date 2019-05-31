@@ -1,4 +1,5 @@
 import { Ppu } from "./ppu";
+import { Controller } from "./controller";
 
 /**
  * CPU MEMORY MAP
@@ -17,10 +18,12 @@ export class Memory {
   private _memory: number[];
 
   private _ppu: Ppu;
+  private _controller: Controller;
 
-  constructor(ppu: Ppu) {
+  constructor(ppu: Ppu, controller: Controller) {
     this._memory = [];
     this._ppu = ppu;
+    this._controller = controller;
 
     // Blank out the memory
     for (let i = 0; i <= 0xffff; i++) {
@@ -61,6 +64,11 @@ export class Memory {
       }
     } else if (address === 0x4014) {
       return this._ppu.write$4014(value);
+    } else if(address === 0x4016) {
+      // Write 1 $4016 to signal the controller to poll its input
+      // Write 0 to $4016 to finish the poll
+      // 4016/4017 becomes ready for polling
+      this._controller.write(value);
     } else {
       this._memory[address & 0xffff] = value;
     }
@@ -84,6 +92,11 @@ export class Memory {
       } else {
         return this._memory[decodedAddress];
       }
+    } else if(address === 0x4016) {
+      // Read controller 1
+      return this._controller.read();
+    } else if(address === 0x4017) {
+      // read controller 2
     }
     return this._memory[address & 0xffff] & 0xff;
   };
