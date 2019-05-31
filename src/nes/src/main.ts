@@ -23,7 +23,6 @@ for (let i = 0; i < HEIGHT; i++) {
 
 let currentCycles = 0;
 function drawFrame(frameBuffer: string[][]) {
-  // const start = performance.now();
   for (let i = 0; i < HEIGHT; i++) {
     for (let j = 0; j < WIDTH; j++) {
       if (
@@ -38,8 +37,6 @@ function drawFrame(frameBuffer: string[][]) {
       context.fillRect(j, i, 1, 1);
     }
   }
-
-  // console.log(`RENDER TIME: ${performance.now() - start}`);
 }
 
 function renderFrame() {
@@ -62,4 +59,4 @@ function run() {
   });
 }
 
-setTimeout(run, 1000);
+setTimeout(run, 5000);

@@ -4,8 +4,6 @@ import {
   AddressingModes,
   IrqVectorLocation,
   NmiVectorLocation,
-  OpAddressingMode,
-  OpLabel,
   ResetVectorLocation,
   StatusBitPositions,
   InterruptRequestType

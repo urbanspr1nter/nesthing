@@ -97,7 +97,7 @@ export class Ppu {
     this._w = false;
 
     this._spriteCount = 0;
-    this._backgroundTile = BigInt.asUintN(64, BigInt("0"));
+    this._backgroundTile = BigInt.asUintN(64, BigInt(0));
     this._initializeOam();
     this._initializeSprites();
   }
@@ -482,7 +482,7 @@ export class Ppu {
       }
     }
 
-    const attributeBits = (color & 12) >> 2;
+    const attributeBits = color & 12;
     const basePaletteAddress = this._getBasePaletteAddress(
       attributeBits,
       usingBackgroundPixel
@@ -508,7 +508,7 @@ export class Ppu {
       }
       offset = 7 - offset;
 
-      const color = (this._onScreenSprites[i].Data >> (offset * 4)) & 0x0f;
+      const color = (this._onScreenSprites[i].Data >> (offset << 2)) & 0x0f;
       if (color % 4 === 0) {
         continue;
       }
@@ -558,8 +558,9 @@ export class Ppu {
   }
 
   private _fetchSpritePattern(baseOamAddress: number, row: number): number {
-    let tileByte = this._oam[baseOamAddress * 4 + 1];
-    const attributes = this._oam[baseOamAddress * 4 + 2];
+    const oamIndex = baseOamAddress << 2;
+    let tileByte = this._oam[oamIndex + 1];
+    const attributes = this._oam[oamIndex + 2];
 
     let address = 0;
     if (!this._regPPUCTRL_spriteSizeLarge) {
@@ -568,7 +569,7 @@ export class Ppu {
       }
       const baseTableMultiplier = this
         ._regPPUCTRL_spritePatternTableBaseAddress;
-      address = baseTableMultiplier * 0x1000 + tileByte * 0x10 + row;
+      address = baseTableMultiplier * 0x1000 + (tileByte << 4) + row;
     } else {
       if ((attributes & 0x80) === 0x80) {
         row = 15 - row;
@@ -581,7 +582,7 @@ export class Ppu {
         tileByte++;
         row -= 8;
       }
-      address = baseTableMultiplier * 0x1000 + tileByte * 0x10 + row;
+      address = baseTableMultiplier * 0x1000 + (tileByte << 4) + row;
     }
 
     let lowTileByte = this._ppuMemory.get(address);
@@ -663,16 +664,16 @@ export class Ppu {
 
     let basePaletteAddress = 0x3f00;
     switch (attributeBits) {
-      case 0x0:
+      case 0:
         basePaletteAddress = 0x3f01;
         break;
-      case 0x1:
+      case 4:
         basePaletteAddress = 0x3f05;
         break;
-      case 0x2:
+      case 8:
         basePaletteAddress = 0x3f09;
         break;
-      case 0x3:
+      case 12:
         basePaletteAddress = 0x3f0d;
         break;
     }

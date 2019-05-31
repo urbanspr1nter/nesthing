@@ -25,7 +25,6 @@ export class Controller {
             6: false,
             7: false
         };
-
         this._strobe = 0;
         this._index = 0;
     }

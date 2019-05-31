@@ -1,9 +1,5 @@
-import { buildRgbString } from "./utils";
-import { PpuPalette } from "./colors";
-
 const TOTAL_SCANLINES = 240;
 const TOTAL_DOTS = 256;
-const DEFAULT_COLOR: ColorComponent = { r: 0, g: 0, b: 192 };
 
 export interface ColorComponent {
   r: number;
