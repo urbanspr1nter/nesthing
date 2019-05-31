@@ -221,10 +221,7 @@ export class Nes {
       // start = performance.now();
 
       let ppuCyclesToRun = cpuCyclesRan * 3;
-      while (ppuCyclesToRun > 0) {
-        this._ppu.run();
-        ppuCyclesToRun--;
-      }
+      this._ppu.run(ppuCyclesToRun);
 
       // ppuTime += (performance.now() - start);
   

@@ -713,77 +713,83 @@ export class Ppu {
     }
   }
 
-  public run(): void {
-    this._tick();
+  public run(ticks: number): void {
+    let currentTicks = 0;
 
-    const isRenderingEnabled =
-      this._regPPUMASK_showBackground || this._regPPUMASK_showSprites;
-    const isPrerenderLine = this._scanlines === 261;
-    const isVisibleLine = this._scanlines < 240;
-    const isRenderLine = isPrerenderLine || isVisibleLine;
-    const isPrefetchCycle = this._cycles >= 321 && this._cycles <= 336;
-    const isVisibleCycle = this._cycles >= 1 && this._cycles <= 256;
-    const isFetchCycle = isPrefetchCycle || isVisibleCycle;
+    while(currentTicks < ticks) {
+      this._tick();
 
-    if (isRenderingEnabled) {
-      if (isVisibleLine && isVisibleCycle) {
-        this._renderPixel();
-      }
-      if (isRenderLine && isFetchCycle) {
-        this._backgroundTile = BigInt.asUintN(
-          64,
-          this._backgroundTile << BigInt(4)
-        );
-        switch (this._cycles % 8) {
-          case 1:
-            this._fetchNametableByte();
-            break;
-          case 3:
-            this._fetchAttributeByte();
-            break;
-          case 5:
-            this._fetchTileLowByte();
-            break;
-          case 7:
-            this._fetchTileHighByte();
-            break;
-          case 0:
-            this._storeBackgroundTileData();
-            break;
+      const isRenderingEnabled =
+        this._regPPUMASK_showBackground || this._regPPUMASK_showSprites;
+      const isPrerenderLine = this._scanlines === 261;
+      const isVisibleLine = this._scanlines < 240;
+      const isRenderLine = isPrerenderLine || isVisibleLine;
+      const isPrefetchCycle = this._cycles >= 321 && this._cycles <= 336;
+      const isVisibleCycle = this._cycles >= 1 && this._cycles <= 256;
+      const isFetchCycle = isPrefetchCycle || isVisibleCycle;
+  
+      if (isRenderingEnabled) {
+        if (isVisibleLine && isVisibleCycle) {
+          this._renderPixel();
+        }
+        if (isRenderLine && isFetchCycle) {
+          this._backgroundTile = BigInt.asUintN(
+            64,
+            this._backgroundTile << BigInt(4)
+          );
+          switch (this._cycles % 8) {
+            case 1:
+              this._fetchNametableByte();
+              break;
+            case 3:
+              this._fetchAttributeByte();
+              break;
+            case 5:
+              this._fetchTileLowByte();
+              break;
+            case 7:
+              this._fetchTileHighByte();
+              break;
+            case 0:
+              this._storeBackgroundTileData();
+              break;
+          }
+        }
+        if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
+          this._copyY();
+        }
+        if (isRenderLine) {
+          if (isFetchCycle && this._cycles % 8 === 0) {
+            this._incrementX();
+          }
+          if (this._cycles === 256) {
+            this._incrementY();
+          }
+          if (this._cycles === 257) {
+            this._copyX();
+          }
         }
       }
-      if (isPrerenderLine && this._cycles >= 280 && this._cycles <= 304) {
-        this._copyY();
-      }
-      if (isRenderLine) {
-        if (isFetchCycle && this._cycles % 8 === 0) {
-          this._incrementX();
-        }
-        if (this._cycles === 256) {
-          this._incrementY();
-        }
+  
+      if (isRenderingEnabled) {
         if (this._cycles === 257) {
-          this._copyX();
+          if (isVisibleLine) {
+            this._evaluateSprites();
+          } else {
+            this._spriteCount = 0;
+          }
         }
       }
-    }
-
-    if (isRenderingEnabled) {
-      if (this._cycles === 257) {
-        if (isVisibleLine) {
-          this._evaluateSprites();
-        } else {
-          this._spriteCount = 0;
-        }
+  
+      if (this._scanlines === 241 && this._cycles === 1) {
+        this._setVblank();
+        this._requestNmiIfNeeded();
       }
-    }
+      if (isPrerenderLine && this._cycles === 1) {
+        this._clearVblank();
+      }
 
-    if (this._scanlines === 241 && this._cycles === 1) {
-      this._setVblank();
-      this._requestNmiIfNeeded();
-    }
-    if (isPrerenderLine && this._cycles === 1) {
-      this._clearVblank();
+      currentTicks++;
     }
   }
 }
