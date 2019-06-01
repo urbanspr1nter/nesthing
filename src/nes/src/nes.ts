@@ -44,86 +44,10 @@ export class Nes {
     this._initialize();
 
     this._cycles = 0;
+  }
 
-    document.addEventListener("keydown", (e) => {
-      const map: { [id: number]: boolean } = {
-        0: false,
-        1: false,
-        2: false,
-        3: false,
-        4: false,
-        5: false,
-        6: false,
-        7: false
-    };
-
-      if(e.key === 'h') {
-        map[Buttons.Start] = true;
-      } 
-      if(e.key === 'g') {
-        map[Buttons.Select] = true;
-      }
-      if(e.key === 'j') {
-        map[Buttons.A] = true;
-      } 
-      if(e.key === 'k') {
-        map[Buttons.B] = true;
-      } 
-      if(e.key === 's') {
-        map[Buttons.Down] = true;
-      } 
-      if(e.key === 'w') {
-        map[Buttons.Up] = true;
-      }
-      if(e.key === 'a') {
-        map[Buttons.Left] = true;
-      }
-      if(e.key === 'd') {
-        map[Buttons.Right] = true;
-      }
-
-      this._controller.setButtons(map);
-    });
-
-    document.addEventListener("keyup", (e) => {
-      const map: { [id: number]: boolean } = {
-        0: false,
-        1: false,
-        2: false,
-        3: false,
-        4: false,
-        5: false,
-        6: false,
-        7: false
-    };
-
-      if(e.key === 'h') {
-        map[Buttons.Start] = false;
-      } 
-      if(e.key === 'g') {
-        map[Buttons.Select] = false;
-      }
-      if(e.key === 'j') {
-        map[Buttons.A] = false;
-      } 
-      if(e.key === 'k') {
-        map[Buttons.B] = false;
-      } 
-      if(e.key === 's') {
-        map[Buttons.Down] = false;
-      } 
-      if(e.key === 'w') {
-        map[Buttons.Up] = false;
-      }
-      if(e.key === 'a') {
-        map[Buttons.Left] = false;
-      }
-      if(e.key === 'd') {
-        map[Buttons.Right] = false;
-      }
-
-      this._controller.setButtons(map);
-    });
+  get controller1(): Controller {
+    return this._controller;
   }
 
   public frameBuffer(): string[][] {
