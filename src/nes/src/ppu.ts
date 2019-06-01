@@ -77,6 +77,9 @@ export class Ppu {
   private _oam: number[];
   private _onScreenSprites: SpriteData[];
 
+  private _tileCache: BigInt[][];
+  private _colorCache: number[][];
+
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
 
@@ -100,6 +103,21 @@ export class Ppu {
     this._backgroundTile = BigInt.asUintN(64, BigInt(0));
     this._initializeOam();
     this._initializeSprites();
+
+    this._tileCache = [];
+    for(let i = 0; i < 256; i++) {
+      this._tileCache.push([]);
+      for(let j = 0; j < 240; j++) {
+        this._tileCache[i].push(BigInt(0));
+      }
+    }
+    this._colorCache = [];
+    for(let i = 0; i < 256; i++) {
+      this._colorCache.push([]);
+      for(let j = 0; j < 240; j++) {
+        this._colorCache[i].push(0);
+      }
+    }
   }
 
   private _initializeOam() {
@@ -384,7 +402,7 @@ export class Ppu {
     const patternTableBaseAddress = this
       ._regPPUCTRL_backgroundPatternTableBaseAddress;
     const patternLowAddress =
-      patternTableBaseAddress + 0x10 * this._ntByte + fineY;
+      patternTableBaseAddress + (this._ntByte << 4) + fineY;
     this._tileLowByte = this._ppuMemory.get(patternLowAddress);
   }
 
@@ -393,7 +411,7 @@ export class Ppu {
     const patternTableBaseAddress = this
       ._regPPUCTRL_backgroundPatternTableBaseAddress;
     const patternHighAddress =
-      patternTableBaseAddress + 0x10 * this._ntByte + fineY + 8;
+      patternTableBaseAddress + (this._ntByte << 4) + fineY + 8;
 
     this._tileHighByte = this._ppuMemory.get(patternHighAddress);
   }
@@ -423,13 +441,23 @@ export class Ppu {
       this._backgroundTile | BigInt.asUintN(32, BigInt(tileData));
   }
 
-  private _getBackgroundPixel() {
+  private _getBackgroundPixel(x: number, y: number) {
     let backgroundPixel = 0;
+
     if (!this._regPPUMASK_showBackground) {
       return backgroundPixel;
     }
 
-    return Number(this._backgroundTile >> BigInt(60));
+    const shiftedBackgroundTile = this._backgroundTile >> BigInt(60);
+
+    let pixel = 0;
+    if(shiftedBackgroundTile !== this._tileCache[y][x]) {
+      this._tileCache[y][x] = shiftedBackgroundTile;
+      this._colorCache[y][x] = Number(shiftedBackgroundTile);
+    }
+    pixel = this._colorCache[y][x];
+
+    return pixel;
   }
 
   /**
@@ -443,7 +471,7 @@ export class Ppu {
 
     let usingBackgroundPixel = false;
 
-    let backgroundPixel = this._getBackgroundPixel();
+    let backgroundPixel = this._getBackgroundPixel(x, y);
     let spritePixel = this._getSpritePixel();
 
     if (x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
@@ -620,9 +648,10 @@ export class Ppu {
     let spriteCount = 0;
 
     for (let i = 0; i < 64; i++) {
-      const y = this._oam[i * 4 + 0];
-      const attribute = this._oam[i * 4 + 2];
-      const x = this._oam[i * 4 + 3];
+      const oamBaseIndex = i << 2;
+      const y = this._oam[oamBaseIndex];
+      const attribute = this._oam[oamBaseIndex + 2];
+      const x = this._oam[oamBaseIndex + 3];
 
       const row = this._scanlines - y;
       if (row < 0 || row >= height) {
@@ -650,8 +679,10 @@ export class Ppu {
   }
 
   /**
-   * Given the attribute bits AB, determine the base palette address
+   * Given the attribute bits AB00, determine the base palette address
    * from the background, or sprite.
+   * 
+   * 0000=0, 0100=4, 1000=8, 1100=12
    *
    * @param attributeBits attribute bits
    * @param isBackgroundPixel is this a background pixel?

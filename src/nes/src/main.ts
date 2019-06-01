@@ -39,16 +39,26 @@ function drawFrame(frameBuffer: string[][]) {
   }
 }
 
+let currentFrames = 0;
+let totalTime = 0;
 function renderFrame() {
-  //const start = performance.now();
-  currentCycles += nes.run(7459);
-  //console.log(`EXEC TIME: ${performance.now() - start}`);
+  const start = performance.now();
+  currentCycles += nes.run(29833);
+  console.log(`EXEC TIME: ${performance.now() - start}`);
 
   if (currentCycles >= 29833) {
     currentCycles = 0;
     requestAnimationFrame(() => {
       drawFrame(nes.frameBuffer());
+      currentFrames++;
     });
+  }
+
+  totalTime += performance.now() - start;
+  if(totalTime >= 1000) {
+    document.getElementById("fps").innerHTML = `${currentFrames} fps`;
+    currentFrames = 0;
+    totalTime = 0;
   }
 }
 
@@ -59,4 +69,4 @@ function run() {
   });
 }
 
-setTimeout(run, 5000);
+setTimeout(run, 1000);
