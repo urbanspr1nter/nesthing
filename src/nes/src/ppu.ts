@@ -11,6 +11,11 @@ interface SpriteData {
   BaseOamAddress: number;
 }
 
+interface BackgroundData {
+  DataHigh32: number;
+  DataLow32: number;
+}
+
 const MAX_SPRITES_PER_SCANLINE = 8;
 
 export class Ppu {
@@ -72,13 +77,10 @@ export class Ppu {
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
-  private _backgroundTile: bigint;
+  private _bgTile: BackgroundData;
 
   private _oam: number[];
   private _onScreenSprites: SpriteData[];
-
-  private _tileCache: BigInt[][];
-  private _colorCache: number[][];
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
@@ -100,24 +102,14 @@ export class Ppu {
     this._w = false;
 
     this._spriteCount = 0;
-    this._backgroundTile = BigInt.asUintN(64, BigInt(0));
+
+    this._bgTile = {
+      DataHigh32: 0,
+      DataLow32: 0
+    };
+
     this._initializeOam();
     this._initializeSprites();
-
-    this._tileCache = [];
-    for(let i = 0; i < 256; i++) {
-      this._tileCache.push([]);
-      for(let j = 0; j < 240; j++) {
-        this._tileCache[i].push(BigInt(0));
-      }
-    }
-    this._colorCache = [];
-    for(let i = 0; i < 256; i++) {
-      this._colorCache.push([]);
-      for(let j = 0; j < 240; j++) {
-        this._colorCache[i].push(0);
-      }
-    }
   }
 
   private _initializeOam() {
@@ -437,8 +429,7 @@ export class Ppu {
       tileData |= attributeByte | highBit | lowBit;
     }
 
-    this._backgroundTile =
-      this._backgroundTile | BigInt.asUintN(32, BigInt(tileData));
+    this._bgTile.DataLow32 = tileData;
   }
 
   private _getBackgroundPixel(x: number, y: number) {
@@ -448,14 +439,7 @@ export class Ppu {
       return backgroundPixel;
     }
 
-    const shiftedBackgroundTile = this._backgroundTile >> BigInt(60);
-
-    let pixel = 0;
-    if(shiftedBackgroundTile !== this._tileCache[y][x]) {
-      this._tileCache[y][x] = shiftedBackgroundTile;
-      this._colorCache[y][x] = Number(shiftedBackgroundTile);
-    }
-    pixel = this._colorCache[y][x];
+    const pixel = (this._bgTile.DataHigh32 >> 28) & 0xF;
 
     return pixel;
   }
@@ -681,7 +665,7 @@ export class Ppu {
   /**
    * Given the attribute bits AB00, determine the base palette address
    * from the background, or sprite.
-   * 
+   *
    * 0000=0, 0100=4, 1000=8, 1100=12
    *
    * @param attributeBits attribute bits
@@ -759,10 +743,12 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        this._backgroundTile = BigInt.asUintN(
-          64,
-          this._backgroundTile << BigInt(4)
-        );
+
+        this._bgTile.DataHigh32 <<= 4;
+        this._bgTile.DataHigh32 =
+          this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >> 28) & 0xf);
+        this._bgTile.DataLow32 <<= 4;
+
         switch (this._cycles % 8) {
           case 1:
             this._fetchNametableByte();
