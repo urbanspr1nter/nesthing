@@ -2,10 +2,22 @@ import { Nes } from "./nes";
 import { Buttons } from "./controller";
 
 const FPS = 60;
-
 const TIME_PER_FRAME = Math.ceil(1000 / FPS);
 const LOGICAL_SECOND_INTERVAL = TIME_PER_FRAME * FPS;
 const CPU_CYCLES_PER_FRAME = 29780;
+const WIDTH = 256;
+const HEIGHT = 240;
+
+const canvas = document.getElementById("main") as HTMLCanvasElement;
+const context = canvas.getContext("2d", { alpha: false });
+context.imageSmoothingEnabled = false;
+
+const nes = new Nes();
+
+const prevBuffer = {
+  buffer: [] as string[][]
+};
+clearPixelBuffer();
 
 const keyMap = {
   Start: "Enter",
@@ -17,6 +29,15 @@ const keyMap = {
   Left: "a",
   Right: "d"
 };
+
+function scale(times: number) {
+  canvas.width = times * WIDTH;
+  canvas.height = times * HEIGHT;
+  context.scale(times, times);
+
+  clearPixelBuffer();
+  drawFrame(nes.frameBuffer());
+}
 
 function getDefaultKeySettings(): { [id: number]: boolean } {
   const defaultMap: { [id: number]: boolean } = {
@@ -34,6 +55,20 @@ function getDefaultKeySettings(): { [id: number]: boolean } {
 }
 
 const keyPressed: { [id: number]: boolean } = { ...getDefaultKeySettings() };
+
+document.getElementById("btn-scale-1").addEventListener("click", () => {
+  scale(1);
+});
+document.getElementById("btn-scale-2").addEventListener("click", () => {
+  scale(2);
+});
+document.getElementById("btn-scale-3").addEventListener("click", () => {
+  scale(3);
+});
+document.getElementById("btn-scale-4").addEventListener("click", () => {
+  scale(4);
+});
+
 
 document.addEventListener("keydown", (e: KeyboardEvent) => {
   if (e.key === keyMap.Start) {
@@ -93,25 +128,21 @@ document.addEventListener("keyup", (e: KeyboardEvent) => {
   nes.controller1.setButtons(keyPressed);
 });
 
-const WIDTH = 256;
-const HEIGHT = 240;
 
-const canvas = document.getElementById("main") as HTMLCanvasElement;
-const context = canvas.getContext("2d", { alpha: false });
-context.imageSmoothingEnabled = false;
 
-const nes = new Nes();
-
-const prevBuffer = {
-  buffer: [] as string[][]
-};
-
-for (let i = 0; i < HEIGHT; i++) {
-  prevBuffer.buffer.push([]);
-  for (let j = 0; j < WIDTH; j++) {
-    prevBuffer.buffer[i].push("");
+function clearPixelBuffer() {
+  for (let i = 0; i < HEIGHT; i++) {
+    if(prevBuffer.buffer[i]) {
+      prevBuffer.buffer[i] = [];
+    } else {
+      prevBuffer.buffer.push([]);
+    }
+    for (let j = 0; j < WIDTH; j++) {
+      prevBuffer.buffer[i].push("");
+    }
   }
 }
+
 
 function drawFrame(frameBuffer: string[][]) {
   for (let i = 0; i < HEIGHT; i++) {
