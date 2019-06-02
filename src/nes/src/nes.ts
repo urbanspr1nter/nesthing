@@ -3,7 +3,7 @@ import { Ppu } from "./ppu";
 import { Cpu } from "./cpu";
 import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
-import { Controller, Buttons } from "./controller";
+import { Controller } from "./controller";
 
 const rom = require("./mario.json");
 

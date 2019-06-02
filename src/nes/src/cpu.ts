@@ -67,53 +67,6 @@ export class Cpu {
   private _memRead(address: number): number {
     return this._memory.get(address);
   }
-
-  public getByteLookAhead(addressingMode: AddressingModes) {
-    switch (addressingMode) {
-      case AddressingModes.Immediate:
-      case AddressingModes.DirectPage:
-      case AddressingModes.DirectPageIndexedIndirectX:
-      case AddressingModes.DirectPageIndexedX:
-      case AddressingModes.DirectPageIndexedY:
-      case AddressingModes.DirectPageIndirectIndexedY:
-      case AddressingModes.Relative:
-        let byte = "";
-        let val = this._memRead(this._regPC.get() + 1);
-        if (val < 0x10) {
-          byte = `0${val.toString(16).toUpperCase()}`;
-        } else {
-          byte = `${val.toString(16).toUpperCase()}`;
-        }
-        return `${byte}`;
-      case AddressingModes.Implicit:
-        return ``;
-      case AddressingModes.Absolute:
-      case AddressingModes.AbsoluteIndexedX:
-      case AddressingModes.AbsoluteIndexedY:
-      case AddressingModes.AbsoluteIndirect:
-        let highByte = ``;
-        let lowByte = ``;
-        let highVal = this._memRead(this._regPC.get() + 2);
-        let lowVal = this._memRead(this._regPC.get() + 1);
-
-        if (highVal < 0x10) {
-          highByte = `0${highVal.toString(16).toUpperCase()}`;
-        } else {
-          highByte = `${highVal.toString(16).toUpperCase()}`;
-        }
-
-        if (lowVal < 0x10) {
-          lowByte = `0${lowVal.toString(16).toUpperCase()}`;
-        } else {
-          lowByte = `${lowVal.toString(16).toUpperCase()}`;
-        }
-
-        return `${lowByte} ${highByte}`;
-
-      default:
-        return ``;
-    }
-  }
   
   public powerUp(): void {
     this._regP.set(0x34);

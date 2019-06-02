@@ -17,10 +17,12 @@ export class PpuMemory {
     }
 
     public set = (address: number, value: number): void  => {
-        this._memory[address & MaxMemoryAddress] = value & 0xFF;
+        const decodedAddress = address % 0x4000;
+        this._memory[decodedAddress] = value & 0xFF;
     }
 
     public get = (address: number) => {
-        return this._memory[address & MaxMemoryAddress] & 0xFF;
+        const decodedAddress = address % 0x4000;
+        return this._memory[decodedAddress] & 0xFF;
     }
 }

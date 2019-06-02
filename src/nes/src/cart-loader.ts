@@ -47,7 +47,7 @@ export class CartLoader {
       HasTrainer: false,
       IgnoreMirroring: false
     };
-    
+
     this._romBytes = [];
     romContents.forEach(value => {
       this._romBytes.push(value);
@@ -57,7 +57,17 @@ export class CartLoader {
   }
 
   public loadCartridgeData(cpuMemory: Memory, ppuMemory: PpuMemory) {
-    const romData = this._romBytes.slice(16);
+    let romData;
+    if (
+      this._romBytes[0] === 0x4e &&
+      this._romBytes[1] === 0x45 &&
+      this._romBytes[2] === 0x53
+    ) {
+      // NES in header, so it is a .nes foramt.
+      romData = this._romBytes.slice(16);
+    } else {
+      romData = this._romBytes;
+    }
     let startAddressPrgBank0 = 0x8000;
     for (let address = 0; address < 0x4000; address++) {
       cpuMemory.set(startAddressPrgBank0, romData[address]);

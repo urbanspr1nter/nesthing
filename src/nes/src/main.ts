@@ -69,7 +69,6 @@ document.getElementById("btn-scale-4").addEventListener("click", () => {
   scale(4);
 });
 
-
 document.addEventListener("keydown", (e: KeyboardEvent) => {
   if (e.key === keyMap.Start) {
     keyPressed[Buttons.Start] = true;
@@ -128,11 +127,9 @@ document.addEventListener("keyup", (e: KeyboardEvent) => {
   nes.controller1.setButtons(keyPressed);
 });
 
-
-
 function clearPixelBuffer() {
   for (let i = 0; i < HEIGHT; i++) {
-    if(prevBuffer.buffer[i]) {
+    if (prevBuffer.buffer[i]) {
       prevBuffer.buffer[i] = [];
     } else {
       prevBuffer.buffer.push([]);
@@ -142,7 +139,6 @@ function clearPixelBuffer() {
     }
   }
 }
-
 
 function drawFrame(frameBuffer: string[][]) {
   for (let i = 0; i < HEIGHT; i++) {

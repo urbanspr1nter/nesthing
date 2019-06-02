@@ -260,7 +260,7 @@ export class Ppu {
 
   public write$2005(dataByte: number) {
     if (!this._w) {
-      this._t = (this._t & 0xfffe0) | (dataByte >> 3);
+      this._t = (this._t & 0xffe0) | (dataByte >> 3);
       this._regPPUSCROLL_x = dataByte & 0x07;
       this._w = true;
     } else {
@@ -271,11 +271,11 @@ export class Ppu {
   }
 
   public write$2006(dataByte: number) {
-    if (!this._w) {
+    if(!this._w) {
       this._t = dataByte;
       this._w = true;
     } else {
-      this._v = ((this._t << 8) | dataByte) & 0x3fff;
+      this._v =  (this._t << 8) | dataByte;
       this._w = false;
     }
   }
@@ -426,7 +426,7 @@ export class Ppu {
       this._tileHighByte <<= 1;
 
       tileData <<= 4;
-      tileData |= attributeByte | highBit | lowBit;
+      tileData |= (attributeByte | highBit | lowBit);
     }
 
     this._bgTile.DataLow32 = tileData;
@@ -439,15 +439,16 @@ export class Ppu {
       return backgroundPixel;
     }
 
-    const pixel = (this._bgTile.DataHigh32 >> 28) & 0xF;
+    const pixel = (this._bgTile.DataHigh32 >> ((7 - this._regPPUSCROLL_x) * 4)) & 0xF;
 
     return pixel;
   }
 
   /**
-   * Shift a tile of 4 bits from the shift registers to form the background pixel needed
-   * to render onto the screen. During this, we are processing the lower databytes from the
-   * shift registers.
+   * Shift a tile of 4 bits from the shift registers to form the background pixel 
+   * needed to render onto the screen. 
+   * 
+   * During this, we are processing the lower databytes from the shift registers.
    */
   private _renderPixel() {
     const x = this._cycles - 1;
@@ -728,6 +729,13 @@ export class Ppu {
     }
   }
 
+  private _shiftBackgroundTile4(): void {
+    this._bgTile.DataHigh32 <<= 4;
+    this._bgTile.DataHigh32 =
+      this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >> 28) & 0xf);
+    this._bgTile.DataLow32 <<= 4;
+  }
+
   private _processTick(): void {
     const isRenderingEnabled =
       this._regPPUMASK_showBackground || this._regPPUMASK_showSprites;
@@ -744,10 +752,7 @@ export class Ppu {
       }
       if (isRenderLine && isFetchCycle) {
 
-        this._bgTile.DataHigh32 <<= 4;
-        this._bgTile.DataHigh32 =
-          this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >> 28) & 0xf);
-        this._bgTile.DataLow32 <<= 4;
+        this._shiftBackgroundTile4();
 
         switch (this._cycles % 8) {
           case 1:
@@ -799,6 +804,8 @@ export class Ppu {
     }
     if (isPrerenderLine && this._cycles === 1) {
       this._clearVblank();
+      this._regPPUSTATUS_spriteHit = false;
+      this._regPPUSTATUS_spriteOverflow = false;
     }
   }
 

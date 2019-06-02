@@ -38,13 +38,10 @@ export class Memory {
   public set = (address: number, value: number): void => {
     value = value & 0xff;
     if (address < 0x2000) {
-      this._memory[address & 0x07ff] = value;
-      this._memory[(address | 0x0800) & 0x0fff] = value;
-      this._memory[(address | 0x1000) & 0x17ff] = value;
-      this._memory[(address | 0x1800) & 0x1fff] = value;
+      this._memory[address % 0x0800] = value;
     } else if (address >= 0x2000 && address <= 0x3fff) {
       // PPU registers
-      const decodedAddress = (0x20 << 8) | (address & 0x0007);
+      const decodedAddress = 0x2000 + (address % 8);
       if (decodedAddress === 0x2000) {
         this._ppu.write$2000(value);
       } else if (decodedAddress === 0x2001) {
@@ -59,9 +56,7 @@ export class Memory {
         this._ppu.write$2006(value);
       } else if (decodedAddress === 0x2007) {
         this._ppu.write$2007(value);
-      } else {
-        this._memory[decodedAddress] = value;
-      }
+      } 
     } else if (address === 0x4014) {
       return this._ppu.write$4014(value);
     } else if(address === 0x4016) {
@@ -76,21 +71,17 @@ export class Memory {
 
   public get = (address: number): number => {
     if (address < 0x2000) {
-      return this._memory[address & 0x07ff];
+      return this._memory[address % 0x800];
     } else if (address >= 0x2000 && address <= 0x3fff) {
-      const decodedAddress = (0x20 << 8) | (address & 0x0007);
-      if (decodedAddress === 0x2000) {
-        return this._ppu.read$2000();
-      } else if (decodedAddress === 0x2002) {
+      const decodedAddress = 0x2000 + (address % 8);
+      if (decodedAddress === 0x2002) {
         return this._ppu.read$2002();
       } else if (decodedAddress === 0x2004) {
         return this._ppu.read$2004();
-      } else if (decodedAddress === 0x2006) {
-        // Not available for reading!
       } else if (decodedAddress === 0x2007) {
         return this._ppu.read$2007();
       } else {
-        return this._memory[decodedAddress];
+        return 0;
       }
     } else if(address === 0x4016) {
       // Read controller 1
