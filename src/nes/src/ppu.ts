@@ -1,9 +1,17 @@
+/**
+ * This PPU is heavily based on fogleman's NES PPU written in Go.
+ */
+
 import { PpuMemory } from "./ppumemory";
 import { FrameBuffer } from "./framebuffer";
 import { PpuPalette } from "./colors";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 
+/**
+ * The data structure to encapsulate the various sprite information 
+ * we will need to render.
+ */
 interface SpriteData {
   Data: number;
   PositionX: number;
@@ -11,6 +19,13 @@ interface SpriteData {
   BaseOamAddress: number;
 }
 
+/**
+ * JS gives us no native "pretty" way to handle 64 bit numbers. BigInt 
+ * is also too slow. 
+ * 
+ * So we'll just slam 2 numbers together with a high and low property 
+ * to serve the same purpose.
+ */
 interface BackgroundData {
   DataHigh32: number;
   DataLow32: number;

@@ -143,10 +143,7 @@ function clearPixelBuffer() {
 function drawFrame(frameBuffer: string[][]) {
   for (let i = 0; i < HEIGHT; i++) {
     for (let j = 0; j < WIDTH; j++) {
-      if (
-        prevBuffer.buffer[i][j] &&
-        prevBuffer.buffer[i][j] === frameBuffer[i][j]
-      ) {
+      if (prevBuffer.buffer[i][j] === frameBuffer[i][j]) {
         continue;
       }
 
