@@ -38,7 +38,7 @@ Six (6) different experiments were conducted:
 5. Using `fillRect` in addition to using a cache to only redraw changed pixels on screen.
 6. Using `fillRect`, a cache, and double buffering the rendering of the pixels onto an off-screen canvas before outputting onto the screen.
 
-For the experiment, I have chosen to randomize the pixel colors, but repeat the same exact previous pixel from the previous frame if, and only if the current pixel is a multiple of 4. This is done to show the benefits of using a cache for experiments (2), (3), (5) and (6).
+For the experiment, I have chosen to randomize the pixel colors, but repeat the same exact previous pixel from the previous frame if, and only if the current pixel is a multiple of 3. This is done to show the benefits of using a cache for experiments (2), (3), (5) and (6).
 
 You can run the experiment yourself here within this source repo in [experiments/canvas-rendering](../experiments/canvas-rendering), or online at http://rogerngo.com/demo/experiements/canvas-rendering/index.html.
 
