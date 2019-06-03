@@ -188,7 +188,7 @@ export class Cpu {
         }
       }
     } else {
-      if ((first ^ second) & (first ^ final) & 0x80) {
+      if (((first ^ second) & 0x80) !== 0 && ((first ^ final) & 0x80) !== 0) {
         return true;
       } else {
         return false;
