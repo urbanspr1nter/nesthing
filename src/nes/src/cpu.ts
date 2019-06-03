@@ -67,7 +67,7 @@ export class Cpu {
   private _memRead(address: number): number {
     return this._memory.get(address);
   }
-  
+
   public powerUp(): void {
     this._regP.set(0x34);
 
@@ -96,7 +96,7 @@ export class Cpu {
 
   public interruptReset(): void {
     const currPcLow = this._regPC.get() & 0xff;
-    const currPcHigh = (this._regPC.get() >> 8) & 0xff;
+    const currPcHigh = (this._regPC.get() >>> 8) & 0xff;
 
     this.stackPush(currPcHigh);
     this.stackPush(currPcLow);
@@ -216,7 +216,7 @@ export class Cpu {
 
   public setupNmi() {
     const currPcLow = this._regPC.get() & 0xff;
-    const currPcHigh = (this._regPC.get() >> 8) & 0xff;
+    const currPcHigh = (this._regPC.get() >>> 8) & 0xff;
 
     this.stackPush(currPcHigh);
     this.stackPush(currPcLow);
@@ -810,7 +810,7 @@ export class Cpu {
     this._regPC.add(2);
     switch (opCode) {
       case 0x00:
-        this.stackPush((this._regPC.get() & 0xff00) >> 8);
+        this.stackPush((this._regPC.get() & 0xff00) >>> 8);
         this.stackPush(this._regPC.get() & 0x00ff);
 
         this.setStatusBit(StatusBitPositions.BrkCausedInterrupt);
@@ -1875,7 +1875,7 @@ export class Cpu {
       case 0x20: // Absolute
         let address = this._addressingHelper.atAbsolute(this._regPC);
         this._regPC.add(1);
-        this.stackPush((this._regPC.get() & 0xff00) >> 8);
+        this.stackPush((this._regPC.get() & 0xff00) >>> 8);
         this.stackPush(this._regPC.get() & 0x00ff);
         this._regPC.set(address);
         this._currentCycles += 6;
@@ -2266,8 +2266,8 @@ export class Cpu {
       case 0x4a: // Accumulator
         operand = this._regA.get();
 
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-        result = operand >> 1;
+        carry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) & ~(1 << 7);
         this._regA.set(result);
         this._currentCycles += 2;
         break;
@@ -2275,8 +2275,8 @@ export class Cpu {
         address = this._addressingHelper.atAbsolute(this._regPC);
         operand = this._memRead(address);
 
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-        result = operand >> 1;
+        carry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
         this._currentCycles += 6;
@@ -2285,8 +2285,8 @@ export class Cpu {
         address = this._addressingHelper.atDirectPage(this._regPC);
         operand = this._memRead(address);
 
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-        result = operand >> 1;
+        carry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
         this._currentCycles += 5;
@@ -2298,8 +2298,8 @@ export class Cpu {
         );
         operand = this._memRead(address);
 
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-        result = operand >> 1;
+        carry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
         this._currentCycles += 7;
@@ -2311,8 +2311,8 @@ export class Cpu {
         );
         operand = this._memRead(address);
 
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-        result = operand >> 1;
+        carry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
         this._currentCycles += 6;
@@ -2739,7 +2739,7 @@ export class Cpu {
         operand = this._regA.get();
 
         newCarry = (operand & 0x80) > 0 ? 1 : 0;
-        result = (operand << 1) | oldCarry;
+        result = (operand << 1) | (oldCarry & 1);
         this._regA.set(result);
         this._currentCycles += 2;
         break;
@@ -2748,7 +2748,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         newCarry = (operand & 0x80) > 0 ? 1 : 0;
-        result = (operand << 1) | oldCarry;
+        result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(2);
         this._currentCycles += 6;
@@ -2758,7 +2758,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         newCarry = (operand & 0x80) > 0 ? 1 : 0;
-        result = (operand << 1) | oldCarry;
+        result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(1);
         this._currentCycles += 5;
@@ -2771,7 +2771,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         newCarry = (operand & 0x80) > 0 ? 1 : 0;
-        result = (operand << 1) | oldCarry;
+        result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(2);
         this._currentCycles += 7;
@@ -2784,7 +2784,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         newCarry = (operand & 0x80) > 0 ? 1 : 0;
-        result = (operand << 1) | oldCarry;
+        result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(1);
         this._currentCycles += 6;
@@ -2822,8 +2822,8 @@ export class Cpu {
       case 0x6a: // Accumulator
         operand = this._regA.get();
 
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-        result = (operand >> 1) | (oldCarry << 7);
+        newCarry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) | (oldCarry << 7);
         this._regA.set(result);
         this._currentCycles += 2;
         break;
@@ -2831,8 +2831,8 @@ export class Cpu {
         address = this._addressingHelper.atAbsolute(this._regPC);
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-        result = (operand >> 1) | (oldCarry << 7);
+        newCarry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
         this._currentCycles += 6;
@@ -2841,8 +2841,8 @@ export class Cpu {
         address = this._addressingHelper.atDirectPage(this._regPC);
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-        result = (operand >> 1) | (oldCarry << 7);
+        newCarry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
         this._currentCycles += 5;
@@ -2854,8 +2854,8 @@ export class Cpu {
         );
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-        result = (operand >> 1) | (oldCarry << 7);
+        newCarry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
         this._currentCycles += 7;
@@ -2867,8 +2867,8 @@ export class Cpu {
         );
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-        result = (operand >> 1) | (oldCarry << 7);
+        newCarry = (operand & 1) === 1 ? 1 : 0;
+        result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
         this._currentCycles += 6;
@@ -2913,7 +2913,7 @@ export class Cpu {
 
         newCarry = (operand & 0x0001) > 0 ? 1 : 0;
 
-        operand = (operand >> 1) | (oldCarry << 7);
+        operand = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, operand);
 
         if (newCarry === 1) {
@@ -2935,7 +2935,7 @@ export class Cpu {
         operand = this._memRead(address);
         newCarry = (operand & 0x0001) > 0 ? 1 : 0;
 
-        operand = (operand >> 1) | (oldCarry << 7);
+        operand = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, operand);
 
         if (newCarry === 1) {
@@ -2957,7 +2957,7 @@ export class Cpu {
         operand = this._memRead(address);
         newCarry = (operand & 0x0001) > 0 ? 1 : 0;
 
-        operand = (operand >> 1) | (oldCarry << 7);
+        operand = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, operand);
 
         if (newCarry === 1) {
@@ -2982,7 +2982,7 @@ export class Cpu {
         operand = this._memRead(address);
         newCarry = (operand & 0x0001) > 0 ? 1 : 0;
 
-        operand = (operand >> 1) | (oldCarry << 7);
+        operand = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, operand);
 
         if (newCarry === 1) {
@@ -3007,7 +3007,7 @@ export class Cpu {
         operand = this._memRead(address);
         newCarry = (operand & 0x0001) > 0 ? 1 : 0;
 
-        operand = (operand >> 1) | (oldCarry << 7);
+        operand = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, operand);
 
         if (newCarry === 1) {
@@ -3032,7 +3032,7 @@ export class Cpu {
         operand = this._memRead(address);
         newCarry = (operand & 0x0001) > 0 ? 1 : 0;
 
-        operand = (operand >> 1) | (oldCarry << 7);
+        operand = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, operand);
 
         if (newCarry === 1) {
@@ -3057,7 +3057,7 @@ export class Cpu {
         operand = this._memRead(address);
         newCarry = (operand & 0x0001) > 0 ? 1 : 0;
 
-        operand = (operand >> 1) | (oldCarry << 7);
+        operand = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, operand);
 
         if (newCarry === 1) {
@@ -3531,7 +3531,7 @@ export class Cpu {
         operand = this._memRead(address);
         carry = (operand & 0x0001) === 1 ? 1 : 0;
 
-        operand = operand >> 1;
+        operand = operand >>> 1;
         this._memWrite(address, operand);
 
         this._regA.set(this._regA.get() ^ this._memRead(address));
@@ -3544,7 +3544,7 @@ export class Cpu {
         operand = this._memRead(address);
         carry = (operand & 0x0001) === 1 ? 1 : 0;
 
-        operand = operand >> 1;
+        operand = operand >>> 1;
         this._memWrite(address, operand);
 
         this._regA.set(this._regA.get() ^ this._memRead(address));
@@ -3557,7 +3557,7 @@ export class Cpu {
         operand = this._memRead(address);
         carry = (operand & 0x0001) === 1 ? 1 : 0;
 
-        operand = operand >> 1;
+        operand = operand >>> 1;
         this._memWrite(address, operand);
 
         this._regA.set(this._regA.get() ^ this._memRead(address));
@@ -3573,7 +3573,7 @@ export class Cpu {
         operand = this._memRead(address);
         carry = (operand & 0x0001) === 1 ? 1 : 0;
 
-        operand = operand >> 1;
+        operand = operand >>> 1;
         this._memWrite(address, operand);
 
         this._regA.set(this._regA.get() ^ this._memRead(address));
@@ -3605,7 +3605,7 @@ export class Cpu {
         operand = this._memRead(address);
         carry = (operand & 0x0001) === 1 ? 1 : 0;
 
-        operand = operand >> 1;
+        operand = operand >>> 1;
         this._memWrite(address, operand);
 
         this._regA.set(this._regA.get() ^ this._memRead(address));
@@ -3621,7 +3621,7 @@ export class Cpu {
         operand = this._memRead(address);
         carry = (operand & 0x0001) === 1 ? 1 : 0;
 
-        operand = operand >> 1;
+        operand = operand >>> 1;
         this._memWrite(address, operand);
 
         this._regA.set(this._regA.get() ^ this._memRead(address));

@@ -275,7 +275,7 @@ export class Ppu {
 
   public write$2005(dataByte: number) {
     if (!this._w) {
-      this._t = (this._t & 0xffe0) | (dataByte >> 3);
+      this._t = (this._t & 0xffe0) | (dataByte >>> 3);
       this._regPPUSCROLL_x = dataByte & 0x07;
       this._w = true;
     } else {
@@ -395,17 +395,17 @@ export class Ppu {
     const attributeAddress =
       0x23c0 |
       (this._v & 0x0c00) |
-      ((this._v >> 4) & 0x38) |
-      ((this._v >> 2) & 0x07);
+      ((this._v >>> 4) & 0x38) |
+      ((this._v >>> 2) & 0x07);
 
     const shift = ((this._v >> 4) & 4) | (this._v & 2);
 
     this._attributeByte =
-      ((this._ppuMemory.get(attributeAddress) >> shift) & 3) << 2;
+      ((this._ppuMemory.get(attributeAddress) >>> shift) & 3) << 2;
   }
 
   private _fetchTileLowByte(): void {
-    const fineY = (this._v >> 12) & 7;
+    const fineY = (this._v >>> 12) & 7;
     const patternTableBaseAddress = this
       ._regPPUCTRL_backgroundPatternTableBaseAddress;
     const patternLowAddress =
@@ -414,7 +414,7 @@ export class Ppu {
   }
 
   private _fetchTileHighByte(): void {
-    const fineY = (this._v >> 12) & 7;
+    const fineY = (this._v >>> 12) & 7;
     const patternTableBaseAddress = this
       ._regPPUCTRL_backgroundPatternTableBaseAddress;
     const patternHighAddress =
@@ -434,8 +434,8 @@ export class Ppu {
 
     let tileData: number = 0;
     for (let i = 0; i < 8; i++) {
-      const lowBit = (this._tileLowByte & 0x80) >> 7;
-      const highBit = (this._tileHighByte & 0x80) >> 6;
+      const lowBit = (this._tileLowByte & 0x80) >>> 7;
+      const highBit = (this._tileHighByte & 0x80) >>> 6;
 
       this._tileLowByte <<= 1;
       this._tileHighByte <<= 1;
@@ -454,7 +454,7 @@ export class Ppu {
       return backgroundPixel;
     }
 
-    const pixel = (this._bgTile.DataHigh32 >> ((7 - this._regPPUSCROLL_x) * 4)) & 0xF;
+    const pixel = (this._bgTile.DataHigh32 >>> ((7 - this._regPPUSCROLL_x) * 4)) & 0xF;
 
     return pixel;
   }
@@ -536,7 +536,7 @@ export class Ppu {
       }
       offset = 7 - offset;
 
-      const color = (this._onScreenSprites[i].Data >> (offset << 2)) & 0x0f;
+      const color = (this._onScreenSprites[i].Data >>> (offset << 2)) & 0x0f;
       if (color % 4 === 0) {
         continue;
       }
@@ -562,7 +562,7 @@ export class Ppu {
     } else {
       this._v = this._v & 0x8fff;
 
-      let y = (this._v & 0x3e0) >> 5;
+      let y = (this._v & 0x3e0) >>> 5;
       if (y === 29) {
         y = 0;
 
@@ -626,11 +626,11 @@ export class Ppu {
         p1 = lowTileByte & 1;
         p2 = (highTileByte & 1) << 1;
 
-        lowTileByte >>= 1;
-        highTileByte >>= 1;
+        lowTileByte >>>= 1;
+        highTileByte >>>= 1;
       } else {
-        p1 = (lowTileByte & 0x80) >> 7;
-        p2 = (highTileByte & 0x80) >> 6;
+        p1 = (lowTileByte & 0x80) >>> 7;
+        p2 = (highTileByte & 0x80) >>> 6;
 
         lowTileByte <<= 1;
         highTileByte <<= 1;
@@ -663,7 +663,7 @@ export class Ppu {
           Data: this._fetchSpritePattern(i, row),
           BaseOamAddress: i,
           PositionX: x,
-          Priority: (attribute >> 5) & 1
+          Priority: (attribute >>> 5) & 1
         };
       }
 
@@ -747,7 +747,7 @@ export class Ppu {
   private _shiftBackgroundTile4(): void {
     this._bgTile.DataHigh32 <<= 4;
     this._bgTile.DataHigh32 =
-      this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >> 28) & 0xf);
+      this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf);
     this._bgTile.DataLow32 <<= 4;
   }
 
