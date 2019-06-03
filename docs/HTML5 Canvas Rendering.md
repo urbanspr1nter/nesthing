@@ -40,7 +40,7 @@ Six (6) different experiments were conducted:
 
 For the experiment, I have chosen to randomize the pixel colors, but repeat the same exact previous pixel from the previous frame if, and only if the current pixel is a multiple of 3. This is done to show the benefits of using a cache for experiments (2), (3), (5) and (6).
 
-You can run the experiment yourself here within this source repo in [experiments/canvas-rendering](../experiments/canvas-rendering), or online at http://rogerngo.com/demo/experiements/canvas-rendering/index.html.
+You can run the experiment yourself here within this source repo in [experiments/canvas-rendering](../experiments/canvas-rendering), or online at http://rogerngo.com/demo/experiments/canvas-rendering/index.html.
 
 
 #### Drawing a Pixel Using a Line.
