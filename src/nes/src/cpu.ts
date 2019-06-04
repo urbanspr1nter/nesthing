@@ -1,7 +1,6 @@
 import { ByteRegister, DoubleByteRegister } from "./register.interface";
 import { Memory } from "./memory";
 import {
-  AddressingModes,
   IrqVectorLocation,
   NmiVectorLocation,
   ResetVectorLocation,
@@ -91,7 +90,9 @@ export class Cpu {
     }
 
     // Perform the RESET Interrupt
-    this.interruptReset();
+    // this.interruptReset();
+
+    this._regPC.set(0xC000);
   }
 
   public interruptReset(): void {
@@ -165,37 +166,12 @@ export class Cpu {
     return (this._regP.get() & (0x01 << bit)) > 0;
   }
 
-  public isOverflow(
-    first: number,
-    second: number,
-    final: number,
-    adc: boolean
-  ): boolean {
-    if (adc) {
-      if ((first & 0x80) == 0x0 && (second & 0x80) == 0x0) {
-        // pos + pos = neg
-        if ((final & 0x80) > 0x0) {
-          return true;
-        } else {
-          return false;
-        }
-      } else if ((first & 0x80) > 0x0 && (second & 0x80) > 0x0) {
-        // neg + neg = pos
-        if ((final & 0x80) == 0x0) {
-          return true;
-        } else {
-          return false;
-        }
-      }
+  public isOverflow(first: number, second: number, final: number): boolean {
+    if (((first ^ second) & 0x80) !== 0 && ((first ^ final) & 0x80) !== 0) {
+      return true;
     } else {
-      if (((first ^ second) & 0x80) !== 0 && ((first ^ final) & 0x80) !== 0) {
-        return true;
-      } else {
-        return false;
-      }
+      return false;
     }
-
-    return false;
   }
 
   public isNegative(value: number): boolean {
@@ -203,14 +179,14 @@ export class Cpu {
   }
 
   public isZero(value: number): boolean {
-    return value === 0;
+    return (value & 0xff) === 0;
   }
 
   public isCarry(first: number, second: number, carry: number, adc: boolean) {
     if (adc) {
       return first + second + carry > 0xff;
     } else {
-      return !(first < second);
+      return (first & 0xFF) - (second & 0xFF) - carry >= 0;
     }
   }
 
@@ -356,7 +332,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Negative);
     }
 
-    if (this.isOverflow(oldA, operand, this._regA.get(), true)) {
+    if (this.isOverflow(oldA, operand, this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Overflow);
     } else {
       this.clearStatusBit(StatusBitPositions.Overflow);
@@ -1826,9 +1802,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Negative);
     }
 
-    if (
-      this.isOverflow(oldA, this._memRead(address), this._regA.get(), false)
-    ) {
+    if (this.isOverflow(oldA, this._memRead(address), this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Overflow);
     } else {
       this.clearStatusBit(StatusBitPositions.Overflow);
@@ -2738,7 +2712,7 @@ export class Cpu {
       case 0x2a: // Accumulator
         operand = this._regA.get();
 
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
+        newCarry = (operand >> 7) & 1;
         result = (operand << 1) | (oldCarry & 1);
         this._regA.set(result);
         this._currentCycles += 2;
@@ -2747,7 +2721,7 @@ export class Cpu {
         address = this._addressingHelper.atAbsolute(this._regPC);
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
+        newCarry = (operand >> 7) & 1;
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(2);
@@ -2757,7 +2731,7 @@ export class Cpu {
         address = this._addressingHelper.atDirectPage(this._regPC);
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
+        newCarry = (operand >> 7) & 1;
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(1);
@@ -2770,7 +2744,7 @@ export class Cpu {
         );
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
+        newCarry = (operand >> 7) & 1;
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(2);
@@ -2783,7 +2757,7 @@ export class Cpu {
         );
         operand = this._memRead(address);
 
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
+        newCarry = (operand >> 7) & 1;
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(1);
@@ -3082,7 +3056,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Negative);
     }
 
-    if (this.isOverflow(oldA, this._memRead(address), this._regA.get(), true)) {
+    if (this.isOverflow(oldA, this._memRead(address), this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Overflow);
     } else {
       this.clearStatusBit(StatusBitPositions.Overflow);
@@ -3303,7 +3277,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Negative);
     }
 
-    if (this.isOverflow(oldA, operand, result, false)) {
+    if (this.isOverflow(oldA, operand, result)) {
       this.setStatusBit(StatusBitPositions.Overflow);
     } else {
       this.clearStatusBit(StatusBitPositions.Overflow);
