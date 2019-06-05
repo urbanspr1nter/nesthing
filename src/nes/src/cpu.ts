@@ -9,6 +9,265 @@ import {
 } from "./cpu.interface";
 import { CpuAddressingHelper } from "./cpu-addressing-helper";
 
+const Cycles = [
+  7,
+  6,
+  2,
+  8,
+  3,
+  3,
+  5,
+  5,
+  3,
+  2,
+  2,
+  2,
+  4,
+  4,
+  6,
+  6,
+  2,
+  5,
+  2,
+  8,
+  4,
+  4,
+  6,
+  6,
+  2,
+  4,
+  2,
+  7,
+  4,
+  4,
+  7,
+  7,
+  6,
+  6,
+  2,
+  8,
+  3,
+  3,
+  5,
+  5,
+  4,
+  2,
+  2,
+  2,
+  4,
+  4,
+  6,
+  6,
+  2,
+  5,
+  2,
+  8,
+  4,
+  4,
+  6,
+  6,
+  2,
+  4,
+  2,
+  7,
+  4,
+  4,
+  7,
+  7,
+  6,
+  6,
+  2,
+  8,
+  3,
+  3,
+  5,
+  5,
+  3,
+  2,
+  2,
+  2,
+  3,
+  4,
+  6,
+  6,
+  2,
+  5,
+  2,
+  8,
+  4,
+  4,
+  6,
+  6,
+  2,
+  4,
+  2,
+  7,
+  4,
+  4,
+  7,
+  7,
+  6,
+  6,
+  2,
+  8,
+  3,
+  3,
+  5,
+  5,
+  4,
+  2,
+  2,
+  2,
+  5,
+  4,
+  6,
+  6,
+  2,
+  5,
+  2,
+  8,
+  4,
+  4,
+  6,
+  6,
+  2,
+  4,
+  2,
+  7,
+  4,
+  4,
+  7,
+  7,
+  2,
+  6,
+  2,
+  6,
+  3,
+  3,
+  3,
+  3,
+  2,
+  2,
+  2,
+  2,
+  4,
+  4,
+  4,
+  4,
+  2,
+  6,
+  2,
+  6,
+  4,
+  4,
+  4,
+  4,
+  2,
+  5,
+  2,
+  5,
+  5,
+  5,
+  5,
+  5,
+  2,
+  6,
+  2,
+  6,
+  3,
+  3,
+  3,
+  3,
+  2,
+  2,
+  2,
+  2,
+  4,
+  4,
+  4,
+  4,
+  2,
+  5,
+  2,
+  5,
+  4,
+  4,
+  4,
+  4,
+  2,
+  4,
+  2,
+  4,
+  4,
+  4,
+  4,
+  4,
+  2,
+  6,
+  2,
+  8,
+  3,
+  3,
+  5,
+  5,
+  2,
+  2,
+  2,
+  2,
+  4,
+  4,
+  6,
+  6,
+  2,
+  5,
+  2,
+  8,
+  4,
+  4,
+  6,
+  6,
+  2,
+  4,
+  2,
+  7,
+  4,
+  4,
+  7,
+  7,
+  2,
+  6,
+  2,
+  8,
+  3,
+  3,
+  5,
+  5,
+  2,
+  2,
+  2,
+  2,
+  4,
+  4,
+  6,
+  6,
+  2,
+  5,
+  2,
+  8,
+  4,
+  4,
+  6,
+  6,
+  2,
+  4,
+  2,
+  7,
+  4,
+  4,
+  7,
+  7
+];
+
 export class Cpu {
   private _memory: Memory;
   private _addressingHelper: CpuAddressingHelper;
@@ -90,9 +349,9 @@ export class Cpu {
     }
 
     // Perform the RESET Interrupt
-    // this.interruptReset();
+    this.interruptReset();
 
-    this._regPC.set(0xC000);
+    // this._regPC.set(0xC000);
   }
 
   public interruptReset(): void {
@@ -175,7 +434,7 @@ export class Cpu {
   }
 
   public isNegative(value: number): boolean {
-    return (value & 0x80) > 0;
+    return (value & 0x80) === 0x80;
   }
 
   public isZero(value: number): boolean {
@@ -186,7 +445,7 @@ export class Cpu {
     if (adc) {
       return first + second + carry > 0xff;
     } else {
-      return (first & 0xFF) - (second & 0xFF) - carry >= 0;
+      return (first & 0xff) - (second & 0xff) - carry >= 0;
     }
   }
 
@@ -227,14 +486,12 @@ export class Cpu {
 
         this._regA.set(oldA + operand + carry);
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0x6d: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
-        this._currentCycles += 4;
         this._regPC.add(2);
         break;
       case 0x65: // Direct Page
@@ -242,7 +499,6 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
-        this._currentCycles += 3;
         this._regPC.add(1);
         break;
       case 0x7d: // Absolute Indexed, X
@@ -261,7 +517,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(2);
         break;
       case 0x79: // Absolute Indexed, Y
@@ -280,7 +536,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(2);
         break;
       case 0x75: // Direct Page Indexed, X
@@ -291,7 +547,6 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
-        this._currentCycles += 4;
         this._regPC.add(1);
         break;
       case 0x61: // Direct Page Indexed Indirect, X
@@ -302,7 +557,6 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
-        this._currentCycles += 6;
         this._regPC.add(1);
         break;
       case 0x71: // Direct Page Indirect Indexed, Y
@@ -321,7 +575,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
-        this._currentCycles += 5 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(1);
         break;
     }
@@ -362,7 +616,6 @@ export class Cpu {
         operand = this._memRead(this._regPC.get());
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 2;
         this._regPC.add(1);
         break;
       case 0x2d:
@@ -370,7 +623,6 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 4;
         this._regPC.add(2);
         break;
       case 0x25:
@@ -378,7 +630,6 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 3;
         this._regPC.add(1);
         break;
       case 0x3d:
@@ -397,7 +648,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(2);
         break;
       case 0x39:
@@ -416,7 +667,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(2);
         break;
       case 0x35:
@@ -427,7 +678,6 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 4;
         this._regPC.add(1);
         break;
       case 0x21:
@@ -438,7 +688,6 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 6;
         this._regPC.add(1);
         break;
       case 0x31:
@@ -455,7 +704,7 @@ export class Cpu {
         operand = this._memRead(address);
 
         this._regA.set(this._regA.get() & operand);
-        this._currentCycles += 5 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(1);
         break;
     }
@@ -485,7 +734,6 @@ export class Cpu {
         result = oldVal << 1;
 
         this._regA.set(result);
-        this._currentCycles += 2;
         break;
       case 0x0e:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -493,7 +741,6 @@ export class Cpu {
 
         result = oldVal << 1;
         this._memWrite(address, result);
-        this._currentCycles += 6;
         this._regPC.add(2);
         break;
       case 0x06:
@@ -502,7 +749,6 @@ export class Cpu {
 
         result = oldVal << 1;
         this._memWrite(address, result);
-        this._currentCycles += 5;
         this._regPC.add(1);
         break;
       case 0x1e:
@@ -514,7 +760,6 @@ export class Cpu {
 
         result = oldVal << 1;
         this._memWrite(address, result);
-        this._currentCycles += 7;
         this._regPC.add(2);
         break;
       case 0x16:
@@ -526,7 +771,6 @@ export class Cpu {
 
         result = oldVal << 1;
         this._memWrite(address, result);
-        this._currentCycles += 6;
         this._regPC.add(1);
         break;
     }
@@ -568,14 +812,10 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           // Move onto the next.
           this._regPC.add(1);
         }
-        this._currentCycles += 2;
-
         break;
     }
   }
@@ -600,13 +840,9 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           this._regPC.add(1);
         }
-
-        this._currentCycles += 2;
         break;
     }
   }
@@ -629,12 +865,9 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           this._regPC.add(1);
         }
-        this._currentCycles += 2;
         break;
     }
   }
@@ -667,7 +900,6 @@ export class Cpu {
           this.clearStatusBit(StatusBitPositions.Zero);
         }
 
-        this._currentCycles += 4;
         this._regPC.add(2);
         break;
       case 0x24: // Direct Page Addressing
@@ -692,7 +924,6 @@ export class Cpu {
           this.clearStatusBit(StatusBitPositions.Zero);
         }
 
-        this._currentCycles += 3;
         this._regPC.add(1);
         break;
     }
@@ -716,12 +947,9 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           this._regPC.add(1);
         }
-        this._currentCycles += 2;
         break;
     }
   }
@@ -744,12 +972,9 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           this._regPC.add(1);
         }
-        this._currentCycles += 2;
         break;
     }
   }
@@ -772,12 +997,9 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           this._regPC.add(1);
         }
-        this._currentCycles += 2;
         break;
     }
   }
@@ -797,8 +1019,6 @@ export class Cpu {
         let interruptVectorHigh = this._memRead(IrqVectorLocation.High);
 
         this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
-
-        this._currentCycles += 7;
 
         this._interrupt = InterruptRequestType.IRQ;
         break;
@@ -826,12 +1046,9 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           this._regPC.add(1);
         }
-        this._currentCycles += 2;
         break;
     }
   }
@@ -854,12 +1071,9 @@ export class Cpu {
           if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
             this._currentCycles += 1;
           }
-
-          this._currentCycles += 1;
         } else {
           this._regPC.add(1);
         }
-        this._currentCycles += 2;
         break;
     }
   }
@@ -869,7 +1083,6 @@ export class Cpu {
     switch (opCode) {
       case 0x18:
         this.clearStatusBit(StatusBitPositions.Carry);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -879,7 +1092,6 @@ export class Cpu {
     switch (opCode) {
       case 0xd8:
         this.clearStatusBit(StatusBitPositions.DecimalMode);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -889,7 +1101,6 @@ export class Cpu {
     switch (opCode) {
       case 0x58:
         this.clearStatusBit(StatusBitPositions.InterruptDisable);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -899,7 +1110,6 @@ export class Cpu {
     switch (opCode) {
       case 0xb8:
         this.clearStatusBit(StatusBitPositions.Overflow);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -920,7 +1130,6 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 2;
         this._regPC.add(1);
         break;
       case 0xcd: // Absolute
@@ -932,7 +1141,6 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 4;
         this._regPC.add(2);
         break;
       case 0xc5: // Direct Page
@@ -944,7 +1152,6 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 3;
         this._regPC.add(1);
         break;
       case 0xdd: // Absolute Indexed, X
@@ -967,7 +1174,7 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(2);
         break;
       case 0xd9: // Absolute Indexed Y
@@ -990,7 +1197,7 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(2);
         break;
       case 0xd5: // Direct Page Indexed, X
@@ -1005,7 +1212,6 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 4;
         this._regPC.add(1);
         break;
       case 0xc1: // Direct Page Indexed Indirect, X
@@ -1020,7 +1226,6 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 6;
         this._regPC.add(1);
         break;
       case 0xd1: // Direct Page Indirect Indexed, Y
@@ -1043,7 +1248,7 @@ export class Cpu {
         } else {
           carry = 0;
         }
-        this._currentCycles += 5 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         this._regPC.add(1);
         break;
     }
@@ -1083,7 +1288,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0xec: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -1095,7 +1299,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0xe4: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1107,7 +1310,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
     }
 
@@ -1147,7 +1349,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0xcc: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -1159,7 +1360,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0xc4: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1171,7 +1371,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
     }
 
@@ -1219,7 +1418,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0xc7:
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1234,7 +1432,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0xcf:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -1249,7 +1446,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0xd3:
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -1267,7 +1463,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0xd7:
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -1285,7 +1480,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0xdb:
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -1303,7 +1497,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0xdf:
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -1321,7 +1514,6 @@ export class Cpu {
           carry = 0;
         }
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
     }
 
@@ -1356,7 +1548,6 @@ export class Cpu {
 
         this._memWrite(address, operand - 1);
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0xc6: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1364,7 +1555,6 @@ export class Cpu {
 
         this._memWrite(address, operand - 1);
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0xde: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -1375,7 +1565,6 @@ export class Cpu {
 
         this._memWrite(address, operand - 1);
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0xd6: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -1386,7 +1575,6 @@ export class Cpu {
 
         this._memWrite(address, operand - 1);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
     }
 
@@ -1408,7 +1596,6 @@ export class Cpu {
     switch (opCode) {
       case 0xca:
         this._regX.set(this._regX.get() - 1);
-        this._currentCycles += 2;
         break;
     }
 
@@ -1430,7 +1617,6 @@ export class Cpu {
     switch (opCode) {
       case 0x88:
         this._regY.set(this._regY.get() - 1);
-        this._currentCycles += 2;
         break;
     }
 
@@ -1461,7 +1647,6 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0x4d: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -1470,7 +1655,6 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0x45: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1479,7 +1663,6 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0x5d: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -1499,7 +1682,7 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0x59: // Absolute Indexed, Y
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -1519,7 +1702,7 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0x55: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -1531,7 +1714,6 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
       case 0x41: // Direct Page Indexed Indirect, X
         address = this._addressingHelper.atDirectPageIndexedIndirectX(
@@ -1543,7 +1725,6 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x51: // Direct Page Indirect Indexed, Y
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -1563,7 +1744,7 @@ export class Cpu {
         result = this._regA.get() ^ operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 5 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
     }
 
@@ -1592,7 +1773,6 @@ export class Cpu {
 
         this._memWrite(address, operand + 1);
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0xe6: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1600,7 +1780,6 @@ export class Cpu {
 
         this._memWrite(address, operand + 1);
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0xfe: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -1611,7 +1790,6 @@ export class Cpu {
 
         this._memWrite(address, operand + 1);
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0xf6: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -1622,7 +1800,6 @@ export class Cpu {
 
         this._memWrite(address, operand + 1);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
     }
 
@@ -1644,7 +1821,6 @@ export class Cpu {
     switch (opCode) {
       case 0xe8:
         this._regX.set(this._regX.get() + 1);
-        this._currentCycles += 2;
         break;
     }
 
@@ -1666,7 +1842,6 @@ export class Cpu {
     switch (opCode) {
       case 0xc8:
         this._regY.set(this._regY.get() + 1);
-        this._currentCycles += 2;
         break;
     }
 
@@ -1708,7 +1883,6 @@ export class Cpu {
         this._regA.set(result);
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0xe7:
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1720,7 +1894,6 @@ export class Cpu {
         this._regA.set(result);
 
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0xef:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -1732,7 +1905,6 @@ export class Cpu {
         this._regA.set(result);
 
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0xf3:
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -1747,7 +1919,6 @@ export class Cpu {
         this._regA.set(result);
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0xf7:
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -1762,7 +1933,6 @@ export class Cpu {
         this._regA.set(result);
 
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0xfb:
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -1777,7 +1947,6 @@ export class Cpu {
         this._regA.set(result);
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0xff:
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -1792,7 +1961,6 @@ export class Cpu {
         this._regA.set(result);
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
     }
 
@@ -1829,7 +1997,6 @@ export class Cpu {
       case 0x4c:
         address = this._addressingHelper.atAbsolute(this._regPC);
         this._regPC.set(address);
-        this._currentCycles += 3;
         break;
       case 0x6c:
         address = this._addressingHelper.atAbsoluteIndirect(this._regPC);
@@ -1837,7 +2004,6 @@ export class Cpu {
           this._currentCycles += 1;
         }
         this._regPC.set(address);
-        this._currentCycles += 5;
         break;
     }
   }
@@ -1852,7 +2018,6 @@ export class Cpu {
         this.stackPush((this._regPC.get() & 0xff00) >>> 8);
         this.stackPush(this._regPC.get() & 0x00ff);
         this._regPC.set(address);
-        this._currentCycles += 6;
         break;
     }
   }
@@ -1872,7 +2037,6 @@ export class Cpu {
         this._regA.set(operand);
         this._regX.set(this._regA.get());
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0xa7:
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1880,7 +2044,6 @@ export class Cpu {
         this._regA.set(operand);
         this._regX.set(this._regA.get());
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0xaf:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -1888,7 +2051,6 @@ export class Cpu {
         this._regA.set(operand);
         this._regX.set(this._regA.get());
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0xb3:
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -1907,7 +2069,6 @@ export class Cpu {
         this._regA.set(operand);
         this._regX.set(this._regA.get());
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0xb7:
         address = this._addressingHelper.atDirectPageIndexedY(
@@ -1918,7 +2079,6 @@ export class Cpu {
         this._regA.set(operand);
         this._regX.set(this._regA.get());
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
       case 0xbf:
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -1937,7 +2097,6 @@ export class Cpu {
         this._regA.set(operand);
         this._regX.set(this._regA.get());
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
     }
 
@@ -1964,7 +2123,6 @@ export class Cpu {
       case 0xa9: // Immediate
         operand = this._memRead(this._regPC.get());
 
-        this._currentCycles += 2;
         this._regA.set(operand);
         this._regPC.add(1);
         break;
@@ -1974,7 +2132,6 @@ export class Cpu {
 
         this._regA.set(operand);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0xa5: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -1982,7 +2139,6 @@ export class Cpu {
 
         this._regA.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0xbd: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -2001,7 +2157,7 @@ export class Cpu {
 
         this._regA.set(operand);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0xb9: // Absolute Indexed, Y
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -2020,7 +2176,7 @@ export class Cpu {
 
         this._regA.set(operand);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0xb5: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2031,7 +2187,6 @@ export class Cpu {
 
         this._regA.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
       case 0xa1: // Direct Page Indexed Indirect, X
         address = this._addressingHelper.atDirectPageIndexedIndirectX(
@@ -2042,7 +2197,6 @@ export class Cpu {
 
         this._regA.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0xb1: // Direct Page Indirect Indexed, Y
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -2061,7 +2215,7 @@ export class Cpu {
 
         this._regA.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 5 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
     }
 
@@ -2090,7 +2244,6 @@ export class Cpu {
 
         this._regX.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0xae: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2098,7 +2251,6 @@ export class Cpu {
 
         this._regX.set(operand);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0xa6: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2106,7 +2258,6 @@ export class Cpu {
 
         this._regX.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0xbe: // Absolute Indexed, Y
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -2125,7 +2276,7 @@ export class Cpu {
 
         this._regX.set(operand);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0xb6: // Direct Page Indexed, Y
         address = this._addressingHelper.atDirectPageIndexedY(
@@ -2136,7 +2287,6 @@ export class Cpu {
 
         this._regX.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
     }
 
@@ -2165,7 +2315,6 @@ export class Cpu {
 
         this._regY.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0xac: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2173,7 +2322,6 @@ export class Cpu {
 
         this._regY.set(operand);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0xa4: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2181,7 +2329,6 @@ export class Cpu {
 
         this._regY.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0xbc: // Absolute Indexed X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -2200,7 +2347,7 @@ export class Cpu {
 
         this._regY.set(operand);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0xb4: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2211,7 +2358,6 @@ export class Cpu {
 
         this._regY.set(operand);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
     }
 
@@ -2243,7 +2389,6 @@ export class Cpu {
         carry = (operand & 1) === 1 ? 1 : 0;
         result = (operand >>> 1) & ~(1 << 7);
         this._regA.set(result);
-        this._currentCycles += 2;
         break;
       case 0x4e: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2253,7 +2398,6 @@ export class Cpu {
         result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0x46: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2263,7 +2407,6 @@ export class Cpu {
         result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0x5e: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -2276,7 +2419,6 @@ export class Cpu {
         result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0x56: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2289,7 +2431,6 @@ export class Cpu {
         result = (operand >>> 1) & ~(1 << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
     }
 
@@ -2322,7 +2463,6 @@ export class Cpu {
       case 0xda:
       case 0xfa:
       case 0xea:
-        this._currentCycles += 2;
         break;
     }
   }
@@ -2336,7 +2476,6 @@ export class Cpu {
       case 0xc2:
       case 0xe2:
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -2346,7 +2485,6 @@ export class Cpu {
     switch (opcode) {
       case 0x0c:
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0x1c:
       case 0x3c:
@@ -2365,13 +2503,12 @@ export class Cpu {
           pageBoundaryCycle = 1;
         }
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0x04:
       case 0x44:
       case 0x64:
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0x14:
       case 0x34:
@@ -2380,7 +2517,6 @@ export class Cpu {
       case 0xd4:
       case 0xf4:
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
     }
   }
@@ -2399,7 +2535,6 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0x0d: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2408,7 +2543,6 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0x05: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2417,7 +2551,6 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0x1d: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -2437,7 +2570,7 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0x19: // Absolute Indexed, Y
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -2457,7 +2590,7 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0x15: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2469,7 +2602,6 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
       case 0x01: // Direct Page Indexed Indirect, X
         address = this._addressingHelper.atDirectPageIndexedIndirectX(
@@ -2481,7 +2613,6 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x11: // Direct Page Indirect Indexed, Y
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -2501,7 +2632,7 @@ export class Cpu {
         result = this._regA.get() | operand;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 5 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
     }
 
@@ -2523,7 +2654,6 @@ export class Cpu {
     switch (opcode) {
       case 0x48:
         this.stackPush(this._regA.get());
-        this._currentCycles += 3;
         break;
     }
   }
@@ -2534,7 +2664,6 @@ export class Cpu {
       case 0x08:
         let pStatus = this._regP.get() | 0x10;
         this.stackPush(pStatus);
-        this._currentCycles += 3;
         break;
     }
   }
@@ -2545,7 +2674,6 @@ export class Cpu {
     switch (opcode) {
       case 0x68:
         this._regA.set(this.stackPull());
-        this._currentCycles += 4;
         break;
     }
 
@@ -2570,7 +2698,6 @@ export class Cpu {
         pStatus = pStatus | 0x20;
         this._regP.set(pStatus);
         this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
-        this._currentCycles += 4;
         break;
     }
   }
@@ -2599,7 +2726,6 @@ export class Cpu {
         this._regA.set(this._regA.get() & this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x27:
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2610,7 +2736,6 @@ export class Cpu {
 
         this._regA.set(this._regA.get() & this._memRead(address));
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0x2f:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2621,7 +2746,6 @@ export class Cpu {
 
         this._regA.set(this._regA.get() & this._memRead(address));
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0x33:
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -2635,7 +2759,6 @@ export class Cpu {
 
         this._regA.set(this._regA.get() & this._memRead(address));
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x37:
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2649,7 +2772,6 @@ export class Cpu {
 
         this._regA.set(this._regA.get() & this._memRead(address));
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x3b:
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -2663,7 +2785,6 @@ export class Cpu {
 
         this._regA.set(this._regA.get() & this._memRead(address));
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0x3f:
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -2677,7 +2798,6 @@ export class Cpu {
 
         this._regA.set(this._regA.get() & this._memRead(address));
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
     }
 
@@ -2715,7 +2835,6 @@ export class Cpu {
         newCarry = (operand >> 7) & 1;
         result = (operand << 1) | (oldCarry & 1);
         this._regA.set(result);
-        this._currentCycles += 2;
         break;
       case 0x2e: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2725,7 +2844,6 @@ export class Cpu {
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0x26: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2735,7 +2853,6 @@ export class Cpu {
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0x3e: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -2748,7 +2865,6 @@ export class Cpu {
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0x36: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2761,7 +2877,6 @@ export class Cpu {
         result = (operand << 1) | (oldCarry & 1);
         this._memWrite(address, result);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
     }
 
@@ -2799,7 +2914,6 @@ export class Cpu {
         newCarry = (operand & 1) === 1 ? 1 : 0;
         result = (operand >>> 1) | (oldCarry << 7);
         this._regA.set(result);
-        this._currentCycles += 2;
         break;
       case 0x6e: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2809,7 +2923,6 @@ export class Cpu {
         result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0x66: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2819,7 +2932,6 @@ export class Cpu {
         result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0x7e: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -2832,7 +2944,6 @@ export class Cpu {
         result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0x76: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2845,7 +2956,6 @@ export class Cpu {
         result = (operand >>> 1) | (oldCarry << 7);
         this._memWrite(address, result);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
     }
 
@@ -2902,7 +3012,6 @@ export class Cpu {
         this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x67:
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -2924,7 +3033,6 @@ export class Cpu {
         this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0x6f:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -2946,7 +3054,6 @@ export class Cpu {
         this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0x73:
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -2971,7 +3078,6 @@ export class Cpu {
         this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x77:
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -2996,7 +3102,6 @@ export class Cpu {
         this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x7b:
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -3021,7 +3126,6 @@ export class Cpu {
         this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0x7f:
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -3046,7 +3150,6 @@ export class Cpu {
         this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
     }
 
@@ -3088,8 +3191,6 @@ export class Cpu {
 
         this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
         this.setStatusBit(StatusBitPositions.Bit5);
-
-        this._currentCycles += 6;
         break;
     }
   }
@@ -3103,7 +3204,6 @@ export class Cpu {
 
         this._regPC.set((newHighPC << 8) | newLowPC);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
     }
   }
@@ -3120,19 +3220,16 @@ export class Cpu {
         );
         this._memWrite(address, this._regA.get() & this._regX.get());
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x87:
         address = this._addressingHelper.atDirectPage(this._regPC);
         this._memWrite(address, this._regA.get() & this._regX.get());
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0x8f:
         address = this._addressingHelper.atAbsolute(this._regPC);
         this._memWrite(address, this._regA.get() & this._regX.get());
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0x97:
         address = this._addressingHelper.atDirectPageIndexedY(
@@ -3141,7 +3238,6 @@ export class Cpu {
         );
         this._memWrite(address, this._regA.get() & this._regX.get());
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
     }
   }
@@ -3165,7 +3261,6 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 2;
         break;
       case 0xed: // Absolute
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -3174,7 +3269,6 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0xe5: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -3183,7 +3277,6 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0xfd: // Absolute Indexed, X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -3203,7 +3296,7 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0xf9: // Absolute Indexed, Y
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -3223,7 +3316,7 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(2);
-        this._currentCycles += 4 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
       case 0xf5: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -3235,7 +3328,6 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
       case 0xe1: // Direct Page Indexed Indirect, X
         address = this._addressingHelper.atDirectPageIndexedIndirectX(
@@ -3247,7 +3339,6 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0xf1: // Direct Page Indirect Indexed, Y
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -3267,7 +3358,7 @@ export class Cpu {
         result = oldA - operand - currentCarry;
         this._regA.set(result);
         this._regPC.add(1);
-        this._currentCycles += 5 + pageBoundaryCycle;
+        this._currentCycles += pageBoundaryCycle;
         break;
     }
 
@@ -3301,7 +3392,6 @@ export class Cpu {
     switch (opcode) {
       case 0x38:
         this.setStatusBit(StatusBitPositions.Carry);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -3311,7 +3401,6 @@ export class Cpu {
     switch (opcode) {
       case 0xf8:
         this.setStatusBit(StatusBitPositions.DecimalMode);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -3321,7 +3410,6 @@ export class Cpu {
     switch (opcode) {
       case 0x78:
         this.setStatusBit(StatusBitPositions.InterruptDisable);
-        this._currentCycles += 2;
         break;
     }
   }
@@ -3352,7 +3440,6 @@ export class Cpu {
         this._regA.set(this._regA.get() | this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x07:
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -3370,7 +3457,6 @@ export class Cpu {
         this._regA.set(this._regA.get() | this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0x0f:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -3388,7 +3474,6 @@ export class Cpu {
         this._regA.set(this._regA.get() | this._memRead(address));
 
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0x13:
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -3409,7 +3494,6 @@ export class Cpu {
         this._regA.set(this._regA.get() | this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x17:
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -3430,7 +3514,6 @@ export class Cpu {
         this._regA.set(this._regA.get() | this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x1b:
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -3451,7 +3534,6 @@ export class Cpu {
         this._regA.set(this._regA.get() | this._memRead(address));
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0x1f:
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -3472,7 +3554,6 @@ export class Cpu {
         this._regA.set(this._regA.get() | this._memRead(address));
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
     }
 
@@ -3511,7 +3592,6 @@ export class Cpu {
         this._regA.set(this._regA.get() ^ this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x47:
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -3524,7 +3604,6 @@ export class Cpu {
         this._regA.set(this._regA.get() ^ this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 5;
         break;
       case 0x4f:
         address = this._addressingHelper.atAbsolute(this._regPC);
@@ -3537,7 +3616,6 @@ export class Cpu {
         this._regA.set(this._regA.get() ^ this._memRead(address));
 
         this._regPC.add(2);
-        this._currentCycles += 6;
         break;
       case 0x53:
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -3553,7 +3631,6 @@ export class Cpu {
         this._regA.set(this._regA.get() ^ this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 8;
         break;
       case 0x57:
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -3569,7 +3646,6 @@ export class Cpu {
         this._regA.set(this._regA.get() ^ this._memRead(address));
 
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x5b:
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -3585,7 +3661,6 @@ export class Cpu {
         this._regA.set(this._regA.get() ^ this._memRead(address));
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
       case 0x5f:
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -3601,7 +3676,6 @@ export class Cpu {
         this._regA.set(this._regA.get() ^ this._memRead(address));
 
         this._regPC.add(2);
-        this._currentCycles += 7;
         break;
     }
 
@@ -3635,14 +3709,12 @@ export class Cpu {
         operand = this._regA.get();
         this._memWrite(address, operand);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0x85: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
         operand = this._regA.get();
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0x9d: // Absolute Indexed X
         address = this._addressingHelper.atAbsoluteIndexedX(
@@ -3652,7 +3724,6 @@ export class Cpu {
         operand = this._regA.get();
         this._memWrite(address, operand);
         this._regPC.add(2);
-        this._currentCycles += 5;
         break;
       case 0x99: // Absolute Indexed Y
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -3662,7 +3733,6 @@ export class Cpu {
         operand = this._regA.get();
         this._memWrite(address, operand);
         this._regPC.add(2);
-        this._currentCycles += 5;
         break;
       case 0x95: // Direct Page Indexed X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -3672,7 +3742,6 @@ export class Cpu {
         operand = this._regA.get();
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
       case 0x81: // Direct Page Indexed Indirect, X
         address = this._addressingHelper.atDirectPageIndexedIndirectX(
@@ -3682,7 +3751,6 @@ export class Cpu {
         operand = this._regA.get();
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
       case 0x91: // Direct Page Indirect Indexed, Y
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -3692,7 +3760,6 @@ export class Cpu {
         operand = this._regA.get();
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 6;
         break;
     }
   }
@@ -3708,14 +3775,12 @@ export class Cpu {
         operand = this._regX.get();
         this._memWrite(address, operand);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0x86: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
         operand = this._regX.get();
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0x96: // Direct Page Indexed, Y
         address = this._addressingHelper.atDirectPageIndexedY(
@@ -3725,7 +3790,6 @@ export class Cpu {
         operand = this._regX.get();
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
     }
   }
@@ -3742,7 +3806,6 @@ export class Cpu {
 
         this._memWrite(address, operand);
         this._regPC.add(2);
-        this._currentCycles += 4;
         break;
       case 0x84: // Direct Page
         address = this._addressingHelper.atDirectPage(this._regPC);
@@ -3750,7 +3813,6 @@ export class Cpu {
 
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 3;
         break;
       case 0x94: // Direct Page Indexed, X
         address = this._addressingHelper.atDirectPageIndexedX(
@@ -3761,7 +3823,6 @@ export class Cpu {
 
         this._memWrite(address, operand);
         this._regPC.add(1);
-        this._currentCycles += 4;
         break;
     }
   }
@@ -3771,7 +3832,6 @@ export class Cpu {
     switch (opcode) {
       case 0xaa:
         this._regX.set(this._regA.get());
-        this._currentCycles += 2;
         break;
     }
 
@@ -3793,7 +3853,6 @@ export class Cpu {
     switch (opcode) {
       case 0xa8:
         this._regY.set(this._regA.get());
-        this._currentCycles += 2;
         break;
     }
 
@@ -3815,7 +3874,6 @@ export class Cpu {
     switch (opcode) {
       case 0xba:
         this._regX.set(this._regSP.get());
-        this._currentCycles += 2;
         break;
     }
 
@@ -3837,7 +3895,6 @@ export class Cpu {
     switch (opcode) {
       case 0x8a:
         this._regA.set(this._regX.get());
-        this._currentCycles += 2;
         break;
     }
 
@@ -3859,7 +3916,6 @@ export class Cpu {
     switch (opcode) {
       case 0x9a:
         this._regSP.set(this._regX.get());
-        this._currentCycles += 2;
         break;
       default:
         break;
@@ -3871,7 +3927,6 @@ export class Cpu {
     switch (opcode) {
       case 0x98:
         this._regA.set(this._regY.get());
-        this._currentCycles += 2;
         break;
       default:
         break;
@@ -3896,6 +3951,7 @@ export class Cpu {
   }
 
   public handleOp(opCode: number) {
+    this._currentCycles += Cycles[opCode];
     switch (opCode) {
       case 0x00:
         this.brk(opCode);
