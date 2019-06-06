@@ -12,7 +12,6 @@ import {
   OpAddressingMode,
   PageCycles
 } from "./cpu.interface";
-import { CpuAddressingHelper } from "./cpu-addressing-helper";
 
 export interface CycleContext {
   PC: number;
@@ -22,7 +21,6 @@ export interface CycleContext {
 
 export class Cpu {
   private _memory: Memory;
-  private _addressingHelper: CpuAddressingHelper;
 
   private _currentCycles: number;
 
@@ -46,7 +44,6 @@ export class Cpu {
     this._currentCycles = 0;
 
     this._memory = memory;
-    this._addressingHelper = new CpuAddressingHelper(this._memory);
 
     this._regA = new ByteRegister(0x00);
     this._regX = new ByteRegister(0x00);
