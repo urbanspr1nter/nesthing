@@ -90,16 +90,18 @@ export class Cpu {
     const low = this._memRead(address);
     const high = this._memRead(address + 1);
 
-    return high << 8 | low;
+    return (high << 8 | low) & 0xffff;
   }
 
   private _read16Bug(address: number): number {
     const a = address;
-    const b = (a & 0xff00) | ((a & 0xff) + 1);
+    const b = (a & 0xff00) | (((a & 0xff) + 1) & 0xff);
     const low = this._memRead(a);
     const high = this._memRead(b);
 
-    return ((high << 8) | (low)) & 0xFFFF;
+    const effAddress = ((high << 8) | (low)) & 0xFFFF;
+
+    return effAddress;
   }
 
   public powerUp(): void {
@@ -125,11 +127,11 @@ export class Cpu {
     }
 
     // Perform the RESET Interrupt
-    //this.interruptReset();
+    this.interruptReset();
 
-    this._regPC.set(0xc000);
+    //this._regPC.set(0xc000);
     this._context = {
-      PC: 0xC000,
+      PC: 0,
       Address: 0,
       Mode: AddressingModes.Immediate
     };
@@ -166,10 +168,6 @@ export class Cpu {
     const address = 0x100 | (this._regSP.get() + 1);
     this._regSP.set(address);
     return this._memRead(address);
-  }
-
-  public setPC(address: number) {
-    this._regPC.set(address);
   }
 
   public getA(): number {
@@ -619,6 +617,7 @@ export class Cpu {
   }
 
   public jmp() {
+    console.log(`JUMPING TO: ${this._context.Address.toString(16)}`);
     this._regPC.set(this._context.Address);
   }
 

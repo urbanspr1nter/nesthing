@@ -5,7 +5,7 @@ import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
 
-const rom = require("./nestest.json");
+const rom = require("./mario.json");
 
 export interface CpuRegisters {
   pc: number;
@@ -135,7 +135,6 @@ export class Nes {
           this._cpu.setupNmi();
         }
   
-        console.log(this._cpu.getPC().toString(16));
         const opCode = this._memory.get(this._cpu.getPC());
         this._cpu.handleOp(opCode);
       }
