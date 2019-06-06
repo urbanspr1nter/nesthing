@@ -5,268 +5,10 @@ import {
   NmiVectorLocation,
   ResetVectorLocation,
   StatusBitPositions,
-  InterruptRequestType
+  InterruptRequestType,
+  Cycles
 } from "./cpu.interface";
 import { CpuAddressingHelper } from "./cpu-addressing-helper";
-
-const Cycles = [
-  7,
-  6,
-  2,
-  8,
-  3,
-  3,
-  5,
-  5,
-  3,
-  2,
-  2,
-  2,
-  4,
-  4,
-  6,
-  6,
-  2,
-  5,
-  2,
-  8,
-  4,
-  4,
-  6,
-  6,
-  2,
-  4,
-  2,
-  7,
-  4,
-  4,
-  7,
-  7,
-  6,
-  6,
-  2,
-  8,
-  3,
-  3,
-  5,
-  5,
-  4,
-  2,
-  2,
-  2,
-  4,
-  4,
-  6,
-  6,
-  2,
-  5,
-  2,
-  8,
-  4,
-  4,
-  6,
-  6,
-  2,
-  4,
-  2,
-  7,
-  4,
-  4,
-  7,
-  7,
-  6,
-  6,
-  2,
-  8,
-  3,
-  3,
-  5,
-  5,
-  3,
-  2,
-  2,
-  2,
-  3,
-  4,
-  6,
-  6,
-  2,
-  5,
-  2,
-  8,
-  4,
-  4,
-  6,
-  6,
-  2,
-  4,
-  2,
-  7,
-  4,
-  4,
-  7,
-  7,
-  6,
-  6,
-  2,
-  8,
-  3,
-  3,
-  5,
-  5,
-  4,
-  2,
-  2,
-  2,
-  5,
-  4,
-  6,
-  6,
-  2,
-  5,
-  2,
-  8,
-  4,
-  4,
-  6,
-  6,
-  2,
-  4,
-  2,
-  7,
-  4,
-  4,
-  7,
-  7,
-  2,
-  6,
-  2,
-  6,
-  3,
-  3,
-  3,
-  3,
-  2,
-  2,
-  2,
-  2,
-  4,
-  4,
-  4,
-  4,
-  2,
-  6,
-  2,
-  6,
-  4,
-  4,
-  4,
-  4,
-  2,
-  5,
-  2,
-  5,
-  5,
-  5,
-  5,
-  5,
-  2,
-  6,
-  2,
-  6,
-  3,
-  3,
-  3,
-  3,
-  2,
-  2,
-  2,
-  2,
-  4,
-  4,
-  4,
-  4,
-  2,
-  5,
-  2,
-  5,
-  4,
-  4,
-  4,
-  4,
-  2,
-  4,
-  2,
-  4,
-  4,
-  4,
-  4,
-  4,
-  2,
-  6,
-  2,
-  8,
-  3,
-  3,
-  5,
-  5,
-  2,
-  2,
-  2,
-  2,
-  4,
-  4,
-  6,
-  6,
-  2,
-  5,
-  2,
-  8,
-  4,
-  4,
-  6,
-  6,
-  2,
-  4,
-  2,
-  7,
-  4,
-  4,
-  7,
-  7,
-  2,
-  6,
-  2,
-  8,
-  3,
-  3,
-  5,
-  5,
-  2,
-  2,
-  2,
-  2,
-  4,
-  4,
-  6,
-  6,
-  2,
-  5,
-  2,
-  8,
-  4,
-  4,
-  6,
-  6,
-  2,
-  4,
-  2,
-  7,
-  4,
-  4,
-  7,
-  7
-];
 
 export class Cpu {
   private _memory: Memory;
@@ -449,6 +191,10 @@ export class Cpu {
     }
   }
 
+  private _crossesPageBoundary(a: number, b: number): boolean {
+    return (a & 0xFF00) !== (b & 0xFF00);
+  }
+
   public setupNmi() {
     const currPcLow = this._regPC.get() & 0xff;
     const currPcHigh = (this._regPC.get() >>> 8) & 0xff;
@@ -502,18 +248,13 @@ export class Cpu {
         this._regPC.add(1);
         break;
       case 0x7d: // Absolute Indexed, X
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
-          pageBoundaryCycle = 1;
-        }
         address = this._addressingHelper.atAbsoluteIndexedX(
           this._regPC,
           this._regX
         );
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
+          pageBoundaryCycle = 1;
+        }
         operand = this._memRead(address);
 
         this._regA.set(oldA + operand + carry);
@@ -521,12 +262,7 @@ export class Cpu {
         this._regPC.add(2);
         break;
       case 0x79: // Absolute Indexed, Y
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         address = this._addressingHelper.atAbsoluteIndexedY(
@@ -560,12 +296,7 @@ export class Cpu {
         this._regPC.add(1);
         break;
       case 0x71: // Direct Page Indirect Indexed, Y
-        if (
-          this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
@@ -637,12 +368,7 @@ export class Cpu {
           this._regPC,
           this._regX
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -656,12 +382,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address - this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -691,12 +412,11 @@ export class Cpu {
         this._regPC.add(1);
         break;
       case 0x31:
-        pageBoundaryCycle = this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        )
-          ? 1
-          : 0;
+          if(this._crossesPageBoundary(address-this._regY.get(), address)) {
+            pageBoundaryCycle = 1;
+          }
+
+
         address = this._addressingHelper.atDirectPageIndirectIndexedY(
           this._regPC,
           this._regY
@@ -1159,12 +879,7 @@ export class Cpu {
           this._regPC,
           this._regX
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -1182,12 +897,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -1233,12 +943,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address - this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -1669,12 +1374,7 @@ export class Cpu {
           this._regPC,
           this._regX
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -1689,12 +1389,8 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -1731,14 +1427,11 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
+
         operand = this._memRead(address);
 
         result = this._regA.get() ^ operand;
@@ -2057,12 +1750,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           this._currentCycles++;
         }
         operand = this._memRead(address);
@@ -2085,12 +1773,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           this._currentCycles++;
         }
         operand = this._memRead(address);
@@ -2145,12 +1828,7 @@ export class Cpu {
           this._regPC,
           this._regX
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -2164,12 +1842,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -2203,12 +1876,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -2264,12 +1932,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -2335,12 +1998,7 @@ export class Cpu {
           this._regPC,
           this._regX
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -2494,6 +2152,7 @@ export class Cpu {
       case 0xfc:
         let pageBoundaryCycle = 0;
 
+        
         if (
           this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
             this._regPC,
@@ -2502,6 +2161,7 @@ export class Cpu {
         ) {
           pageBoundaryCycle = 1;
         }
+
         this._regPC.add(2);
         this._currentCycles += pageBoundaryCycle;
         break;
@@ -2557,12 +2217,7 @@ export class Cpu {
           this._regPC,
           this._regX
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -2577,12 +2232,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -2619,12 +2269,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -3283,12 +2928,7 @@ export class Cpu {
           this._regPC,
           this._regX
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -3303,12 +2943,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
@@ -3345,12 +2980,7 @@ export class Cpu {
           this._regPC,
           this._regY
         );
-        if (
-          this._addressingHelper.crossesPageBoundaryAtDirectPageIndirectIndexedY(
-            this._regPC,
-            this._regY
-          )
-        ) {
+        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
           pageBoundaryCycle = 1;
         }
         operand = this._memRead(address);
