@@ -60,7 +60,7 @@ export class Cpu {
     this._stallCycles = 0;
 
     this._context = {
-      PC: 0,
+      PC: this._regPC.get(),
       Address: 0,
       Mode: AddressingModes.Immediate
     };
@@ -99,7 +99,7 @@ export class Cpu {
     const low = this._memRead(a);
     const high = this._memRead(b);
 
-    return (high << 8) | (low);
+    return ((high << 8) | (low)) & 0xFFFF;
   }
 
   public powerUp(): void {
@@ -125,9 +125,14 @@ export class Cpu {
     }
 
     // Perform the RESET Interrupt
-    this.interruptReset();
+    //this.interruptReset();
 
-    // this._regPC.set(0xC000);
+    this._regPC.set(0xc000);
+    this._context = {
+      PC: 0xC000,
+      Address: 0,
+      Mode: AddressingModes.Immediate
+    };
   }
 
   public interruptReset(): void {
@@ -262,7 +267,7 @@ export class Cpu {
     const b = this._memRead(this._context.Address);
     const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
 
-    this._regPC.set(a + b + carry);
+    this._regA.set(a + b + carry);
 
     if(this._regA.get() === 0) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -408,9 +413,8 @@ export class Cpu {
     this.stackPush((this._regPC.get() & 0xff00) >>> 8);
     this.stackPush(this._regPC.get() & 0x00ff);
 
-    this.setStatusBit(StatusBitPositions.BrkCausedInterrupt);
-    this.stackPush(this._regP.get() | 0x10);
-    this.setStatusBit(StatusBitPositions.InterruptDisable);
+    this.php();
+    this.sei();
 
     let interruptVectorLow = this._memRead(IrqVectorLocation.Low);
     let interruptVectorHigh = this._memRead(IrqVectorLocation.High);
@@ -1033,7 +1037,7 @@ export class Cpu {
         address = this._read16(this._regPC.get() + 1);
         break;
       case AddressingModes.AbsoluteIndirect:
-        address = this._read16Bug(this._regPC.get() + 1);
+        address = this._read16Bug(this._read16(this._regPC.get() + 1));
         break;
       case AddressingModes.DirectPage:
         address = this._memRead(this._regPC.get() + 1);

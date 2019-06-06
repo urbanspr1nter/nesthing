@@ -1,5 +1,6 @@
-// require('./nestest');
+require('./nestest');
 
+/*
 import { Nes } from "./nes";
 import { Buttons } from "./controller";
 
@@ -199,3 +200,4 @@ function run() {
 }
 
 setTimeout(run, 1000);
+*/

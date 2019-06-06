@@ -339,7 +339,7 @@ export const OpAddressingMode: { [id: string]: AddressingModes } = {
   0x1d: AddressingModes.AbsoluteIndexedX,
   0x1e: AddressingModes.AbsoluteIndexedX,
   0x1f: AddressingModes.AbsoluteIndexedX,
-  0x20: null,
+  0x20: AddressingModes.Absolute,
   0x21: AddressingModes.DirectPageIndexedIndirectX,
   0x22: null,
   0x23: AddressingModes.DirectPageIndexedIndirectX,
