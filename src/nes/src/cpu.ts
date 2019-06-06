@@ -6,9 +6,19 @@ import {
   ResetVectorLocation,
   StatusBitPositions,
   InterruptRequestType,
-  Cycles
+  Cycles,
+  AddressingModes,
+  InstructionSizes,
+  OpAddressingMode,
+  PageCycles
 } from "./cpu.interface";
 import { CpuAddressingHelper } from "./cpu-addressing-helper";
+
+export interface CycleContext {
+  PC: number;
+  Address: number;
+  Mode: AddressingModes;
+}
 
 export class Cpu {
   private _memory: Memory;
@@ -30,6 +40,8 @@ export class Cpu {
   // Helpers
   private _interrupt: InterruptRequestType;
 
+  private _context: CycleContext;
+
   constructor(memory: Memory) {
     this._currentCycles = 0;
 
@@ -46,6 +58,12 @@ export class Cpu {
     this._interrupt = InterruptRequestType.None;
 
     this._stallCycles = 0;
+
+    this._context = {
+      PC: 0,
+      Address: 0,
+      Mode: AddressingModes.Immediate
+    };
   }
 
   public setStallCycles(cycles: number) {
@@ -66,6 +84,22 @@ export class Cpu {
 
   private _memRead(address: number): number {
     return this._memory.get(address);
+  }
+
+  private _read16(address: number): number {
+    const low = this._memRead(address);
+    const high = this._memRead(address + 1);
+
+    return high << 8 | low;
+  }
+
+  private _read16Bug(address: number): number {
+    const a = address;
+    const b = (a & 0xff00) | ((a & 0xff) + 1);
+    const low = this._memRead(a);
+    const high = this._memRead(b);
+
+    return (high << 8) | (low);
   }
 
   public powerUp(): void {
@@ -192,7 +226,14 @@ export class Cpu {
   }
 
   private _crossesPageBoundary(a: number, b: number): boolean {
-    return (a & 0xFF00) !== (b & 0xFF00);
+    return (a & 0xff00) !== (b & 0xff00);
+  }
+
+  private _addBranchCycles(context: CycleContext) {
+    this._currentCycles++;
+    if (this._crossesPageBoundary(context.PC, context.Address)) {
+      this._currentCycles++;
+    }
   }
 
   public setupNmi() {
@@ -216,1229 +257,73 @@ export class Cpu {
     this._interrupt = InterruptRequestType.NMI;
   }
 
-  public adc(opCode: number) {
-    const oldA = this._regA.get();
+  public adc() {
+    const a = this._regA.get();
+    const b = this._memRead(this._context.Address);
     const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
 
-    let operand = 0;
-    let address = 0;
-    let pageBoundaryCycle = 0;
+    this._regPC.set(a + b + carry);
 
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x69: // Immediate
-        address = this._addressingHelper.atImmediate(this._regPC);
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._regPC.add(1);
-        break;
-      case 0x6d: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._regPC.add(2);
-        break;
-      case 0x65: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._regPC.add(1);
-        break;
-      case 0x7d: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(2);
-        break;
-      case 0x79: // Absolute Indexed, Y
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(2);
-        break;
-      case 0x75: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._regPC.add(1);
-        break;
-      case 0x61: // Direct Page Indexed Indirect, X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._regPC.add(1);
-        break;
-      case 0x71: // Direct Page Indirect Indexed, Y
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(oldA + operand + carry);
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isOverflow(oldA, operand, this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Overflow);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Overflow);
-    }
-
-    if (this._regA.get() === 0) {
+    if(this._regA.get() === 0) {
       this.setStatusBit(StatusBitPositions.Zero);
     } else {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if (this.isCarry(oldA, operand, carry, true)) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public and(opCode: number) {
-    let address = 0;
-    let operand = 0;
-    let pageBoundaryCycle = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x29:
-        operand = this._memRead(this._regPC.get());
-
-        this._regA.set(this._regA.get() & operand);
-        this._regPC.add(1);
-        break;
-      case 0x2d:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        this._regA.set(this._regA.get() & operand);
-        this._regPC.add(2);
-        break;
-      case 0x25:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        this._regA.set(this._regA.get() & operand);
-        this._regPC.add(1);
-        break;
-      case 0x3d:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regA.set(this._regA.get() & operand);
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(2);
-        break;
-      case 0x39:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address - this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regA.set(this._regA.get() & operand);
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(2);
-        break;
-      case 0x35:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(this._regA.get() & operand);
-        this._regPC.add(1);
-        break;
-      case 0x21:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(this._regA.get() & operand);
-        this._regPC.add(1);
-        break;
-      case 0x31:
-          if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-            pageBoundaryCycle = 1;
-          }
-
-
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(this._regA.get() & operand);
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(1);
-        break;
-    }
-
     if (this.isNegative(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Negative);
     } else {
       this.clearStatusBit(StatusBitPositions.Negative);
     }
+
+    if (this.isCarry(a, b, carry, true)) {
+      this.setStatusBit(StatusBitPositions.Carry);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Carry);
+    }
+
+    if (this.isOverflow(a, b, this._regA.get())) {
+      this.setStatusBit(StatusBitPositions.Overflow);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Overflow);
+    }
+  }
+
+  public and() {
+    this._regA.set(this._regA.get() & this._memRead(this._context.Address));
 
     if (this.isZero(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
     } else {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
+
+    if (this.isNegative(this._regA.get())) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
   }
 
-  public asl(opCode: number) {
-    let oldVal = 0;
-    let result = 0;
-    let address = 0;
+  public asl() {
+    let carry;
+    let result;
+    if(this._context.Mode === AddressingModes.Accumulator) {
+      carry = (this._regA.get() >>> 7) & 1;
+      this._regA.set(this._regA.get() << 1);
+      result = this._regA.get();
+    } else {
+      const operand = this._memRead(this._context.Address);
+      carry = (operand >>> 7) & 1;
+      result = operand << 1;
 
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x0a:
-        oldVal = this._regA.get();
-        result = oldVal << 1;
-
-        this._regA.set(result);
-        break;
-      case 0x0e:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        oldVal = this._memRead(address);
-
-        result = oldVal << 1;
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x06:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        oldVal = this._memRead(address);
-
-        result = oldVal << 1;
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
-      case 0x1e:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        oldVal = this._memRead(address);
-
-        result = oldVal << 1;
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x16:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        oldVal = this._memRead(address);
-
-        result = oldVal << 1;
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
+      this._memWrite(this._context.Address, result);
     }
 
-    if ((oldVal & 0x80) === 0x80) {
+    if(carry === 1) {
       this.setStatusBit(StatusBitPositions.Carry);
     } else {
       this.clearStatusBit(StatusBitPositions.Carry);
-    }
-
-    if (this.isNegative(result & 0xff)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(result & 0xff)) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public bcc(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x90:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          // Move onto the next.
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public bcs(opCode: number) {
-    if (this._regPC.get() === 0xf211) {
-    }
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xb0:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (this.getStatusBitFlag(StatusBitPositions.Carry)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public beq(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xf0:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public bit(opCode: number) {
-    let address = 0;
-    let operand = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x2c: // Absolute Addressing
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        if ((operand & 0x80) > 0) {
-          this.setStatusBit(StatusBitPositions.Negative);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Negative);
-        }
-
-        if ((operand & 0x40) > 0) {
-          this.setStatusBit(StatusBitPositions.Overflow);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Overflow);
-        }
-
-        if ((operand & this._regA.get()) === 0) {
-          this.setStatusBit(StatusBitPositions.Zero);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Zero);
-        }
-
-        this._regPC.add(2);
-        break;
-      case 0x24: // Direct Page Addressing
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        if (this.isNegative(operand)) {
-          this.setStatusBit(StatusBitPositions.Negative);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Negative);
-        }
-
-        if ((operand & 0x40) > 0) {
-          this.setStatusBit(StatusBitPositions.Overflow);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Overflow);
-        }
-
-        if ((operand & this._regA.get()) === 0) {
-          this.setStatusBit(StatusBitPositions.Zero);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Zero);
-        }
-
-        this._regPC.add(1);
-        break;
-    }
-  }
-
-  public bmi(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x30:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public bne(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xd0:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public bpl(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x10:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public brk(opCode: number) {
-    this._regPC.add(2);
-    switch (opCode) {
-      case 0x00:
-        this.stackPush((this._regPC.get() & 0xff00) >>> 8);
-        this.stackPush(this._regPC.get() & 0x00ff);
-
-        this.setStatusBit(StatusBitPositions.BrkCausedInterrupt);
-        this.stackPush(this._regP.get() | 0x10);
-        this.setStatusBit(StatusBitPositions.InterruptDisable);
-
-        let interruptVectorLow = this._memRead(IrqVectorLocation.Low);
-        let interruptVectorHigh = this._memRead(IrqVectorLocation.High);
-
-        this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
-
-        this._interrupt = InterruptRequestType.IRQ;
-        break;
-      default:
-        console.error(`ERROR: Unhandled BRK opcode! ${opCode}`);
-        break;
-    }
-  }
-
-  public bvc(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x50:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public bvs(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x70:
-        let displacement = this._memRead(this._regPC.get()) & 0xff;
-        if (displacement >= 0x80) {
-          displacement = -(0xff - displacement + 0x1);
-        }
-
-        if (this.getStatusBitFlag(StatusBitPositions.Overflow)) {
-          const pcPageBoundaryByte = (this._regPC.get() + 1) & 0xff00;
-
-          this._regPC.add(displacement + 1);
-
-          // Page boundary crossed?
-          if (pcPageBoundaryByte !== (this._regPC.get() & 0xff00)) {
-            this._currentCycles += 1;
-          }
-        } else {
-          this._regPC.add(1);
-        }
-        break;
-    }
-  }
-
-  public clc(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x18:
-        this.clearStatusBit(StatusBitPositions.Carry);
-        break;
-    }
-  }
-
-  public cld(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xd8:
-        this.clearStatusBit(StatusBitPositions.DecimalMode);
-        break;
-    }
-  }
-
-  public cli(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x58:
-        this.clearStatusBit(StatusBitPositions.InterruptDisable);
-        break;
-    }
-  }
-
-  public clv(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xb8:
-        this.clearStatusBit(StatusBitPositions.Overflow);
-        break;
-    }
-  }
-
-  public cmp(opCode: number) {
-    let operand = 0;
-    let address = 0;
-    let carry = 0;
-    let pageBoundaryCycle = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xc9: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xcd: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(2);
-        break;
-      case 0xc5: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xdd: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(2);
-        break;
-      case 0xd9: // Absolute Indexed Y
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(2);
-        break;
-      case 0xd5: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xc1: // Direct Page Indexed Indirect, X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xd1: // Direct Page Indirect Indexed, Y
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address - this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        if (this._regA.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._currentCycles += pageBoundaryCycle;
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._regA.get() - operand)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regA.get() - operand)) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public cpx(opCode: number) {
-    let address = 0;
-    let operand = 0;
-    let carry = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xe0: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        if (this._regX.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xec: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        if (this._regX.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(2);
-        break;
-      case 0xe4: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        if (this._regX.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._regX.get() - operand)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regX.get() - operand)) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public cpy(opCode: number) {
-    let address = 0;
-    let operand = 0;
-    let carry = 0;
-
-    this._regPC.add(1);
-
-    switch (opCode) {
-      case 0xc0: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        if (this._regY.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xcc: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        if (this._regY.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(2);
-        break;
-      case 0xc4: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        if (this._regY.get() >= operand) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._regY.get() - operand)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regY.get() - operand)) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public dcp(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let carry = 0;
-
-    // DEC then CMP
-    this._regPC.add(1);
-
-    switch (opcode) {
-      case 0xc3:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        operand--;
-
-        this._memWrite(address, operand);
-
-        if (this._regA.get() >= this._memRead(address)) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xc7:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-        operand--;
-
-        this._memWrite(address, operand);
-
-        if (this._regA.get() >= this._memRead(address)) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xcf:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-        operand--;
-
-        this._memWrite(address, operand);
-
-        if (this._regA.get() >= this._memRead(address)) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(2);
-        break;
-      case 0xd3:
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        operand--;
-
-        this._memWrite(address, operand);
-
-        if (this._regA.get() >= this._memRead(address)) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xd7:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        operand--;
-
-        this._memWrite(address, operand);
-
-        if (this._regA.get() >= this._memRead(address)) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(1);
-        break;
-      case 0xdb:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        operand--;
-
-        this._memWrite(address, operand);
-
-        if (this._regA.get() >= this._memRead(address)) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(2);
-        break;
-      case 0xdf:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        operand--;
-
-        this._memWrite(address, operand);
-
-        if (this._regA.get() >= this._memRead(address)) {
-          carry = 1;
-        } else {
-          carry = 0;
-        }
-        this._regPC.add(2);
-        break;
-    }
-
-    if (this.isNegative(this._regA.get() - this._memRead(address))) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regA.get() - this._memRead(address))) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public dec(opCode: number) {
-    let address = 0;
-    let operand = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xce: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand - 1);
-        this._regPC.add(2);
-        break;
-      case 0xc6: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand - 1);
-        this._regPC.add(1);
-        break;
-      case 0xde: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand - 1);
-        this._regPC.add(2);
-        break;
-      case 0xd6: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand - 1);
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._memRead(address))) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._memRead(address))) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public dex(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xca:
-        this._regX.set(this._regX.get() - 1);
-        break;
-    }
-
-    if (this.isNegative(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public dey(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x88:
-        this._regY.set(this._regY.get() - 1);
-        break;
-    }
-
-    if (this.isNegative(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public eor(opCode: number) {
-    let address = 0;
-    let operand = 0;
-    let result = 0;
-    let pageBoundaryCycle = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x49: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x4d: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(2);
-        break;
-      case 0x45: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x5d: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0x59: // Absolute Indexed, Y
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0x55: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x41: // Direct Page Indexed Indirect, X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x51: // Direct Page Indirect Indexed, Y
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-
-        operand = this._memRead(address);
-
-        result = this._regA.get() ^ operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        this._currentCycles += pageBoundaryCycle;
-        break;
     }
 
     if (this.isNegative(result)) {
@@ -1454,832 +339,213 @@ export class Cpu {
     }
   }
 
-  public inc(opCode: number) {
-    let address = 0;
-    let operand = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xee: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand + 1);
-        this._regPC.add(2);
-        break;
-      case 0xe6: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand + 1);
-        this._regPC.add(1);
-        break;
-      case 0xfe: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand + 1);
-        this._regPC.add(2);
-        break;
-      case 0xf6: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._memWrite(address, operand + 1);
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._memRead(address))) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._memRead(address))) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
+  public bcc() {
+    if(!this.getStatusBitFlag(StatusBitPositions.Carry)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
     }
   }
 
-  public inx(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xe8:
-        this._regX.set(this._regX.get() + 1);
-        break;
-    }
-
-    if (this.isNegative(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
+  public bcs() {
+    if(this.getStatusBitFlag(StatusBitPositions.Carry)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
     }
   }
 
-  public iny(opCode: number) {
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xc8:
-        this._regY.set(this._regY.get() + 1);
-        break;
-    }
-
-    if (this.isNegative(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
+  public beq() {
+    if(this.getStatusBitFlag(StatusBitPositions.Zero)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
     }
   }
 
-  public isb(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let result = 0;
-    let oldA = this._regA.get();
-    // Subtract 1 more if carry is clear!
-    let currentCarry = !this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+  public bit() {
+    const value = this._memRead(this._context.Address);
+    const overflow = (value >>> 6) & 1;
 
-    this._regPC.add(1);
-
-    // INC then SBC
-    switch (opcode) {
-      case 0xe3:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        operand++;
-        this._memWrite(address, operand);
-
-        result = oldA - this._memRead(address) - currentCarry;
-        this._regA.set(result);
-
-        this._regPC.add(1);
-        break;
-      case 0xe7:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-        operand++;
-        this._memWrite(address, operand);
-
-        result = oldA - this._memRead(address) - currentCarry;
-        this._regA.set(result);
-
-        this._regPC.add(1);
-        break;
-      case 0xef:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-        operand++;
-        this._memWrite(address, operand);
-
-        result = oldA - this._memRead(address) - currentCarry;
-        this._regA.set(result);
-
-        this._regPC.add(2);
-        break;
-      case 0xf3:
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        operand++;
-        this._memWrite(address, operand);
-
-        result = oldA - this._memRead(address) - currentCarry;
-        this._regA.set(result);
-
-        this._regPC.add(1);
-        break;
-      case 0xf7:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        operand++;
-        this._memWrite(address, operand);
-
-        result = oldA - this._memRead(address) - currentCarry;
-        this._regA.set(result);
-
-        this._regPC.add(1);
-        break;
-      case 0xfb:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        operand++;
-        this._memWrite(address, operand);
-
-        result = oldA - this._memRead(address) - currentCarry;
-        this._regA.set(result);
-
-        this._regPC.add(2);
-        break;
-      case 0xff:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        operand++;
-        this._memWrite(address, operand);
-
-        result = oldA - this._memRead(address) - currentCarry;
-        this._regA.set(result);
-
-        this._regPC.add(2);
-        break;
-    }
-
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isOverflow(oldA, this._memRead(address), this._regA.get())) {
+    if(overflow > 0) {
       this.setStatusBit(StatusBitPositions.Overflow);
     } else {
       this.clearStatusBit(StatusBitPositions.Overflow);
     }
 
-    if (this.isZero(result)) {
+    if((value & this._regA.get()) === 0) {
       this.setStatusBit(StatusBitPositions.Zero);
     } else {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if (this.isCarry(oldA, this._memRead(address), currentCarry, false)) {
+    if(this.isNegative(value)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+  }
+
+  public bmi() {
+    if(this.getStatusBitFlag(StatusBitPositions.Negative)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
+    }
+  }
+
+  public bne() {
+    if(!this.getStatusBitFlag(StatusBitPositions.Zero)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
+    }
+  }
+
+  public bpl() {
+    if(!this.getStatusBitFlag(StatusBitPositions.Negative)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
+    }
+  }
+
+  public brk() {
+    this.stackPush((this._regPC.get() & 0xff00) >>> 8);
+    this.stackPush(this._regPC.get() & 0x00ff);
+
+    this.setStatusBit(StatusBitPositions.BrkCausedInterrupt);
+    this.stackPush(this._regP.get() | 0x10);
+    this.setStatusBit(StatusBitPositions.InterruptDisable);
+
+    let interruptVectorLow = this._memRead(IrqVectorLocation.Low);
+    let interruptVectorHigh = this._memRead(IrqVectorLocation.High);
+
+    this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
+
+    this._interrupt = InterruptRequestType.IRQ;
+  }
+
+  public bvc() {
+    if(!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
+    }
+  }
+
+  public bvs() {
+    if(this.getStatusBitFlag(StatusBitPositions.Overflow)) {
+      this._regPC.set(this._context.Address);
+      this._addBranchCycles(this._context);
+    }
+  }
+
+  public clc() {
+    this.clearStatusBit(StatusBitPositions.Carry);
+  }
+
+  public cld() {
+    this.clearStatusBit(StatusBitPositions.DecimalMode);
+  }
+
+  public cli() {
+    this.clearStatusBit(StatusBitPositions.InterruptDisable);
+  }
+
+  public clv() {
+    this.clearStatusBit(StatusBitPositions.Overflow);
+  }
+
+  private _compare(a: number, b: number) {
+    const xformedA = a & 0xff;
+    const xformedB = b & 0xff;
+    const result = (xformedA - xformedB) & 0xff
+
+    if(result === 0) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if(this.isNegative(result)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if(xformedA >= xformedB) {
       this.setStatusBit(StatusBitPositions.Carry);
     } else {
       this.clearStatusBit(StatusBitPositions.Carry);
     }
   }
 
-  public jmp(opCode: number) {
-    let address = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0x4c:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        this._regPC.set(address);
-        break;
-      case 0x6c:
-        address = this._addressingHelper.atAbsoluteIndirect(this._regPC);
-        if ((this._regPC.get() & 0x00ff) === 0x00ff) {
-          this._currentCycles += 1;
-        }
-        this._regPC.set(address);
-        break;
-    }
+  public cmp() {
+    const value = this._memRead(this._context.Address);
+    this._compare(this._regA.get(), value);
   }
 
-  public jsr(opCode: number) {
-    this._regPC.add(1);
-
-    switch (opCode) {
-      case 0x20: // Absolute
-        let address = this._addressingHelper.atAbsolute(this._regPC);
-        this._regPC.add(1);
-        this.stackPush((this._regPC.get() & 0xff00) >>> 8);
-        this.stackPush(this._regPC.get() & 0x00ff);
-        this._regPC.set(address);
-        break;
-    }
+  public cpx() {
+    const value = this._memRead(this._context.Address);
+    this._compare(this._regX.get(), value);
   }
 
-  public lax(opcode: number) {
-    let address = 0;
-    let operand = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0xa3: // Direct Indirect X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        this._regA.set(operand);
-        this._regX.set(this._regA.get());
-        this._regPC.add(1);
-        break;
-      case 0xa7:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-        this._regA.set(operand);
-        this._regX.set(this._regA.get());
-        this._regPC.add(1);
-        break;
-      case 0xaf:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-        this._regA.set(operand);
-        this._regX.set(this._regA.get());
-        this._regPC.add(2);
-        break;
-      case 0xb3:
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          this._currentCycles++;
-        }
-        operand = this._memRead(address);
-        this._regA.set(operand);
-        this._regX.set(this._regA.get());
-        this._regPC.add(1);
-        break;
-      case 0xb7:
-        address = this._addressingHelper.atDirectPageIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        this._regA.set(operand);
-        this._regX.set(this._regA.get());
-        this._regPC.add(1);
-        break;
-      case 0xbf:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          this._currentCycles++;
-        }
-        operand = this._memRead(address);
-        this._regA.set(operand);
-        this._regX.set(this._regA.get());
-        this._regPC.add(2);
-        break;
-    }
-
-    if (this.isNegative(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
+  public cpy() {
+    const value = this._memRead(this._context.Address);
+    this._compare(this._regY.get(), value);
   }
 
-  public lda(opCode: number) {
-    let address = 0;
-    let operand = 0;
-    let pageBoundaryCycle = 0;
-
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xa9: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        this._regA.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xad: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        this._regA.set(operand);
-        this._regPC.add(2);
-        break;
-      case 0xa5: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        this._regA.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xbd: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regA.set(operand);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0xb9: // Absolute Indexed, Y
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regA.set(operand);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0xb5: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xa1: // Direct Page Indexed Indirect, X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._regA.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xb1: // Direct Page Indirect Indexed, Y
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regA.set(operand);
-        this._regPC.add(1);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-    }
-
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
+  public dcp() {
   }
 
-  public ldx(opCode: number) {
-    let operand = 0;
-    let address = 0;
-    let pageBoundaryCycle = 0;
+  public dec() {
+    const value = this._memRead(this._context.Address) - 1;
+    this._memWrite(this._context.Address, value);
 
-    this._regPC.add(1);
-    switch (opCode) {
-      case 0xa2: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        this._regX.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xae: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        this._regX.set(operand);
-        this._regPC.add(2);
-        break;
-      case 0xa6: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        this._regX.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xbe: // Absolute Indexed, Y
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regX.set(operand);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0xb6: // Direct Page Indexed, Y
-        address = this._addressingHelper.atDirectPageIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-
-        this._regX.set(operand);
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public ldy(opcode: number) {
-    let operand = 0;
-    let address = 0;
-    let pageBoundaryCycle = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0xa0: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        this._regY.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xac: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        this._regY.set(operand);
-        this._regPC.add(2);
-        break;
-      case 0xa4: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        this._regY.set(operand);
-        this._regPC.add(1);
-        break;
-      case 0xbc: // Absolute Indexed X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        this._regY.set(operand);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0xb4: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        this._regY.set(operand);
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public lsr(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let carry = 0;
-    let result = 0;
-
-    this._regPC.add(1);
-
-    switch (opcode) {
-      case 0x4a: // Accumulator
-        operand = this._regA.get();
-
-        carry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) & ~(1 << 7);
-        this._regA.set(result);
-        break;
-      case 0x4e: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        carry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) & ~(1 << 7);
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x46: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        carry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) & ~(1 << 7);
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
-      case 0x5e: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        carry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) & ~(1 << 7);
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x56: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        carry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) & ~(1 << 7);
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(result & 0xff)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(result & 0xff)) {
+    if(value === 0) {
       this.setStatusBit(StatusBitPositions.Zero);
     } else {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
+    if(this.isNegative(value)) {
+      this.setStatusBit(StatusBitPositions.Negative);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this.clearStatusBit(StatusBitPositions.Negative);
     }
   }
 
-  public nop(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x1a:
-      case 0x3a:
-      case 0x5a:
-      case 0x7a:
-      case 0xda:
-      case 0xfa:
-      case 0xea:
-        break;
+  public dex() {
+    const value = this._regX.get() - 1;
+    this._regX.set(value);
+
+    if(value === 0) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if(this.isNegative(value)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
     }
   }
 
-  public skb(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x80:
-      case 0x82:
-      case 0x89:
-      case 0xc2:
-      case 0xe2:
-        this._regPC.add(1);
-        break;
+  public dey() {
+    const value = this._regY.get() - 1;
+    this._regY.set(value);
+
+    if(value === 0) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if(this.isNegative(value)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
     }
   }
 
-  public ign(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x0c:
-        this._regPC.add(2);
-        break;
-      case 0x1c:
-      case 0x3c:
-      case 0x5c:
-      case 0x7c:
-      case 0xdc:
-      case 0xfc:
-        let pageBoundaryCycle = 0;
-
-        
-        if (
-          this._addressingHelper.crossesPageBoundaryAtAbsoluteIndexedX(
-            this._regPC,
-            this._regX
-          )
-        ) {
-          pageBoundaryCycle = 1;
-        }
-
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0x04:
-      case 0x44:
-      case 0x64:
-        this._regPC.add(1);
-        break;
-      case 0x14:
-      case 0x34:
-      case 0x54:
-      case 0x74:
-      case 0xd4:
-      case 0xf4:
-        this._regPC.add(1);
-        break;
-    }
-  }
-
-  public ora(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let result = 0;
-    let pageBoundaryCycle = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x09: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x0d: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(2);
-        break;
-      case 0x05: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x1d: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0x19: // Absolute Indexed, Y
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0x15: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x01: // Direct Page Indexed Indirect, X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0x11: // Direct Page Indirect Indexed, Y
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = this._regA.get() | operand;
-        this._regA.set(result);
-        this._regPC.add(1);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-    }
+  public eor() {
+    const result = this._regA.get() ^ this._memRead(this._context.Address);
+    this._regA.set(result);
 
     if (this.isNegative(result)) {
       this.setStatusBit(StatusBitPositions.Negative);
@@ -2294,33 +560,76 @@ export class Cpu {
     }
   }
 
-  public pha(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x48:
-        this.stackPush(this._regA.get());
-        break;
+  public inc() {
+    const value = this._memRead(this._context.Address) + 1;
+    this._memWrite(this._context.Address, value);
+
+    if(value === 0) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if(this.isNegative(value)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
     }
   }
 
-  public php(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x08:
-        let pStatus = this._regP.get() | 0x10;
-        this.stackPush(pStatus);
-        break;
+  public inx() {
+    const value = this._regX.get() + 1;
+    this._regX.set(value);
+
+    if(value === 0) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if(this.isNegative(value)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
     }
   }
 
-  public pla(opcode: number) {
-    this._regPC.add(1);
+  public iny() {
+    const value = this._regY.get() + 1;
+    this._regY.set(value);
 
-    switch (opcode) {
-      case 0x68:
-        this._regA.set(this.stackPull());
-        break;
+    if(value === 0) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
     }
+
+    if(this.isNegative(value)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+  }
+
+  public isb() {
+  }
+
+  public jmp() {
+    this._regPC.set(this._context.Address);
+  }
+
+  public jsr() {
+    const startAddr = this._regPC.get() - 1;
+    this.stackPush((startAddr & 0xff00) >>> 8);
+    this.stackPush(startAddr & 0x00ff);
+
+    this._regPC.set(this._context.Address);
+  }
+
+  public lax() { }
+
+  public lda() {
+    this._regA.set(this._memRead(this._context.Address));
 
     if (this.isNegative(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Negative);
@@ -2335,1135 +644,8 @@ export class Cpu {
     }
   }
 
-  public plp(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x28:
-        let pStatus = this.stackPull();
-        pStatus = pStatus | 0x20;
-        this._regP.set(pStatus);
-        this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
-        break;
-    }
-  }
-
-  public rla(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let newCarry = 0;
-    let oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
-
-    this._regPC.add(1);
-
-    // ROL and AND
-    switch (opcode) {
-      case 0x23:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-
-        operand = this._memRead(address);
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
-
-        this._memWrite(address, (operand << 1) | oldCarry);
-
-        this._regA.set(this._regA.get() & this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x27:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
-
-        this._memWrite(address, (operand << 1) | oldCarry);
-
-        this._regA.set(this._regA.get() & this._memRead(address));
-        this._regPC.add(1);
-        break;
-      case 0x2f:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
-
-        this._memWrite(address, (operand << 1) | oldCarry);
-
-        this._regA.set(this._regA.get() & this._memRead(address));
-        this._regPC.add(2);
-        break;
-      case 0x33:
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
-
-        this._memWrite(address, (operand << 1) | oldCarry);
-
-        this._regA.set(this._regA.get() & this._memRead(address));
-        this._regPC.add(1);
-        break;
-      case 0x37:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
-
-        this._memWrite(address, (operand << 1) | oldCarry);
-
-        this._regA.set(this._regA.get() & this._memRead(address));
-        this._regPC.add(1);
-        break;
-      case 0x3b:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
-
-        this._memWrite(address, (operand << 1) | oldCarry);
-
-        this._regA.set(this._regA.get() & this._memRead(address));
-        this._regPC.add(2);
-        break;
-      case 0x3f:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x80) > 0 ? 1 : 0;
-
-        this._memWrite(address, (operand << 1) | oldCarry);
-
-        this._regA.set(this._regA.get() & this._memRead(address));
-        this._regPC.add(2);
-        break;
-    }
-
-    if (newCarry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public rol(opcode: number) {
-    let operand = 0;
-    let address = 0;
-    let result = 0;
-    let oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
-    let newCarry = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x2a: // Accumulator
-        operand = this._regA.get();
-
-        newCarry = (operand >> 7) & 1;
-        result = (operand << 1) | (oldCarry & 1);
-        this._regA.set(result);
-        break;
-      case 0x2e: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        newCarry = (operand >> 7) & 1;
-        result = (operand << 1) | (oldCarry & 1);
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x26: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        newCarry = (operand >> 7) & 1;
-        result = (operand << 1) | (oldCarry & 1);
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
-      case 0x3e: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        newCarry = (operand >> 7) & 1;
-        result = (operand << 1) | (oldCarry & 1);
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x36: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        newCarry = (operand >> 7) & 1;
-        result = (operand << 1) | (oldCarry & 1);
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(result & 0xff)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(result & 0xff)) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (newCarry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public ror(opcode: number) {
-    let operand = 0;
-    let address = 0;
-    let result = 0;
-    let oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
-    let newCarry = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x6a: // Accumulator
-        operand = this._regA.get();
-
-        newCarry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) | (oldCarry << 7);
-        this._regA.set(result);
-        break;
-      case 0x6e: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        newCarry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x66: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        newCarry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
-      case 0x7e: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        newCarry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, result);
-        this._regPC.add(2);
-        break;
-      case 0x76: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        newCarry = (operand & 1) === 1 ? 1 : 0;
-        result = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, result);
-        this._regPC.add(1);
-        break;
-    }
-
-    if (this.isNegative(result & 0xff)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(result & 0xff)) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (newCarry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public rra(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let oldCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
-    let newCarry = 0;
-    let oldA = 0;
-
-    // ROR and then ADC
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x63:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-
-        operand = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, operand);
-
-        if (newCarry === 1) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        // adc time
-        oldA = this._regA.get();
-
-        this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
-
-        this._regPC.add(1);
-        break;
-      case 0x67:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-
-        operand = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, operand);
-
-        if (newCarry === 1) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        // adc time
-        oldA = this._regA.get();
-
-        this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
-
-        this._regPC.add(1);
-        break;
-      case 0x6f:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-
-        operand = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, operand);
-
-        if (newCarry === 1) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        // adc time
-        oldA = this._regA.get();
-
-        this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
-
-        this._regPC.add(2);
-        break;
-      case 0x73:
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-
-        operand = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, operand);
-
-        if (newCarry === 1) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        // adc time
-        oldA = this._regA.get();
-
-        this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
-
-        this._regPC.add(1);
-        break;
-      case 0x77:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-
-        operand = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, operand);
-
-        if (newCarry === 1) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        // adc time
-        oldA = this._regA.get();
-
-        this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
-
-        this._regPC.add(1);
-        break;
-      case 0x7b:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-
-        operand = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, operand);
-
-        if (newCarry === 1) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        // adc time
-        oldA = this._regA.get();
-
-        this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
-
-        this._regPC.add(2);
-        break;
-      case 0x7f:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        newCarry = (operand & 0x0001) > 0 ? 1 : 0;
-
-        operand = (operand >>> 1) | (oldCarry << 7);
-        this._memWrite(address, operand);
-
-        if (newCarry === 1) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        // adc time
-        oldA = this._regA.get();
-
-        this._regA.set(this._regA.get() + this._memRead(address) + newCarry);
-
-        this._regPC.add(2);
-        break;
-    }
-
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isOverflow(oldA, this._memRead(address), this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Overflow);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Overflow);
-    }
-
-    if (this._regA.get() === 0) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (this.isCarry(oldA, this._memRead(address), newCarry, true)) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public rti(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x40:
-        const newP = this.stackPull();
-        const pcLow = this.stackPull();
-        const pcHigh = this.stackPull();
-
-        this._regPC.set((pcHigh << 8) | pcLow);
-        this._regP.set(newP);
-
-        this.clearStatusBit(StatusBitPositions.BrkCausedInterrupt);
-        this.setStatusBit(StatusBitPositions.Bit5);
-        break;
-    }
-  }
-
-  public rts(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x60:
-        const newLowPC = this.stackPull();
-        const newHighPC = this.stackPull();
-
-        this._regPC.set((newHighPC << 8) | newLowPC);
-        this._regPC.add(1);
-        break;
-    }
-  }
-
-  public sax(opcode: number) {
-    let address = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x83:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        this._memWrite(address, this._regA.get() & this._regX.get());
-        this._regPC.add(1);
-        break;
-      case 0x87:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        this._memWrite(address, this._regA.get() & this._regX.get());
-        this._regPC.add(1);
-        break;
-      case 0x8f:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        this._memWrite(address, this._regA.get() & this._regX.get());
-        this._regPC.add(2);
-        break;
-      case 0x97:
-        address = this._addressingHelper.atDirectPageIndexedY(
-          this._regPC,
-          this._regY
-        );
-        this._memWrite(address, this._regA.get() & this._regX.get());
-        this._regPC.add(1);
-        break;
-    }
-  }
-
-  public sbc(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let result = 0;
-    let pageBoundaryCycle = 0;
-    let oldA = this._regA.get();
-    // Subtract 1 more if carry is clear!
-    let currentCarry = !this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
-
-    this._regPC.add(1);
-
-    switch (opcode) {
-      case 0xeb:
-      case 0xe9: // Immediate
-        operand = this._memRead(this._regPC.get());
-
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0xed: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(2);
-        break;
-      case 0xe5: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0xfd: // Absolute Indexed, X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        if(this._crossesPageBoundary(address-this._regX.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0xf9: // Absolute Indexed, Y
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(2);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-      case 0xf5: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0xe1: // Direct Page Indexed Indirect, X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        //
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(1);
-        break;
-      case 0xf1: // Direct Page Indirect Indexed, Y
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        if(this._crossesPageBoundary(address-this._regY.get(), address)) {
-          pageBoundaryCycle = 1;
-        }
-        operand = this._memRead(address);
-
-        result = oldA - operand - currentCarry;
-        this._regA.set(result);
-        this._regPC.add(1);
-        this._currentCycles += pageBoundaryCycle;
-        break;
-    }
-
-    if (this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isOverflow(oldA, operand, result)) {
-      this.setStatusBit(StatusBitPositions.Overflow);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Overflow);
-    }
-
-    if (this.isZero(result)) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-
-    if (this.isCarry(oldA, operand, currentCarry, false)) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public sec(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x38:
-        this.setStatusBit(StatusBitPositions.Carry);
-        break;
-    }
-  }
-
-  public sed(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0xf8:
-        this.setStatusBit(StatusBitPositions.DecimalMode);
-        break;
-    }
-  }
-
-  public sei(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x78:
-        this.setStatusBit(StatusBitPositions.InterruptDisable);
-        break;
-    }
-  }
-
-  public slo(opcode: number) {
-    let address = 0;
-    let operand = 0;
-
-    this._regPC.add(1);
-
-    switch (opcode) {
-      case 0x03:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        if ((this._memRead(address) & 0x80) === 0x80) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        operand <<= 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() | this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x07:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-
-        if ((this._memRead(address) & 0x80) === 0x80) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        operand <<= 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() | this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x0f:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-
-        if ((this._memRead(address) & 0x80) === 0x80) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        operand <<= 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() | this._memRead(address));
-
-        this._regPC.add(2);
-        break;
-      case 0x13:
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-
-        if ((this._memRead(address) & 0x80) === 0x80) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        operand <<= 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() | this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x17:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        if ((this._memRead(address) & 0x80) === 0x80) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        operand <<= 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() | this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x1b:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-
-        if ((this._memRead(address) & 0x80) === 0x80) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        operand <<= 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() | this._memRead(address));
-
-        this._regPC.add(2);
-        break;
-      case 0x1f:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-
-        if ((this._memRead(address) & 0x80) === 0x80) {
-          this.setStatusBit(StatusBitPositions.Carry);
-        } else {
-          this.clearStatusBit(StatusBitPositions.Carry);
-        }
-
-        operand <<= 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() | this._memRead(address));
-
-        this._regPC.add(2);
-        break;
-    }
-
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public sre(opcode: number) {
-    let address = 0;
-    let operand = 0;
-    let carry = 0;
-
-    this._regPC.add(1);
-
-    switch (opcode) {
-      case 0x43:
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-
-        operand = operand >>> 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() ^ this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x47:
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._memRead(address);
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-
-        operand = operand >>> 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() ^ this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x4f:
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._memRead(address);
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-
-        operand = operand >>> 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() ^ this._memRead(address));
-
-        this._regPC.add(2);
-        break;
-      case 0x53:
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-
-        operand = operand >>> 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() ^ this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x57:
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-
-        operand = operand >> 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() ^ this._memRead(address));
-
-        this._regPC.add(1);
-        break;
-      case 0x5b:
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._memRead(address);
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-
-        operand = operand >>> 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() ^ this._memRead(address));
-
-        this._regPC.add(2);
-        break;
-      case 0x5f:
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._memRead(address);
-        carry = (operand & 0x0001) === 1 ? 1 : 0;
-
-        operand = operand >>> 1;
-        this._memWrite(address, operand);
-
-        this._regA.set(this._regA.get() ^ this._memRead(address));
-
-        this._regPC.add(2);
-        break;
-    }
-
-    if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
-
-    if (this.isZero(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Zero);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
-    }
-  }
-
-  public sta(opcode: number) {
-    let operand = 0;
-    let address = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x8d: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._regA.get();
-        this._memWrite(address, operand);
-        this._regPC.add(2);
-        break;
-      case 0x85: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._regA.get();
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-      case 0x9d: // Absolute Indexed X
-        address = this._addressingHelper.atAbsoluteIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._regA.get();
-        this._memWrite(address, operand);
-        this._regPC.add(2);
-        break;
-      case 0x99: // Absolute Indexed Y
-        address = this._addressingHelper.atAbsoluteIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._regA.get();
-        this._memWrite(address, operand);
-        this._regPC.add(2);
-        break;
-      case 0x95: // Direct Page Indexed X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._regA.get();
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-      case 0x81: // Direct Page Indexed Indirect, X
-        address = this._addressingHelper.atDirectPageIndexedIndirectX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._regA.get();
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-      case 0x91: // Direct Page Indirect Indexed, Y
-        address = this._addressingHelper.atDirectPageIndirectIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._regA.get();
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-    }
-  }
-
-  public stx(opcode: number) {
-    let address = 0;
-    let operand = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x8e: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._regX.get();
-        this._memWrite(address, operand);
-        this._regPC.add(2);
-        break;
-      case 0x86: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._regX.get();
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-      case 0x96: // Direct Page Indexed, Y
-        address = this._addressingHelper.atDirectPageIndexedY(
-          this._regPC,
-          this._regY
-        );
-        operand = this._regX.get();
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-    }
-  }
-
-  public sty(opcode: number) {
-    let address = 0;
-    let operand = 0;
-
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x8c: // Absolute
-        address = this._addressingHelper.atAbsolute(this._regPC);
-        operand = this._regY.get();
-
-        this._memWrite(address, operand);
-        this._regPC.add(2);
-        break;
-      case 0x84: // Direct Page
-        address = this._addressingHelper.atDirectPage(this._regPC);
-        operand = this._regY.get();
-
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-      case 0x94: // Direct Page Indexed, X
-        address = this._addressingHelper.atDirectPageIndexedX(
-          this._regPC,
-          this._regX
-        );
-        operand = this._regY.get();
-
-        this._memWrite(address, operand);
-        this._regPC.add(1);
-        break;
-    }
-  }
-
-  public tax(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0xaa:
-        this._regX.set(this._regA.get());
-        break;
-    }
+  public ldx() {
+    this._regX.set(this._memRead(this._context.Address));
 
     if (this.isNegative(this._regX.get())) {
       this.setStatusBit(StatusBitPositions.Negative);
@@ -3478,13 +660,8 @@ export class Cpu {
     }
   }
 
-  public tay(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0xa8:
-        this._regY.set(this._regA.get());
-        break;
-    }
+  public ldy() {
+    this._regY.set(this._memRead(this._context.Address));
 
     if (this.isNegative(this._regY.get())) {
       this.setStatusBit(StatusBitPositions.Negative);
@@ -3499,34 +676,79 @@ export class Cpu {
     }
   }
 
-  public tsx(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0xba:
-        this._regX.set(this._regSP.get());
-        break;
+  public lsr() {
+    let carry;
+    let result;
+
+    if(this._context.Mode === AddressingModes.Accumulator) {
+      carry = this._regA.get() & 1;
+      this._regA.set(this._regA.get() >>> 1);
+      result = this._regA.get();
+    } else {
+      const value = this._memRead(this._context.Address);
+      carry = value & 1;
+
+      result = value >>> 1;
+      this._memWrite(this._context.Address, result);
     }
 
-    if (this.isNegative(this._regX.get())) {
+    if (this.isNegative(result)) {
       this.setStatusBit(StatusBitPositions.Negative);
     } else {
       this.clearStatusBit(StatusBitPositions.Negative);
     }
 
-    if (this.isZero(this._regX.get())) {
+    if (this.isZero(result)) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if (carry === 1) {
+      this.setStatusBit(StatusBitPositions.Carry);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Carry);
+    }
+  }
+
+  public nop() {
+    // noop
+  }
+
+  public skb() {
+  }
+
+  public ign() {    
+  }
+
+  public ora() {
+    this._regA.set(this._regA.get() | this._memRead(this._context.Address));
+
+    const result = this._regA.get();
+    if (this.isNegative(result)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if (this.isZero(result)) {
       this.setStatusBit(StatusBitPositions.Zero);
     } else {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
   }
 
-  public txa(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x8a:
-        this._regA.set(this._regX.get());
-        break;
-    }
+  public pha() {
+    this.stackPush(this._regA.get());
+  }
+
+  public php() {
+    let pStatus = this._regP.get() | 0x10;
+    this.stackPush(pStatus);
+  }
+
+  public pla() {
+    this._regA.set(this.stackPull());
 
     if (this.isNegative(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Negative);
@@ -3541,26 +763,245 @@ export class Cpu {
     }
   }
 
-  public txs(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x9a:
-        this._regSP.set(this._regX.get());
-        break;
-      default:
-        break;
+  public plp() {
+    let pStatus = this.stackPull() & 0xEF | 0x20;
+    this._regP.set(pStatus);
+  }
+
+  public rla() {
+  }
+
+  public rol() {
+    const currCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1: 0;
+    let newCarry;
+    let result;
+
+    if(this._context.Mode === AddressingModes.Accumulator) {
+      newCarry = (this._regA.get() >>> 7) & 1;
+      this._regA.set((this._regA.get() << 1) | currCarry);
+
+      result = this._regA.get();
+    } else {
+      const value = this._memRead(this._context.Address);
+      newCarry = (value >>> 7) & 1;
+
+      result = (value << 1) | currCarry;
+
+      this._memWrite(this._context.Address, result);
+    }
+
+    if (this.isNegative(result)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if (this.isZero(result)) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if (newCarry === 1) {
+      this.setStatusBit(StatusBitPositions.Carry);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Carry);
     }
   }
 
-  public tya(opcode: number) {
-    this._regPC.add(1);
-    switch (opcode) {
-      case 0x98:
-        this._regA.set(this._regY.get());
-        break;
-      default:
-        break;
+  public ror() {
+    const currCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1: 0;
+    let newCarry;
+    let result;
+
+    if(this._context.Mode === AddressingModes.Accumulator) {
+      newCarry = this._regA.get() & 1;
+      this._regA.set((this._regA.get() >>> 1) | (currCarry << 7));
+
+      result = this._regA.get();
+    } else {
+      const value = this._memRead(this._context.Address);
+      newCarry = value& 1;
+
+      result = (value >>> 1) | (currCarry << 7);
+
+      this._memWrite(this._context.Address, result);
     }
+
+
+    if (this.isNegative(result)) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if (this.isZero(result)) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if (newCarry === 1) {
+      this.setStatusBit(StatusBitPositions.Carry);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Carry);
+    }
+  }
+
+  public rra() {
+  }
+
+  public rti() {
+    const newP = (this.stackPull() & 0xEF) | 0x20;
+    const pcLow = this.stackPull();
+    const pcHigh = this.stackPull();
+
+    this._regPC.set((pcHigh << 8) | pcLow);
+    this._regP.set(newP);
+  }
+
+  public rts() {
+    const newLowPC = this.stackPull();
+    const newHighPC = this.stackPull();
+
+    this._regPC.set(((newHighPC << 8) | newLowPC) + 1);
+  }
+
+  public sax() {
+  }
+
+  public sbc() {
+    const a = this._regA.get();
+    const b = this._memRead(this._context.Address);
+    const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+
+    this._regA.set(a - b - (1- carry));
+
+    if(this.isZero(this._regA.get())) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+
+    if(this.isNegative(this._regA.get())) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if(this.isCarry(a, b, 1 - carry, false)) {
+      this.setStatusBit(StatusBitPositions.Carry);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Carry);
+    }
+
+    if(this.isOverflow(a, b, this._regA.get())) {
+      this.setStatusBit(StatusBitPositions.Overflow);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Overflow);
+    }
+  }
+
+  public sec() {
+    this.setStatusBit(StatusBitPositions.Carry);
+  }
+
+  public sed() {
+    this.setStatusBit(StatusBitPositions.DecimalMode);
+  }
+
+  public sei() {
+    this.setStatusBit(StatusBitPositions.InterruptDisable);
+  }
+
+  public slo() {
+  }
+
+  public sre() {
+  }
+
+  public sta() {
+    this._memWrite(this._context.Address, this._regA.get());
+  }
+
+  public stx() {
+    this._memWrite(this._context.Address, this._regX.get());
+  }
+
+  public sty() {
+    this._memWrite(this._context.Address, this._regY.get());
+  }
+
+  public tax() {
+    this._regX.set(this._regA.get());
+
+    if (this.isNegative(this._regX.get())) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if (this.isZero(this._regX.get())) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+  }
+
+  public tay() {
+    this._regY.set(this._regA.get());
+
+    if (this.isNegative(this._regY.get())) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if (this.isZero(this._regY.get())) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+  }
+
+  public tsx() {
+    this._regX.set(this._regSP.get());
+
+    if (this.isNegative(this._regX.get())) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if (this.isZero(this._regX.get())) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+  }
+
+  public txa() {
+    this._regA.set(this._regX.get());
+
+    if (this.isNegative(this._regA.get())) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
+    }
+
+    if (this.isZero(this._regA.get())) {
+      this.setStatusBit(StatusBitPositions.Zero);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Zero);
+    }
+  }
+
+  public txs() {
+    this._regSP.set(this._regX.get());
+  }
+
+  public tya() {
+    this._regA.set(this._regY.get());
 
     if (this.isNegative(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Negative);
@@ -3580,11 +1021,81 @@ export class Cpu {
     this._currentCycles++;
   }
 
+  private _getAddressFromMode(mode: AddressingModes) {
+    let address = 0;
+    let pageCrossed = false;
+
+    switch (mode) {
+      case AddressingModes.Immediate:
+        address = this._regPC.get() + 1;
+        break;
+      case AddressingModes.Absolute:
+        address = this._read16(this._regPC.get() + 1);
+        break;
+      case AddressingModes.AbsoluteIndirect:
+        address = this._read16Bug(this._regPC.get() + 1);
+        break;
+      case AddressingModes.DirectPage:
+        address = this._memRead(this._regPC.get() + 1);
+        break;
+      case AddressingModes.AbsoluteIndexedX:
+        address = this._read16(this._regPC.get() + 1) + this._regX.get();
+        pageCrossed = this._crossesPageBoundary(address - this._regX.get(), address);
+        break;
+      case AddressingModes.AbsoluteIndexedY:
+        address = this._read16(this._regPC.get() + 1) + this._regY.get();
+        pageCrossed = this._crossesPageBoundary(address - this._regY.get(), address);
+        break;
+      case AddressingModes.DirectPageIndexedX:
+        address = (this._memRead(this._regPC.get() + 1) + this._regX.get()) & 0xff;
+        break;
+      case AddressingModes.DirectPageIndexedY:
+        address = (this._memRead(this._regPC.get() + 1) + this._regY.get()) & 0xff;
+        break;
+      case AddressingModes.DirectPageIndexedIndirectX:
+        address = this._read16Bug(this._memRead(this._regPC.get() + 1) + this._regX.get());
+        break;
+      case AddressingModes.DirectPageIndirectIndexedY:
+        address = this._read16Bug(this._memRead(this._regPC.get() + 1)) + this._regY.get();
+        break;
+      case AddressingModes.Implicit:
+        address = 0;
+        break;
+      case AddressingModes.Accumulator:
+        address = 0;
+        break;
+      case AddressingModes.Relative:
+        const offset = this._memRead(this._regPC.get() + 1);
+        if(offset < 0x80) {
+          address = this._regPC.get() + 2 + offset;
+        } else {
+          address = this._regPC.get() + 2 + offset - 0x100;
+        }
+        break;
+    }
+
+    return { address, pageCrossed };
+  }
+
   public handleOp(opCode: number) {
+
+    let addressInfo = this._getAddressFromMode(OpAddressingMode[opCode]);
+
+    this._regPC.add(InstructionSizes[opCode]);
     this._currentCycles += Cycles[opCode];
+    if(addressInfo.pageCrossed) {
+      this._currentCycles += PageCycles[opCode];
+    }
+
+    this._context = {
+      PC: this._regPC.get(),
+      Address: addressInfo.address,
+      Mode: OpAddressingMode[opCode]
+    };
+
     switch (opCode) {
       case 0x00:
-        this.brk(opCode);
+        this.brk();
         break;
       case 0x01:
       case 0x05:
@@ -3594,17 +1105,17 @@ export class Cpu {
       case 0x15:
       case 0x19:
       case 0x1d:
-        this.ora(opCode);
+        this.ora();
         break;
       case 0x06:
       case 0x0a:
       case 0x0e:
       case 0x16:
       case 0x1e:
-        this.asl(opCode);
+        this.asl();
         break;
       case 0x08:
-        this.php(opCode);
+        this.php();
         break;
       case 0x0c:
       case 0x1c:
@@ -3622,16 +1133,16 @@ export class Cpu {
       case 0x74:
       case 0xd4:
       case 0xf4:
-        this.ign(opCode);
+        this.ign();
         break;
       case 0x10:
-        this.bpl(opCode);
+        this.bpl();
         break;
       case 0x18:
-        this.clc(opCode);
+        this.clc();
         break;
       case 0x20:
-        this.jsr(opCode);
+        this.jsr();
         break;
       case 0x21:
       case 0x25:
@@ -3641,30 +1152,30 @@ export class Cpu {
       case 0x35:
       case 0x39:
       case 0x3d:
-        this.and(opCode);
+        this.and();
         break;
       case 0x24:
       case 0x2c:
-        this.bit(opCode);
+        this.bit();
         break;
       case 0x26:
       case 0x2a:
       case 0x2e:
       case 0x36:
       case 0x3e:
-        this.rol(opCode);
+        this.rol();
         break;
       case 0x28:
-        this.plp(opCode);
+        this.plp();
         break;
       case 0x30:
-        this.bmi(opCode);
+        this.bmi();
         break;
       case 0x38:
-        this.sec(opCode);
+        this.sec();
         break;
       case 0x40:
-        this.rti(opCode);
+        this.rti();
         break;
       case 0x41:
       case 0x45:
@@ -3674,30 +1185,30 @@ export class Cpu {
       case 0x55:
       case 0x59:
       case 0x5d:
-        this.eor(opCode);
+        this.eor();
         break;
       case 0x46:
       case 0x4a:
       case 0x4e:
       case 0x56:
       case 0x5e:
-        this.lsr(opCode);
+        this.lsr();
         break;
       case 0x48:
-        this.pha(opCode);
+        this.pha();
         break;
       case 0x4c:
       case 0x6c:
-        this.jmp(opCode);
+        this.jmp();
         break;
       case 0x50:
-        this.bvc(opCode);
+        this.bvc();
         break;
       case 0x58:
-        this.cli(opCode);
+        this.cli();
         break;
       case 0x60:
-        this.rts(opCode);
+        this.rts();
         break;
       case 0x61:
       case 0x65:
@@ -3707,23 +1218,23 @@ export class Cpu {
       case 0x75:
       case 0x79:
       case 0x7d:
-        this.adc(opCode);
+        this.adc();
         break;
       case 0x66:
       case 0x6a:
       case 0x6e:
       case 0x76:
       case 0x7e:
-        this.ror(opCode);
+        this.ror();
         break;
       case 0x68:
-        this.pla(opCode);
+        this.pla();
         break;
       case 0x70:
-        this.bvs(opCode);
+        this.bvs();
         break;
       case 0x78:
-        this.sei(opCode);
+        this.sei();
         break;
       case 0x81:
       case 0x85:
@@ -3732,39 +1243,39 @@ export class Cpu {
       case 0x95:
       case 0x99:
       case 0x9d:
-        this.sta(opCode);
+        this.sta();
         break;
       case 0x84:
       case 0x8c:
       case 0x94:
-        this.sty(opCode);
+        this.sty();
         break;
       case 0x86:
       case 0x8e:
       case 0x96:
-        this.stx(opCode);
+        this.stx();
         break;
       case 0x88:
-        this.dey(opCode);
+        this.dey();
         break;
       case 0x8a:
-        this.txa(opCode);
+        this.txa();
         break;
       case 0x90:
-        this.bcc(opCode);
+        this.bcc();
         break;
       case 0x98:
-        this.tya(opCode);
+        this.tya();
         break;
       case 0x9a:
-        this.txs(opCode);
+        this.txs();
         break;
       case 0xa0:
       case 0xa4:
       case 0xac:
       case 0xb4:
       case 0xbc:
-        this.ldy(opCode);
+        this.ldy();
         break;
       case 0xa1:
       case 0xa5:
@@ -3774,34 +1285,34 @@ export class Cpu {
       case 0xb5:
       case 0xb9:
       case 0xbd:
-        this.lda(opCode);
+        this.lda();
         break;
       case 0xa2:
       case 0xa6:
       case 0xae:
       case 0xb6:
       case 0xbe:
-        this.ldx(opCode);
+        this.ldx();
         break;
       case 0xa8:
-        this.tay(opCode);
+        this.tay();
         break;
       case 0xaa:
-        this.tax(opCode);
+        this.tax();
         break;
       case 0xb0:
-        this.bcs(opCode);
+        this.bcs();
         break;
       case 0xb8:
-        this.clv(opCode);
+        this.clv();
         break;
       case 0xba:
-        this.tsx(opCode);
+        this.tsx();
         break;
       case 0xc0:
       case 0xc4:
       case 0xcc:
-        this.cpy(opCode);
+        this.cpy();
         break;
       case 0xc1:
       case 0xc5:
@@ -3811,30 +1322,30 @@ export class Cpu {
       case 0xd5:
       case 0xd9:
       case 0xdd:
-        this.cmp(opCode);
+        this.cmp();
         break;
       case 0xc6:
       case 0xce:
       case 0xd6:
       case 0xde:
-        this.dec(opCode);
+        this.dec();
         break;
       case 0xc8:
-        this.iny(opCode);
+        this.iny();
         break;
       case 0xca:
-        this.dex(opCode);
+        this.dex();
         break;
       case 0xd0:
-        this.bne(opCode);
+        this.bne();
         break;
       case 0xd8:
-        this.cld(opCode);
+        this.cld();
         break;
       case 0xe0:
       case 0xe4:
       case 0xec:
-        this.cpx(opCode);
+        this.cpx();
         break;
       case 0xe1:
       case 0xe5:
@@ -3845,16 +1356,16 @@ export class Cpu {
       case 0xf5:
       case 0xf9:
       case 0xfd:
-        this.sbc(opCode);
+        this.sbc();
         break;
       case 0xe6:
       case 0xee:
       case 0xf6:
       case 0xfe:
-        this.inc(opCode);
+        this.inc();
         break;
       case 0xe8:
-        this.inx(opCode);
+        this.inx();
         break;
       case 0x1a:
       case 0x3a:
@@ -3863,20 +1374,20 @@ export class Cpu {
       case 0xda:
       case 0xfa:
       case 0xea:
-        this.nop(opCode);
+        this.nop();
         break;
       case 0x80:
       case 0x82:
       case 0x89:
       case 0xc2:
       case 0xe2:
-        this.skb(opCode);
+        this.skb();
         break;
       case 0xf0:
-        this.beq(opCode);
+        this.beq();
         break;
       case 0xf8:
-        this.sed(opCode);
+        this.sed();
         break;
       case 0xa3:
       case 0xa7:
@@ -3884,13 +1395,13 @@ export class Cpu {
       case 0xb3:
       case 0xb7:
       case 0xbf:
-        this.lax(opCode);
+        this.lax();
         break;
       case 0x83:
       case 0x87:
       case 0x8f:
       case 0x97:
-        this.sax(opCode);
+        this.sax();
         break;
       case 0xc3:
       case 0xc7:
@@ -3899,7 +1410,7 @@ export class Cpu {
       case 0xd7:
       case 0xdb:
       case 0xdf:
-        this.dcp(opCode);
+        this.dcp();
         break;
       case 0xe3:
       case 0xe7:
@@ -3908,7 +1419,7 @@ export class Cpu {
       case 0xf7:
       case 0xfb:
       case 0xff:
-        this.isb(opCode);
+        this.isb();
         break;
       case 0x03:
       case 0x07:
@@ -3917,7 +1428,7 @@ export class Cpu {
       case 0x17:
       case 0x1b:
       case 0x1f:
-        this.slo(opCode);
+        this.slo();
         break;
       case 0x23:
       case 0x27:
@@ -3926,7 +1437,7 @@ export class Cpu {
       case 0x37:
       case 0x3b:
       case 0x3f:
-        this.rla(opCode);
+        this.rla();
         break;
       case 0x43:
       case 0x47:
@@ -3935,7 +1446,7 @@ export class Cpu {
       case 0x57:
       case 0x5b:
       case 0x5f:
-        this.sre(opCode);
+        this.sre();
         break;
       case 0x63:
       case 0x67:
@@ -3944,7 +1455,7 @@ export class Cpu {
       case 0x77:
       case 0x7b:
       case 0x7f:
-        this.rra(opCode);
+        this.rra();
         break;
       default:
         break;
