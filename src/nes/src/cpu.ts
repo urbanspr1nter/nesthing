@@ -66,11 +66,9 @@ export class Cpu {
   public setStallCycles(cycles: number) {
     this._stallCycles = cycles;
   }
-
   public stallCycles(): number {
     return this._stallCycles;
   }
-
   public totalCycles(): number {
     return this._currentCycles;
   }
@@ -80,7 +78,6 @@ export class Cpu {
   public clearCycles() {
     this._currentCycles = 0;
   }
-
   public powerUp(): void {
     this._regP.set(0x24);
     this._regSP.set(0x01fd);
@@ -96,6 +93,10 @@ export class Cpu {
     this._interruptReset();
     this._setCurrentContext(0, AddressingModes.Immediate);
   }
+  public requestInterrupt(interruptRequestType: InterruptRequestType) {
+    this._interrupt = interruptRequestType;
+  }
+  
 
   private _setCurrentContext(address: number, addressingMode: AddressingModes) {
     this._context = {
@@ -263,7 +264,7 @@ export class Cpu {
     }
   }
 
-  public setupNmi() {
+  public _handleNmi() {
     const currPcLow = this._regPC.get() & 0xff;
     const currPcHigh = (this._regPC.get() >>> 8) & 0xff;
     this._stackPush(currPcHigh);
@@ -277,7 +278,7 @@ export class Cpu {
         this._memRead(NmiVectorLocation.Low)
     );
     this._currentCycles += 7;
-    this._interrupt = InterruptRequestType.NMI;
+    this._interrupt = InterruptRequestType.None;
   }
 
   public irq() {
@@ -293,7 +294,7 @@ export class Cpu {
         this._memRead(IrqVectorLocation.Low)
     );
     this._currentCycles += 7;
-    this._interrupt = InterruptRequestType.NMI;
+    this._interrupt = InterruptRequestType.None;
   }
 
   private _adc() {
@@ -418,7 +419,7 @@ export class Cpu {
 
     this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
 
-    this._interrupt = InterruptRequestType.IRQ;
+    this._interrupt = InterruptRequestType.None;
   }
 
   private _bvc() {
@@ -760,7 +761,7 @@ export class Cpu {
   private _slo() {}
   private _sre() {}
 
-  public runStallCycle() {
+  private _runStallCycle() {
     this._stallCycles--;
     this._currentCycles++;
   }
@@ -837,21 +838,38 @@ export class Cpu {
     return { address, pageCrossed };
   }
 
-  public handleOp(opCode: number) {
-    let addressInfo = this._getAddressFromMode(OpAddressingMode[opCode]);
+  // Returns cycles ran
+  public step(): number {
+    const prevCurrentCycles = this._currentCycles;
 
-    this._regPC.add(InstructionSizes[opCode]);
-    this._currentCycles += Cycles[opCode];
-    if (addressInfo.pageCrossed) {
-      this._currentCycles += PageCycles[opCode];
+    if(this._stallCycles > 0) {
+      this._runStallCycle();
+      return this._currentCycles - prevCurrentCycles;
     }
 
-    this._context = {
-      PC: this._regPC.get(),
-      Address: addressInfo.address,
-      Mode: OpAddressingMode[opCode]
-    };
+    if(this._interrupt === InterruptRequestType.NMI) {
+      this._handleNmi();
+    }
+    this._interrupt = InterruptRequestType.None;
 
+    const op = this._memory.get(this._regPC.get());
+    
+    let addressInfo = this._getAddressFromMode(OpAddressingMode[op]);
+    
+    this._regPC.add(InstructionSizes[op]);
+    this._currentCycles += Cycles[op];
+    if (addressInfo.pageCrossed) {
+      this._currentCycles += PageCycles[op];
+    }
+
+    this._setCurrentContext(addressInfo.address, OpAddressingMode[op]);
+
+    this.handleOp(op);
+
+    return this._currentCycles - prevCurrentCycles;
+  }
+
+  public handleOp(opCode: number) {
     switch (opCode) {
       case 0x00:
         this._brk();

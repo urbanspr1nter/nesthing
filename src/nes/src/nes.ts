@@ -5,7 +5,7 @@ import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
 
-const rom = require("./mario.json");
+const rom = require("./roms/mario.json");
 
 export interface CpuRegisters {
   pc: number;
@@ -120,52 +120,16 @@ export class Nes {
     }
   }
 
-  public run(cyclesToRun: number): number {
-    /**
-     * The general approach to this run loop is to simulate both the CPU, PPU and APU
-     * all running at the same time. Each piece of hardware will run for the necessary amount of
-     * cycles.
-     */
+  public run(): number {
+    const cpuSteps = this._cpu.step();
 
-    // let cpuTime = 0;
-    // let ppuTime = 0;
-    while (this._cycles <= cyclesToRun) {
-      // let start = performance.now();
-
-      const beginCpuCycles = this._cpu.getCurrentCycles();
-
-      if (this._cpu.stallCycles() > 0) {
-        this._cpu.runStallCycle();
-      } else {
-        // If we are entering in VBLANK, Enter NMI handling routine!
-        this._nmiTriggered = this._ppu.cpuNmiRequested();
-        if (this._nmiTriggered) {
-          this._cpu.setupNmi();
-        }
-
-        const opCode = this._memory.get(this._cpu.getPC());
-        this._cpu.handleOp(opCode);
-      }
-
-      const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
-
-      // cpuTime += (performance.now() - start);
-      // start = performance.now();
-
-      let ppuCyclesToRun = cpuCyclesRan * 3;
-      this._ppu.run(ppuCyclesToRun);
-
-      // ppuTime += (performance.now() - start);
-
-      this._cycles += cpuCyclesRan;
+    let totalPpuSteps = cpuSteps * 3;
+    while(totalPpuSteps > 0) {
+      this._ppu.step();
+      totalPpuSteps--;
     }
 
-    const cyclesRan = this._cycles;
-    this._cycles = 0;
-
-    // console.log(`CPU TIME: ${cpuTime}, PPU TIME: ${ppuTime}, TOTAL TIME: ${cpuTime + ppuTime}`);
-
-    return cyclesRan;
+    return cpuSteps;
   }
 
   private _initialize() {

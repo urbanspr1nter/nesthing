@@ -176,7 +176,7 @@ function renderFrame() {
 
   const start = performance.now();
 
-  totalCycles += nes.run(CPU_CYCLES_PER_FRAME);
+  totalCycles += nes.run();
 
   currentTimeDelta = performance.now() - start;
   if (totalCycles >= CPU_CYCLES_PER_FRAME) {

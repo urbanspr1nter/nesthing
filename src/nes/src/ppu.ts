@@ -7,6 +7,7 @@ import { FrameBuffer } from "./framebuffer";
 import { PpuPalette } from "./colors";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
+import { InterruptRequestType } from "./cpu.interface";
 
 /**
  * The data structure to encapsulate the various sprite information
@@ -201,6 +202,7 @@ export class Ppu {
 
     if (this._regPPUCTRL_generateNmiAtVblankStart && this._isVblank()) {
       this._cpuNmiRequested = true;
+      this._cpu.requestInterrupt(InterruptRequestType.NMI);
     }
 
     this._t = (this._t & 0xf3ff) | ((dataByte & 0x03 & 0xffff) << 10);
@@ -360,15 +362,6 @@ export class Ppu {
     this._v += this._regPPUCTRL_vramIncrement;
   }
 
-  public cpuNmiRequested(): boolean {
-    if (this._cpuNmiRequested) {
-      this._cpuNmiRequested = false;
-      return true;
-    }
-
-    return false;
-  }
-
   private _setVblank() {
     this._regPPUSTATUS_vblankStarted = true;
   }
@@ -389,6 +382,9 @@ export class Ppu {
    */
   private _requestNmiIfNeeded(): void {
     this._cpuNmiRequested = this._regPPUCTRL_generateNmiAtVblankStart;
+    if(this._cpuNmiRequested) {
+      this._cpu.requestInterrupt(InterruptRequestType.NMI);
+    }
   }
 
   /**
@@ -839,13 +835,8 @@ export class Ppu {
     }
   }
 
-  public run(ticks: number): void {
-    let currentTicks = 0;
-
-    while (currentTicks < ticks) {
-      this._tick();
-      this._processTick();
-      currentTicks++;
-    }
+  public step(): void {
+    this._tick();
+    this._processTick();
   }
 }
