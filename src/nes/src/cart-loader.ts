@@ -71,13 +71,13 @@ export class CartLoader {
         cpuMemory.set(startAddressPrgBank0, romData[address]);
         startAddressPrgBank0++;
       }
-  
+
       let startAddressPrgBank1 = 0xc000;
       for (let address = 0x4000; address < 0x8000; address++) {
         cpuMemory.set(startAddressPrgBank1, romData[address]);
         startAddressPrgBank1++;
       }
-  
+
       let startAddressChrBank0 = 0x0;
       for (let address = 0x8000; address < 0x8000 + 0x2000; address++) {
         ppuMemory.set(startAddressChrBank0, romData[address]);
@@ -91,9 +91,7 @@ export class CartLoader {
         cpuMemory.set(startAddressPrgBank1, romData[address]);
         startAddressPrgBank1++;
       }
-  
     }
-
   }
 
   private _getHeader() {

@@ -1,6 +1,5 @@
 // require('./nestest');
 
-
 import { Nes } from "./nes";
 import { Buttons } from "./controller";
 

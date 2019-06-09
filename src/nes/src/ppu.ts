@@ -9,7 +9,7 @@ import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 
 /**
- * The data structure to encapsulate the various sprite information 
+ * The data structure to encapsulate the various sprite information
  * we will need to render.
  */
 interface SpriteData {
@@ -20,10 +20,10 @@ interface SpriteData {
 }
 
 /**
- * JS gives us no native "pretty" way to handle 64 bit numbers. BigInt 
- * is also too slow. 
- * 
- * So we'll just slam 2 numbers together with a high and low property 
+ * JS gives us no native "pretty" way to handle 64 bit numbers. BigInt
+ * is also too slow.
+ *
+ * So we'll just slam 2 numbers together with a high and low property
  * to serve the same purpose.
  */
 interface BackgroundData {
@@ -203,7 +203,7 @@ export class Ppu {
       this._cpuNmiRequested = true;
     }
 
-    this._t = (this._t & 0xF3FF) | (((dataByte & 0x03) & 0xffff) << 10);
+    this._t = (this._t & 0xf3ff) | ((dataByte & 0x03 & 0xffff) << 10);
   }
 
   public read$2000() {
@@ -297,7 +297,7 @@ export class Ppu {
       this._w = false;
     }*/
 
-    if(!this._w) {
+    if (!this._w) {
       this._t = (this._t & 0x80ff) | ((dataByte & 0x3f) << 8);
       this._w = true;
     } else {
@@ -319,7 +319,9 @@ export class Ppu {
       this._ppuDataReadBuffer = value;
       value = bufferedData;
     } else {
-      this._ppuDataReadBuffer = this._ppuMemory.get((this._v & 0xffff) - 0x1000);
+      this._ppuDataReadBuffer = this._ppuMemory.get(
+        (this._v & 0xffff) - 0x1000
+      );
     }
 
     this.incrementVramAddress();
@@ -453,7 +455,7 @@ export class Ppu {
       this._tileHighByte <<= 1;
 
       tileData <<= 4;
-      tileData |= (attributeByte | highBit | lowBit);
+      tileData |= attributeByte | highBit | lowBit;
     }
 
     this._bgTile.DataLow32 = tileData;
@@ -466,15 +468,16 @@ export class Ppu {
       return backgroundPixel;
     }
 
-    const pixel = (this._bgTile.DataHigh32 >>> ((7 - this._regPPUSCROLL_x) * 4)) & 0xF;
+    const pixel =
+      (this._bgTile.DataHigh32 >>> ((7 - this._regPPUSCROLL_x) * 4)) & 0xf;
 
     return pixel;
   }
 
   /**
-   * Shift a tile of 4 bits from the shift registers to form the background pixel 
-   * needed to render onto the screen. 
-   * 
+   * Shift a tile of 4 bits from the shift registers to form the background pixel
+   * needed to render onto the screen.
+   *
    * During this, we are processing the lower databytes from the shift registers.
    */
   private _renderPixel() {
@@ -778,7 +781,6 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-
         this._shiftBackgroundTile4();
 
         switch (this._cycles % 8) {

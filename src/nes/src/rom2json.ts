@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from "fs";
 /**
  * Schema
  * {
@@ -7,15 +7,15 @@ import * as fs from 'fs';
  * }
  */
 
- const bytes: number[] = [];
- const romContents = fs.readFileSync('./nestest.nes');
- romContents.forEach(value => {
-     bytes.push(value);
- });
+const bytes: number[] = [];
+const romContents = fs.readFileSync("./nestest.nes");
+romContents.forEach(value => {
+  bytes.push(value);
+});
 
- const result = {
-     name: 'nestest.nes',
-     raw: bytes
- };
+const result = {
+  name: "nestest.nes",
+  raw: bytes
+};
 
- fs.writeFileSync('./nestest.json', JSON.stringify(result));
+fs.writeFileSync("./nestest.json", JSON.stringify(result));

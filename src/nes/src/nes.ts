@@ -119,9 +119,9 @@ export class Nes {
      * cycles.
      */
 
-     // let cpuTime = 0;
-     // let ppuTime = 0;
-    while(this._cycles <= cyclesToRun) {
+    // let cpuTime = 0;
+    // let ppuTime = 0;
+    while (this._cycles <= cyclesToRun) {
       // let start = performance.now();
 
       const beginCpuCycles = this._cpu.getCurrentCycles();
@@ -134,13 +134,13 @@ export class Nes {
         if (this._nmiTriggered) {
           this._cpu.setupNmi();
         }
-  
+
         const opCode = this._memory.get(this._cpu.getPC());
         this._cpu.handleOp(opCode);
       }
-  
+
       const cpuCyclesRan = this._cpu.getCurrentCycles() - beginCpuCycles;
-      
+
       // cpuTime += (performance.now() - start);
       // start = performance.now();
 
@@ -148,7 +148,7 @@ export class Nes {
       this._ppu.run(ppuCyclesToRun);
 
       // ppuTime += (performance.now() - start);
-  
+
       this._cycles += cpuCyclesRan;
     }
 
