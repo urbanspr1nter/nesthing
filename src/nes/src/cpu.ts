@@ -813,6 +813,10 @@ export class Cpu {
         address =
           this._read16Bug(this._memRead(this._regPC.get() + 1)) +
           this._regY.get();
+        pageCrossed = this._crossesPageBoundary(
+          address - this._regY.get(),
+          address
+        );
         break;
       case AddressingModes.Implicit:
         address = 0;

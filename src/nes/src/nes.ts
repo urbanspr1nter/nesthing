@@ -75,7 +75,7 @@ export class Nes {
   }
 
   public snapNt() {
-    this._ppuMemory.snapNt();
+    return this._ppuMemory.snapNt();
   }
 
   public scanlines(): number {

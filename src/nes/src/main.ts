@@ -75,7 +75,8 @@ document.getElementById("btn-pause").addEventListener("click", () => {
   paused = !paused;
 });
 document.getElementById("btn-snap-nt").addEventListener("click", () => {
-  nes.snapNt();
+  const data = nes.snapNt();
+  document.getElementById("txtarea-console").innerHTML = data;
 });
 
 document.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -175,7 +176,7 @@ function renderFrame() {
 
   const start = performance.now();
 
-  totalCycles += nes.run(497);
+  totalCycles += nes.run(CPU_CYCLES_PER_FRAME);
 
   currentTimeDelta = performance.now() - start;
   if (/*frameTime >= TIME_PER_FRAME && */ totalCycles >= CPU_CYCLES_PER_FRAME) {

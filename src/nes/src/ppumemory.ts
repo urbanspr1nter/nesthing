@@ -30,7 +30,7 @@ export class PpuMemory {
       let data = "";
       for(let address = 0x2000; address <= 0x23BF; address++) {
           if(address % 0x20 === 0) {
-              data += "\n";
+              data += "&#13;";
           }
 
           let byte = this._memory[address].toString(16).toUpperCase();
@@ -40,6 +40,6 @@ export class PpuMemory {
           data += `${byte} `;
       }
 
-      console.log(data);
+      return data;
   }
 }

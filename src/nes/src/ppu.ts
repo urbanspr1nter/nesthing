@@ -295,8 +295,9 @@ export class Ppu {
     } else {
       this._v =  (this._t << 8) | dataByte;
       this._w = false;
-    }*/
-
+    }
+*/
+    
     if (!this._w) {
       this._t = (this._t & 0x80ff) | ((dataByte & 0x3f) << 8);
       this._w = true;
