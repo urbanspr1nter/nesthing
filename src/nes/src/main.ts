@@ -166,7 +166,6 @@ function drawFrame(frameBuffer: string[][]) {
 var currentFrames = 0;
 let currentTimeDelta = 0;
 let totalTime = 0;
-let frameTime = 0;
 let totalCycles = 0;
 
 function renderFrame() {
@@ -181,14 +180,12 @@ function renderFrame() {
   currentTimeDelta = performance.now() - start;
   if (/*frameTime >= TIME_PER_FRAME && */ totalCycles >= CPU_CYCLES_PER_FRAME) {
     totalCycles = 0;
-    frameTime = 0;
+    nes.clearTotalCycles();
     requestAnimationFrame(() => {
       drawFrame(nes.frameBuffer());
       currentFrames++;
     });
   }
-
-  frameTime += currentTimeDelta;
 
   totalTime += currentTimeDelta;
   showFps();

@@ -70,6 +70,10 @@ export class Nes {
     return this._cpu.totalCycles();
   }
 
+  public clearTotalCycles(): void {
+    this._cpu.clearCycles();
+  }
+
   public snapNt() {
     this._ppuMemory.snapNt();
   }

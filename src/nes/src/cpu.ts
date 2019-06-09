@@ -74,74 +74,44 @@ export class Cpu {
   public totalCycles(): number {
     return this._currentCycles;
   }
-
-  private _memWrite(address: number, data: number) {
-    this._memory.set(address, data);
+  public getCurrentCycles(): number {
+    return this._currentCycles;
   }
-
-  private _memRead(address: number): number {
-    return this._memory.get(address);
-  }
-
-  private _read16(address: number): number {
-    const low = this._memRead(address);
-    const high = this._memRead(address + 1);
-
-    return ((high << 8) | low) & 0xffff;
-  }
-
-  private _read16Bug(address: number): number {
-    const a = address;
-    const b = (a & 0xff00) | (((a & 0xff) + 1) & 0xff);
-    const low = this._memRead(a);
-    const high = this._memRead(b);
-
-    const effAddress = ((high << 8) | low) & 0xffff;
-
-    return effAddress;
+  public clearCycles() {
+    this._currentCycles = 0;
   }
 
   public powerUp(): void {
-    this._regP.set(0x34);
-
+    this._regP.set(0x24);
+    this._regSP.set(0x01fd);
     this._regA.set(0);
     this._regX.set(0);
     this._regY.set(0);
-    this._regSP.set(0x01fd);
-
-    // Frame IRQ Enabled
-    this._memWrite(0x4015, 0);
-
-    // All channels disabled
-    this._memWrite(0x4017, 0);
-
-    for (let i = 0x4000; i <= 0x400f; i++) {
-      this._memWrite(i, 0x0);
-    }
 
     for (let i = 0x0000; i <= 0x07ff; i++) {
       this._memWrite(i, 0xff);
     }
 
     // Perform the RESET Interrupt
-    this.interruptReset();
+    this._interruptReset();
+    this._setCurrentContext(0, AddressingModes.Immediate);
+  }
 
-    //this._regPC.set(0xc000);
+  private _setCurrentContext(address: number, addressingMode: AddressingModes) {
     this._context = {
-      PC: 0,
-      Address: 0,
-      Mode: AddressingModes.Immediate
+      PC: this._regPC.get(),
+      Address: address,
+      Mode: addressingMode
     };
   }
 
-  public interruptReset(): void {
+  private _interruptReset(): void {
     const currPcLow = this._regPC.get() & 0xff;
     const currPcHigh = (this._regPC.get() >>> 8) & 0xff;
 
-    this.stackPush(currPcHigh);
-    this.stackPush(currPcLow);
-
-    this.stackPush(this._regP.get());
+    this._stackPush(currPcHigh);
+    this._stackPush(currPcLow);
+    this._stackPush(this._regP.get());
 
     this.setStatusBit(StatusBitPositions.InterruptDisable);
 
@@ -153,18 +123,6 @@ export class Cpu {
     this.setStatusBit(StatusBitPositions.InterruptDisable);
 
     this._currentCycles += 7;
-  }
-
-  public stackPush(data: number): void {
-    const address = 0x100 | this._regSP.get();
-    this._memWrite(address, data);
-    this._regSP.set(address - 1);
-  }
-
-  public stackPull(): number {
-    const address = 0x100 | (this._regSP.get() + 1);
-    this._regSP.set(address);
-    return this._memRead(address);
   }
 
   public getA(): number {
@@ -184,9 +142,6 @@ export class Cpu {
   }
   public getP(): number {
     return this._regP.get();
-  }
-  public getCurrentCycles(): number {
-    return this._currentCycles;
   }
 
   public setStatusBit(bit: StatusBitPositions): void {
@@ -222,8 +177,46 @@ export class Cpu {
     if (adc) {
       return modifiedFirst + modifiedSecond + modifiedCarry > 0xff;
     } else {
-      return (modifiedFirst & 0xff) - (modifiedSecond & 0xff) - modifiedCarry >= 0;
+      return (
+        (modifiedFirst & 0xff) - (modifiedSecond & 0xff) - modifiedCarry >= 0
+      );
     }
+  }
+
+  private _memWrite(address: number, data: number) {
+    this._memory.set(address, data);
+  }
+
+  private _memRead(address: number): number {
+    return this._memory.get(address);
+  }
+
+  private _stackPush(data: number): void {
+    this._memWrite(0x100 | this._regSP.get(), data);
+    this._regSP.set(this._regSP.get() - 1);
+  }
+
+  private _stackPull(): number {
+    this._regSP.set(this._regSP.get() + 1);
+    return this._memRead(0x100 | this._regSP.get());
+  }
+
+  private _read16(address: number): number {
+    const low = this._memRead(address);
+    const high = this._memRead(address + 1);
+
+    return ((high << 8) | low) & 0xffff;
+  }
+
+  private _read16Bug(address: number): number {
+    const a = address;
+    const b = (a & 0xff00) | (((a & 0xff) + 1) & 0xff);
+    const low = this._memRead(a);
+    const high = this._memRead(b);
+
+    const effAddress = ((high << 8) | low) & 0xffff;
+
+    return effAddress;
   }
 
   private _crossesPageBoundary(a: number, b: number): boolean {
@@ -255,28 +248,55 @@ export class Cpu {
     }
   }
 
+  private _compare(a: number, b: number) {
+    const xformedA = a & 0xff;
+    const xformedB = b & 0xff;
+    const result = (xformedA - xformedB) & 0xff;
+
+    this._setZero(result);
+    this._setNegative(result);
+
+    if (xformedA >= xformedB) {
+      this.setStatusBit(StatusBitPositions.Carry);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Carry);
+    }
+  }
+
   public setupNmi() {
     const currPcLow = this._regPC.get() & 0xff;
     const currPcHigh = (this._regPC.get() >>> 8) & 0xff;
+    this._stackPush(currPcHigh);
+    this._stackPush(currPcLow);
 
-    this.stackPush(currPcHigh);
-    this.stackPush(currPcLow);
-
-    this.stackPush(this._regP.get());
+    this._php();
 
     this.setStatusBit(StatusBitPositions.InterruptDisable);
-
     this._regPC.set(
       (this._memRead(NmiVectorLocation.High) << 8) |
         this._memRead(NmiVectorLocation.Low)
     );
-
     this._currentCycles += 7;
-
     this._interrupt = InterruptRequestType.NMI;
   }
 
-  public adc() {
+  public irq() {
+    const currPcLow = this._regPC.get() & 0xff;
+    const currPcHigh = (this._regPC.get() >>> 8) & 0xff;
+    this._stackPush(currPcHigh);
+    this._stackPush(currPcLow);
+
+    this._php();
+    this.setStatusBit(StatusBitPositions.InterruptDisable);
+    this._regPC.set(
+      (this._memRead(IrqVectorLocation.High) << 8) |
+        this._memRead(IrqVectorLocation.Low)
+    );
+    this._currentCycles += 7;
+    this._interrupt = InterruptRequestType.NMI;
+  }
+
+  private _adc() {
     const a = this._regA.get();
     const b = this._memRead(this._context.Address);
     const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
@@ -299,16 +319,16 @@ export class Cpu {
     }
   }
 
-  public and() {
+  private _and() {
     this._regA.set(this._regA.get() & this._memRead(this._context.Address));
-
     this._setZero(this._regA.get());
     this._setNegative(this._regA.get());
   }
 
-  public asl() {
-    let carry;
-    let result;
+  private _asl() {
+    let carry: number;
+    let result: number;
+
     if (this._context.Mode === AddressingModes.Accumulator) {
       carry = (this._regA.get() >>> 7) & 1;
       this._regA.set(this._regA.get() << 1);
@@ -331,28 +351,28 @@ export class Cpu {
     this._setZero(result);
   }
 
-  public bcc() {
+  private _bcc() {
     if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public bcs() {
+  private _bcs() {
     if (this.getStatusBitFlag(StatusBitPositions.Carry)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public beq() {
+  private _beq() {
     if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public bit() {
+  private _bit() {
     const value = this._memRead(this._context.Address);
     const overflow = (value >>> 6) & 1;
 
@@ -362,39 +382,36 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Overflow);
     }
 
-    const result = value & this._regA.get() & 0xff;
-    this._setZero(result);
-
+    this._setZero(value & this._regA.get());
     this._setNegative(value);
   }
 
-  public bmi() {
+  private _bmi() {
     if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public bne() {
+  private _bne() {
     if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public bpl() {
+  private _bpl() {
     if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public brk() {
-    this.stackPush((this._regPC.get() & 0xff00) >>> 8);
-    this.stackPush(this._regPC.get() & 0x00ff);
-
-    this.php();
-    this.sei();
+  private _brk() {
+    this._stackPush((this._regPC.get() & 0xff00) >>> 8);
+    this._stackPush(this._regPC.get() & 0x00ff);
+    this._php();
+    this._sei();
 
     let interruptVectorLow = this._memRead(IrqVectorLocation.Low);
     let interruptVectorHigh = this._memRead(IrqVectorLocation.High);
@@ -404,153 +421,128 @@ export class Cpu {
     this._interrupt = InterruptRequestType.IRQ;
   }
 
-  public bvc() {
+  private _bvc() {
     if (!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public bvs() {
+  private _bvs() {
     if (this.getStatusBitFlag(StatusBitPositions.Overflow)) {
       this._regPC.set(this._context.Address);
       this._addBranchCycles(this._context);
     }
   }
 
-  public clc() {
+  private _clc() {
     this.clearStatusBit(StatusBitPositions.Carry);
   }
 
-  public cld() {
+  private _cld() {
     this.clearStatusBit(StatusBitPositions.DecimalMode);
   }
 
-  public cli() {
+  private _cli() {
     this.clearStatusBit(StatusBitPositions.InterruptDisable);
   }
 
-  public clv() {
+  private _clv() {
     this.clearStatusBit(StatusBitPositions.Overflow);
   }
 
-  private _compare(a: number, b: number) {
-    const xformedA = a & 0xff;
-    const xformedB = b & 0xff;
-    const result = (xformedA - xformedB) & 0xff;
-
-    this._setZero(result);
-    this._setNegative(result);
-
-    if (xformedA >= xformedB) {
-      this.setStatusBit(StatusBitPositions.Carry);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
-    }
-  }
-
-  public cmp() {
+  private _cmp() {
     const value = this._memRead(this._context.Address);
     this._compare(this._regA.get(), value);
   }
 
-  public cpx() {
+  private _cpx() {
     const value = this._memRead(this._context.Address);
     this._compare(this._regX.get(), value);
   }
 
-  public cpy() {
+  private _cpy() {
     const value = this._memRead(this._context.Address);
     this._compare(this._regY.get(), value);
   }
 
-  public dcp() {}
-
-  public dec() {
+  private _dec() {
     const value = this._memRead(this._context.Address) - 1;
     this._memWrite(this._context.Address, value);
     this._setZero(value);
     this._setNegative(value);
   }
 
-  public dex() {
+  private _dex() {
     this._regX.set(this._regX.get() - 1);
-
     this._setZero(this._regX.get());
     this._setNegative(this._regX.get());
   }
 
-  public dey() {
+  private _dey() {
     this._regY.set(this._regY.get() - 1);
     this._setZero(this._regY.get());
     this._setNegative(this._regY.get());
   }
 
-  public eor() {
+  private _eor() {
     const result = this._regA.get() ^ this._memRead(this._context.Address);
     this._regA.set(result);
-
     this._setNegative(result);
     this._setZero(result);
   }
 
-  public inc() {
+  private _inc() {
     const value = this._memRead(this._context.Address) + 1;
     this._memWrite(this._context.Address, value);
-
     this._setZero(value);
     this._setNegative(value);
   }
 
-  public inx() {
+  private _inx() {
     this._regX.set(this._regX.get() + 1);
     this._setZero(this._regX.get());
     this._setNegative(this._regX.get());
   }
 
-  public iny() {
+  private _iny() {
     this._regY.set(this._regY.get() + 1);
     this._setZero(this._regY.get());
     this._setNegative(this._regY.get());
   }
 
-  public isb() {}
-
-  public jmp() {
+  private _jmp() {
     this._regPC.set(this._context.Address);
   }
 
-  public jsr() {
+  private _jsr() {
     const startAddr = this._regPC.get() - 1;
-    this.stackPush((startAddr & 0xff00) >>> 8);
-    this.stackPush(startAddr & 0x00ff);
-
+    this._stackPush((startAddr & 0xff00) >>> 8);
+    this._stackPush(startAddr & 0x00ff);
     this._regPC.set(this._context.Address);
   }
 
-  public lax() {}
-
-  public lda() {
+  private _lda() {
     this._regA.set(this._memRead(this._context.Address));
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
 
-  public ldx() {
+  private _ldx() {
     this._regX.set(this._memRead(this._context.Address));
     this._setNegative(this._regX.get());
     this._setZero(this._regX.get());
   }
 
-  public ldy() {
+  private _ldy() {
     this._regY.set(this._memRead(this._context.Address));
     this._setNegative(this._regY.get());
     this._setZero(this._regY.get());
   }
 
-  public lsr() {
-    let carry;
-    let result;
+  private _lsr() {
+    let carry: number;
+    let result: number;
 
     if (this._context.Mode === AddressingModes.Accumulator) {
       carry = this._regA.get() & 1;
@@ -559,7 +551,6 @@ export class Cpu {
     } else {
       const value = this._memRead(this._context.Address);
       carry = value & 1;
-
       result = value >>> 1;
       this._memWrite(this._context.Address, result);
     }
@@ -574,46 +565,40 @@ export class Cpu {
     }
   }
 
-  public nop() {
+  private _nop() {
     // noop
   }
 
-  public skb() {}
-
-  public ign() {}
-
-  public ora() {
+  private _ora() {
     this._regA.set(this._regA.get() | this._memRead(this._context.Address));
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
 
-  public pha() {
-    this.stackPush(this._regA.get());
+  private _pha() {
+    this._stackPush(this._regA.get());
   }
 
-  public php() {
+  private _php() {
     let pStatus = this._regP.get() | 0x10;
-    this.stackPush(pStatus);
+    this._stackPush(pStatus);
   }
 
-  public pla() {
-    this._regA.set(this.stackPull());
+  private _pla() {
+    this._regA.set(this._stackPull());
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
 
-  public plp() {
-    let pStatus = (this.stackPull() & 0xef) | 0x20;
+  private _plp() {
+    let pStatus = (this._stackPull() & 0xef) | 0x20;
     this._regP.set(pStatus);
   }
 
-  public rla() {}
-
-  public rol() {
+  public _rol() {
     const currCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
-    let newCarry;
-    let result;
+    let newCarry: number;
+    let result: number;
 
     if (this._context.Mode === AddressingModes.Accumulator) {
       newCarry = (this._regA.get() >>> 7) & 1;
@@ -639,10 +624,10 @@ export class Cpu {
     }
   }
 
-  public ror() {
+  public _ror() {
     const currCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
-    let newCarry;
-    let result;
+    let newCarry: number;
+    let result: number;
 
     if (this._context.Mode === AddressingModes.Accumulator) {
       newCarry = this._regA.get() & 1;
@@ -668,27 +653,22 @@ export class Cpu {
     }
   }
 
-  public rra() {}
-
-  public rti() {
-    const newP = (this.stackPull() & 0xef) | 0x20;
-    const pcLow = this.stackPull();
-    const pcHigh = this.stackPull();
+  private _rti() {
+    const newP = (this._stackPull() & 0xef) | 0x20;
+    const pcLow = this._stackPull();
+    const pcHigh = this._stackPull();
 
     this._regPC.set((pcHigh << 8) | pcLow);
     this._regP.set(newP);
   }
 
-  public rts() {
-    const newLowPC = this.stackPull();
-    const newHighPC = this.stackPull();
-
+  public _rts() {
+    const newLowPC = this._stackPull();
+    const newHighPC = this._stackPull();
     this._regPC.set(((newHighPC << 8) | newLowPC) + 1);
   }
 
-  public sax() {}
-
-  public sbc() {
+  public _sbc() {
     const a = this._regA.get();
     const b = this._memRead(this._context.Address);
     const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
@@ -711,69 +691,74 @@ export class Cpu {
     }
   }
 
-  public sec() {
+  public _sec() {
     this.setStatusBit(StatusBitPositions.Carry);
   }
 
-  public sed() {
+  public _sed() {
     this.setStatusBit(StatusBitPositions.DecimalMode);
   }
 
-  public sei() {
+  public _sei() {
     this.setStatusBit(StatusBitPositions.InterruptDisable);
   }
 
-  public slo() {}
-
-  public sre() {}
-
-  public sta() {
+  public _sta() {
     this._memWrite(this._context.Address, this._regA.get());
   }
 
-  public stx() {
+  public _stx() {
     this._memWrite(this._context.Address, this._regX.get());
   }
 
-  public sty() {
+  public _sty() {
     this._memWrite(this._context.Address, this._regY.get());
   }
 
-  public tax() {
+  private _tax() {
     this._regX.set(this._regA.get());
     this._setNegative(this._regX.get());
     this._setZero(this._regX.get());
   }
 
-  public tay() {
+  private _tay() {
     this._regY.set(this._regA.get());
     this._setNegative(this._regY.get());
     this._setZero(this._regY.get());
   }
 
-  public tsx() {
+  private _tsx() {
     this._regX.set(this._regSP.get());
-
     this._setNegative(this._regX.get());
     this._setZero(this._regX.get());
   }
 
-  public txa() {
+  private _txa() {
     this._regA.set(this._regX.get());
-
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
 
-  public txs() {
+  private _txs() {
     this._regSP.set(this._regX.get());
   }
 
-  public tya() {
+  private _tya() {
     this._regA.set(this._regY.get());
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
+
+  private _dcp() {}
+  private _ign() {}
+  private _isb() {}
+  private _lax() {}
+  private _rla() {}
+  private _rra() {}
+  private _sax() {}
+  private _skb() {}
+  private _slo() {}
+  private _sre() {}
 
   public runStallCycle() {
     this._stallCycles--;
@@ -865,7 +850,7 @@ export class Cpu {
 
     switch (opCode) {
       case 0x00:
-        this.brk();
+        this._brk();
         break;
       case 0x01:
       case 0x05:
@@ -875,17 +860,17 @@ export class Cpu {
       case 0x15:
       case 0x19:
       case 0x1d:
-        this.ora();
+        this._ora();
         break;
       case 0x06:
       case 0x0a:
       case 0x0e:
       case 0x16:
       case 0x1e:
-        this.asl();
+        this._asl();
         break;
       case 0x08:
-        this.php();
+        this._php();
         break;
       case 0x0c:
       case 0x1c:
@@ -903,16 +888,16 @@ export class Cpu {
       case 0x74:
       case 0xd4:
       case 0xf4:
-        this.ign();
+        this._ign();
         break;
       case 0x10:
-        this.bpl();
+        this._bpl();
         break;
       case 0x18:
-        this.clc();
+        this._clc();
         break;
       case 0x20:
-        this.jsr();
+        this._jsr();
         break;
       case 0x21:
       case 0x25:
@@ -922,30 +907,30 @@ export class Cpu {
       case 0x35:
       case 0x39:
       case 0x3d:
-        this.and();
+        this._and();
         break;
       case 0x24:
       case 0x2c:
-        this.bit();
+        this._bit();
         break;
       case 0x26:
       case 0x2a:
       case 0x2e:
       case 0x36:
       case 0x3e:
-        this.rol();
+        this._rol();
         break;
       case 0x28:
-        this.plp();
+        this._plp();
         break;
       case 0x30:
-        this.bmi();
+        this._bmi();
         break;
       case 0x38:
-        this.sec();
+        this._sec();
         break;
       case 0x40:
-        this.rti();
+        this._rti();
         break;
       case 0x41:
       case 0x45:
@@ -955,30 +940,30 @@ export class Cpu {
       case 0x55:
       case 0x59:
       case 0x5d:
-        this.eor();
+        this._eor();
         break;
       case 0x46:
       case 0x4a:
       case 0x4e:
       case 0x56:
       case 0x5e:
-        this.lsr();
+        this._lsr();
         break;
       case 0x48:
-        this.pha();
+        this._pha();
         break;
       case 0x4c:
       case 0x6c:
-        this.jmp();
+        this._jmp();
         break;
       case 0x50:
-        this.bvc();
+        this._bvc();
         break;
       case 0x58:
-        this.cli();
+        this._cli();
         break;
       case 0x60:
-        this.rts();
+        this._rts();
         break;
       case 0x61:
       case 0x65:
@@ -988,23 +973,23 @@ export class Cpu {
       case 0x75:
       case 0x79:
       case 0x7d:
-        this.adc();
+        this._adc();
         break;
       case 0x66:
       case 0x6a:
       case 0x6e:
       case 0x76:
       case 0x7e:
-        this.ror();
+        this._ror();
         break;
       case 0x68:
-        this.pla();
+        this._pla();
         break;
       case 0x70:
-        this.bvs();
+        this._bvs();
         break;
       case 0x78:
-        this.sei();
+        this._sei();
         break;
       case 0x81:
       case 0x85:
@@ -1013,39 +998,39 @@ export class Cpu {
       case 0x95:
       case 0x99:
       case 0x9d:
-        this.sta();
+        this._sta();
         break;
       case 0x84:
       case 0x8c:
       case 0x94:
-        this.sty();
+        this._sty();
         break;
       case 0x86:
       case 0x8e:
       case 0x96:
-        this.stx();
+        this._stx();
         break;
       case 0x88:
-        this.dey();
+        this._dey();
         break;
       case 0x8a:
-        this.txa();
+        this._txa();
         break;
       case 0x90:
-        this.bcc();
+        this._bcc();
         break;
       case 0x98:
-        this.tya();
+        this._tya();
         break;
       case 0x9a:
-        this.txs();
+        this._txs();
         break;
       case 0xa0:
       case 0xa4:
       case 0xac:
       case 0xb4:
       case 0xbc:
-        this.ldy();
+        this._ldy();
         break;
       case 0xa1:
       case 0xa5:
@@ -1055,34 +1040,34 @@ export class Cpu {
       case 0xb5:
       case 0xb9:
       case 0xbd:
-        this.lda();
+        this._lda();
         break;
       case 0xa2:
       case 0xa6:
       case 0xae:
       case 0xb6:
       case 0xbe:
-        this.ldx();
+        this._ldx();
         break;
       case 0xa8:
-        this.tay();
+        this._tay();
         break;
       case 0xaa:
-        this.tax();
+        this._tax();
         break;
       case 0xb0:
-        this.bcs();
+        this._bcs();
         break;
       case 0xb8:
-        this.clv();
+        this._clv();
         break;
       case 0xba:
-        this.tsx();
+        this._tsx();
         break;
       case 0xc0:
       case 0xc4:
       case 0xcc:
-        this.cpy();
+        this._cpy();
         break;
       case 0xc1:
       case 0xc5:
@@ -1092,30 +1077,30 @@ export class Cpu {
       case 0xd5:
       case 0xd9:
       case 0xdd:
-        this.cmp();
+        this._cmp();
         break;
       case 0xc6:
       case 0xce:
       case 0xd6:
       case 0xde:
-        this.dec();
+        this._dec();
         break;
       case 0xc8:
-        this.iny();
+        this._iny();
         break;
       case 0xca:
-        this.dex();
+        this._dex();
         break;
       case 0xd0:
-        this.bne();
+        this._bne();
         break;
       case 0xd8:
-        this.cld();
+        this._cld();
         break;
       case 0xe0:
       case 0xe4:
       case 0xec:
-        this.cpx();
+        this._cpx();
         break;
       case 0xe1:
       case 0xe5:
@@ -1126,16 +1111,16 @@ export class Cpu {
       case 0xf5:
       case 0xf9:
       case 0xfd:
-        this.sbc();
+        this._sbc();
         break;
       case 0xe6:
       case 0xee:
       case 0xf6:
       case 0xfe:
-        this.inc();
+        this._inc();
         break;
       case 0xe8:
-        this.inx();
+        this._inx();
         break;
       case 0x1a:
       case 0x3a:
@@ -1144,20 +1129,20 @@ export class Cpu {
       case 0xda:
       case 0xfa:
       case 0xea:
-        this.nop();
+        this._nop();
         break;
       case 0x80:
       case 0x82:
       case 0x89:
       case 0xc2:
       case 0xe2:
-        this.skb();
+        this._skb();
         break;
       case 0xf0:
-        this.beq();
+        this._beq();
         break;
       case 0xf8:
-        this.sed();
+        this._sed();
         break;
       case 0xa3:
       case 0xa7:
@@ -1165,13 +1150,13 @@ export class Cpu {
       case 0xb3:
       case 0xb7:
       case 0xbf:
-        this.lax();
+        this._lax();
         break;
       case 0x83:
       case 0x87:
       case 0x8f:
       case 0x97:
-        this.sax();
+        this._sax();
         break;
       case 0xc3:
       case 0xc7:
@@ -1180,7 +1165,7 @@ export class Cpu {
       case 0xd7:
       case 0xdb:
       case 0xdf:
-        this.dcp();
+        this._dcp();
         break;
       case 0xe3:
       case 0xe7:
@@ -1189,7 +1174,7 @@ export class Cpu {
       case 0xf7:
       case 0xfb:
       case 0xff:
-        this.isb();
+        this._isb();
         break;
       case 0x03:
       case 0x07:
@@ -1198,7 +1183,7 @@ export class Cpu {
       case 0x17:
       case 0x1b:
       case 0x1f:
-        this.slo();
+        this._slo();
         break;
       case 0x23:
       case 0x27:
@@ -1207,7 +1192,7 @@ export class Cpu {
       case 0x37:
       case 0x3b:
       case 0x3f:
-        this.rla();
+        this._rla();
         break;
       case 0x43:
       case 0x47:
@@ -1216,7 +1201,7 @@ export class Cpu {
       case 0x57:
       case 0x5b:
       case 0x5f:
-        this.sre();
+        this._sre();
         break;
       case 0x63:
       case 0x67:
@@ -1225,7 +1210,7 @@ export class Cpu {
       case 0x77:
       case 0x7b:
       case 0x7f:
-        this.rra();
+        this._rra();
         break;
       default:
         break;
