@@ -36,7 +36,6 @@ const MAX_SPRITES_PER_SCANLINE = 8;
 
 export class Ppu {
   private _frameBuffer: FrameBuffer;
-  private _cpuNmiRequested: boolean;
   private _ppuMemory: PpuMemory;
   private _ppuDataReadBuffer: number;
   private _cycles: number;
@@ -98,10 +97,12 @@ export class Ppu {
   private _oam: number[];
   private _onScreenSprites: SpriteData[];
 
+  private _nmiPrevious: boolean;
+  private _nmiDelay: number;
+
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
 
-    this._cpuNmiRequested = false;
     this._ppuMemory = ppuMemory;
 
     this._scanlines = 0;
@@ -201,7 +202,6 @@ export class Ppu {
       (dataByte & 0x80) === 0x0 ? false : true;
 
     if (this._regPPUCTRL_generateNmiAtVblankStart && this._isVblank()) {
-      this._cpuNmiRequested = true;
       this._cpu.requestInterrupt(InterruptRequestType.NMI);
     }
 
@@ -362,29 +362,27 @@ export class Ppu {
     this._v += this._regPPUCTRL_vramIncrement;
   }
 
-  private _setVblank() {
-    this._regPPUSTATUS_vblankStarted = true;
-  }
-
-  private _clearVblank() {
-    this._regPPUSTATUS_vblankStarted = false;
-  }
-
   private _isVblank(): boolean {
     return this._regPPUSTATUS_vblankStarted;
   }
 
-  /**
-   * An NMI can be PREVENTED if bit 7 of $2002 is off.
-   *
-   * Therefore, we only generate an NMI request to the CPU
-   * IFF bit 7 of $2002 is ON.
-   */
-  private _requestNmiIfNeeded(): void {
-    this._cpuNmiRequested = this._regPPUCTRL_generateNmiAtVblankStart;
-    if(this._cpuNmiRequested) {
-      this._cpu.requestInterrupt(InterruptRequestType.NMI);
+  private _setVblank() {
+    this._regPPUSTATUS_vblankStarted = true;
+    this._nmiChange();
+  }
+
+  private _clearVblank() {
+    this._regPPUSTATUS_vblankStarted = false;
+    this._nmiChange();
+  }
+
+  private _nmiChange() {
+    const nmi = this._regPPUCTRL_generateNmiAtVblankStart && this._regPPUSTATUS_vblankStarted;
+    if(nmi && !this._nmiPrevious) {
+      this._nmiDelay = 15;
     }
+
+    this._nmiPrevious = nmi;
   }
 
   /**
@@ -725,6 +723,13 @@ export class Ppu {
   }
 
   private _tick(): void {
+    if(this._nmiDelay > 0) {
+      this._nmiDelay--;
+      if(this._nmiDelay && this._regPPUCTRL_generateNmiAtVblankStart && this._regPPUSTATUS_vblankStarted) {
+        this._cpu.requestInterrupt(InterruptRequestType.NMI);
+      }
+    }
+
     if (this._regPPUMASK_showBackground || this._regPPUMASK_showSprites) {
       if (!this._evenFrame && this._scanlines === 261 && this._cycles === 339) {
         this._cycles = 0;
@@ -826,7 +831,6 @@ export class Ppu {
 
     if (this._scanlines === 241 && this._cycles === 1) {
       this._setVblank();
-      this._requestNmiIfNeeded();
     }
     if (isPrerenderLine && this._cycles === 1) {
       this._clearVblank();

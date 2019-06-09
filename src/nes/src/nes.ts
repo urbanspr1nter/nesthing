@@ -28,8 +28,6 @@ export class Nes {
   private _ppuMemory: PpuMemory;
   private _ppu: Ppu;
   private _cpu: Cpu;
-  private _nmiTriggered: boolean;
-  private _cycles: number;
   private _controller: Controller;
 
   constructor() {
@@ -42,8 +40,6 @@ export class Nes {
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
-
-    this._cycles = 0;
   }
 
   get controller1(): Controller {
@@ -60,10 +56,6 @@ export class Nes {
 
   public ppuMemory(): number[] {
     return this._ppuMemory.bits();
-  }
-
-  public cpuNmiRequested(): boolean {
-    return this._nmiTriggered;
   }
 
   public cpuTotalCycles(): number {
@@ -106,18 +98,9 @@ export class Nes {
   }
 
   public loadRom() {
-    // For now, we can only load Donkey Kong
-    const romBytes: number[] = [];
-
     const romContents = rom.raw;
     const cartLoader = new CartLoader(romContents);
     cartLoader.loadCartridgeData(this._memory, this._ppuMemory);
-
-    // Initialize the nametables to $00
-    let ntStartAddress = 0x2000;
-    for (let i = ntStartAddress; i < 0x3f00; i++) {
-      this._ppuMemory.set(i, 0x00);
-    }
   }
 
   public run(): number {
