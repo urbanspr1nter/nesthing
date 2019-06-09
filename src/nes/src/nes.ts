@@ -70,6 +70,10 @@ export class Nes {
     return this._cpu.totalCycles();
   }
 
+  public snapNt() {
+    this._ppuMemory.snapNt();
+  }
+
   public scanlines(): number {
     return this._ppu.getScanlines();
   }

@@ -15,6 +15,7 @@ const context = canvas.getContext("2d", { alpha: false });
 context.imageSmoothingEnabled = false;
 
 const nes = new Nes();
+let paused = false;
 
 const prevBuffer = {
   buffer: [] as string[][]
@@ -69,6 +70,12 @@ document.getElementById("btn-scale-3").addEventListener("click", () => {
 });
 document.getElementById("btn-scale-4").addEventListener("click", () => {
   scale(4);
+});
+document.getElementById("btn-pause").addEventListener("click", () => {
+  paused = !paused;
+});
+document.getElementById("btn-snap-nt").addEventListener("click", () => {
+  nes.snapNt();
 });
 
 document.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -163,6 +170,10 @@ let frameTime = 0;
 let totalCycles = 0;
 
 function renderFrame() {
+  if(paused) {
+    return;
+  }
+
   const start = performance.now();
 
   totalCycles += nes.run(497);

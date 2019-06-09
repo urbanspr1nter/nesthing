@@ -320,7 +320,7 @@ export class Ppu {
       value = bufferedData;
     } else {
       this._ppuDataReadBuffer = this._ppuMemory.get(
-        (this._v & 0xffff) - 0x1000
+        ((this._v & 0xffff) - 0x1000) & 0xffff
       );
     }
 

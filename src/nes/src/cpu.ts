@@ -202,7 +202,13 @@ export class Cpu {
   }
 
   public isOverflow(first: number, second: number, final: number): boolean {
-    if (((first ^ second) & 0x80) !== 0 && ((first ^ final) & 0x80) !== 0) {
+    const modifiedFirst = first & 0xff;
+    const modifiedSecond = second & 0xff;
+    const modifiedFinal = final & 0xff;
+    if (
+      ((modifiedFirst ^ modifiedSecond) & 0x80) !== 0 &&
+      ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
+    ) {
       return true;
     } else {
       return false;
@@ -210,10 +216,13 @@ export class Cpu {
   }
 
   public isCarry(first: number, second: number, carry: number, adc: boolean) {
+    const modifiedFirst = first & 0xff;
+    const modifiedSecond = second & 0xff;
+    const modifiedCarry = carry & 0xff;
     if (adc) {
-      return first + second + carry > 0xff;
+      return modifiedFirst + modifiedSecond + modifiedCarry > 0xff;
     } else {
-      return (first & 0xff) - (second & 0xff) - carry >= 0;
+      return (modifiedFirst & 0xff) - (modifiedSecond & 0xff) - modifiedCarry >= 0;
     }
   }
 
@@ -460,25 +469,21 @@ export class Cpu {
   public dec() {
     const value = this._memRead(this._context.Address) - 1;
     this._memWrite(this._context.Address, value);
-
     this._setZero(value);
     this._setNegative(value);
   }
 
   public dex() {
-    const value = this._regX.get() - 1;
-    this._regX.set(value);
+    this._regX.set(this._regX.get() - 1);
 
-    this._setZero(value);
-    this._setNegative(value);
+    this._setZero(this._regX.get());
+    this._setNegative(this._regX.get());
   }
 
   public dey() {
-    const value = this._regY.get() - 1;
-    this._regY.set(value);
-
-    this._setZero(value);
-    this._setNegative(value);
+    this._regY.set(this._regY.get() - 1);
+    this._setZero(this._regY.get());
+    this._setNegative(this._regY.get());
   }
 
   public eor() {
@@ -498,19 +503,15 @@ export class Cpu {
   }
 
   public inx() {
-    const value = this._regX.get() + 1;
-    this._regX.set(value);
-
-    this._setZero(value);
-    this._setNegative(value);
+    this._regX.set(this._regX.get() + 1);
+    this._setZero(this._regX.get());
+    this._setNegative(this._regX.get());
   }
 
   public iny() {
-    const value = this._regY.get() + 1;
-    this._regY.set(value);
-
-    this._setZero(value);
-    this._setNegative(value);
+    this._regY.set(this._regY.get() + 1);
+    this._setZero(this._regY.get());
+    this._setNegative(this._regY.get());
   }
 
   public isb() {}
@@ -531,21 +532,18 @@ export class Cpu {
 
   public lda() {
     this._regA.set(this._memRead(this._context.Address));
-
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
 
   public ldx() {
     this._regX.set(this._memRead(this._context.Address));
-
     this._setNegative(this._regX.get());
     this._setZero(this._regX.get());
   }
 
   public ldy() {
     this._regY.set(this._memRead(this._context.Address));
-
     this._setNegative(this._regY.get());
     this._setZero(this._regY.get());
   }
@@ -586,11 +584,8 @@ export class Cpu {
 
   public ora() {
     this._regA.set(this._regA.get() | this._memRead(this._context.Address));
-
-    const result = this._regA.get();
-
-    this._setNegative(result);
-    this._setZero(result);
+    this._setNegative(this._regA.get());
+    this._setZero(this._regA.get());
   }
 
   public pha() {
@@ -604,7 +599,6 @@ export class Cpu {
 
   public pla() {
     this._regA.set(this.stackPull());
-
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
@@ -747,14 +741,12 @@ export class Cpu {
 
   public tax() {
     this._regX.set(this._regA.get());
-
     this._setNegative(this._regX.get());
     this._setZero(this._regX.get());
   }
 
   public tay() {
     this._regY.set(this._regA.get());
-
     this._setNegative(this._regY.get());
     this._setZero(this._regY.get());
   }
@@ -779,7 +771,6 @@ export class Cpu {
 
   public tya() {
     this._regA.set(this._regY.get());
-
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
