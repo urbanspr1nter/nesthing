@@ -37,6 +37,7 @@ export class Memory {
 
   public set = (address: number, value: number): void => {
     value = value & 0xff;
+    
     if (address < 0x2000) {
       this._memory[address % 0x0800] = value;
     } else if (address >= 0x2000 && address <= 0x3fff) {
@@ -71,15 +72,15 @@ export class Memory {
 
   public get = (address: number): number => {
     if (address < 0x2000) {
-      return this._memory[address % 0x800];
+      return this._memory[address % 0x800] & 0xff;
     } else if (address >= 0x2000 && address <= 0x3fff) {
       const decodedAddress = 0x2000 + (address % 8);
       if (decodedAddress === 0x2002) {
-        return this._ppu.read$2002();
+        return this._ppu.read$2002() & 0xff;
       } else if (decodedAddress === 0x2004) {
-        return this._ppu.read$2004();
+        return this._ppu.read$2004() & 0xff;
       } else if (decodedAddress === 0x2007) {
-        return this._ppu.read$2007();
+        return this._ppu.read$2007() & 0xff;
       } else {
         return 0;
       }

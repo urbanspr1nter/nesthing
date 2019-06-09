@@ -190,9 +190,9 @@ export class Ppu {
     this._regPPUCTRL_nt1 = dataByte & 0x02;
     this._regPPUCTRL_vramIncrement = (dataByte & 0x04) === 0x0 ? 1 : 32;
     this._regPPUCTRL_spritePatternTableBaseAddress =
-      (dataByte & 0x08) === 0x0 ? 0x0 : 0x1000;
+      (dataByte & 0x08) === 0x0 ? 0 : 0x1000;
     this._regPPUCTRL_backgroundPatternTableBaseAddress =
-      (dataByte & 0x10) === 0x0 ? 0x0000 : 0x1000;
+      (dataByte & 0x10) === 0x0 ? 0 : 0x1000;
     this._regPPUCTRL_spriteSizeLarge = (dataByte & 0x20) === 0x0 ? false : true;
     this._regPPUCTRL_masterSlaveSelect =
       (dataByte & 0x40) === 0x0 ? false : true;
@@ -202,6 +202,8 @@ export class Ppu {
     if (this._regPPUCTRL_generateNmiAtVblankStart && this._isVblank()) {
       this._cpuNmiRequested = true;
     }
+
+    this._t = (this._t & 0xF3FF) | (((dataByte & 0x03) & 0xffff) << 10);
   }
 
   public read$2000() {
@@ -286,11 +288,21 @@ export class Ppu {
   }
 
   public write$2006(dataByte: number) {
+    /*
     if(!this._w) {
       this._t = dataByte;
       this._w = true;
     } else {
       this._v =  (this._t << 8) | dataByte;
+      this._w = false;
+    }*/
+
+    if(!this._w) {
+      this._t = (this._t & 0x80ff) | ((dataByte & 0x3f) << 8);
+      this._w = true;
+    } else {
+      this._t = (this._t & 0xff00) | (dataByte & 0xffff);
+      this._v = this._t;
       this._w = false;
     }
   }
@@ -307,7 +319,7 @@ export class Ppu {
       this._ppuDataReadBuffer = value;
       value = bufferedData;
     } else {
-      this._ppuDataReadBuffer = this._ppuMemory.get(this._v - 0x1000);
+      this._ppuDataReadBuffer = this._ppuMemory.get((this._v & 0xffff) - 0x1000);
     }
 
     this.incrementVramAddress();
@@ -398,7 +410,7 @@ export class Ppu {
       ((this._v >>> 4) & 0x38) |
       ((this._v >>> 2) & 0x07);
 
-    const shift = ((this._v >> 4) & 4) | (this._v & 2);
+    const shift = ((this._v >>> 4) & 4) | (this._v & 2);
 
     this._attributeByte =
       ((this._ppuMemory.get(attributeAddress) >>> shift) & 3) << 2;

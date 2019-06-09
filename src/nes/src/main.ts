@@ -169,7 +169,7 @@ function renderFrame() {
   totalCycles += nes.run(497);
 
   currentTimeDelta = performance.now() - start;
-  if (frameTime >= TIME_PER_FRAME && totalCycles >= CPU_CYCLES_PER_FRAME) {
+  if (/*frameTime >= TIME_PER_FRAME && */ totalCycles >= CPU_CYCLES_PER_FRAME) {
     totalCycles = 0;
     frameTime = 0;
     requestAnimationFrame(() => {

@@ -209,10 +209,6 @@ export class Cpu {
     }
   }
 
-  public isNegative(value: number): boolean {
-    return (value & 0x80) === 0x80;
-  }
-
   public isZero(value: number): boolean {
     return (value & 0xff) === 0;
   }
@@ -233,6 +229,15 @@ export class Cpu {
     this._currentCycles++;
     if (this._crossesPageBoundary(context.PC, context.Address)) {
       this._currentCycles++;
+    }
+  }
+
+  private _setNegative(dataByte: number) {
+    const modified = dataByte & 0xff;
+    if((modified & 0x80) === 0x80) {
+      this.setStatusBit(StatusBitPositions.Negative);
+    } else {
+      this.clearStatusBit(StatusBitPositions.Negative);
     }
   }
 
@@ -270,11 +275,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regA.get());
 
     if (this.isCarry(a, b, carry, true)) {
       this.setStatusBit(StatusBitPositions.Carry);
@@ -298,12 +299,8 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+    this._setNegative(this._regA.get());
     }
-  }
 
   public asl() {
     let carry;
@@ -326,11 +323,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(result);
 
     if (this.isZero(result)) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -370,18 +363,15 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Overflow);
     }
 
-    if((value & this._regA.get()) === 0) {
+    const result = (value & this._regA.get()) & 0xff;
+    if(result=== 0) {
       this.setStatusBit(StatusBitPositions.Zero);
     } else {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(value)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+    this._setNegative(value);
     }
-  }
 
   public bmi() {
     if(this.getStatusBitFlag(StatusBitPositions.Negative)) {
@@ -460,11 +450,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(result);
 
     if(xformedA >= xformedB) {
       this.setStatusBit(StatusBitPositions.Carry);
@@ -501,12 +487,8 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(value)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+    this._setNegative(value);
     }
-  }
 
   public dex() {
     const value = this._regX.get() - 1;
@@ -518,12 +500,8 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(value)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+    this._setNegative(value);
     }
-  }
 
   public dey() {
     const value = this._regY.get() - 1;
@@ -535,22 +513,14 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(value)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+    this._setNegative(value);
     }
-  }
 
   public eor() {
     const result = this._regA.get() ^ this._memRead(this._context.Address);
     this._regA.set(result);
 
-    if (this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(result);
 
     if (this.isZero(result)) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -569,12 +539,8 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(value)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+    this._setNegative(value);
     }
-  }
 
   public inx() {
     const value = this._regX.get() + 1;
@@ -586,12 +552,8 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(value)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+    this._setNegative(value);
     }
-  }
 
   public iny() {
     const value = this._regY.get() + 1;
@@ -603,18 +565,13 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(value)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(value);
   }
 
   public isb() {
   }
 
   public jmp() {
-    console.log(`JUMPING TO: ${this._context.Address.toString(16)}`);
     this._regPC.set(this._context.Address);
   }
 
@@ -631,11 +588,7 @@ export class Cpu {
   public lda() {
     this._regA.set(this._memRead(this._context.Address));
 
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regA.get());
 
     if (this.isZero(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -647,11 +600,7 @@ export class Cpu {
   public ldx() {
     this._regX.set(this._memRead(this._context.Address));
 
-    if (this.isNegative(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regX.get());
 
     if (this.isZero(this._regX.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -663,11 +612,7 @@ export class Cpu {
   public ldy() {
     this._regY.set(this._memRead(this._context.Address));
 
-    if (this.isNegative(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regY.get());
 
     if (this.isZero(this._regY.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -692,11 +637,7 @@ export class Cpu {
       this._memWrite(this._context.Address, result);
     }
 
-    if (this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(result);
 
     if (this.isZero(result)) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -725,11 +666,8 @@ export class Cpu {
     this._regA.set(this._regA.get() | this._memRead(this._context.Address));
 
     const result = this._regA.get();
-    if (this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+
+    this._setNegative(result);
 
     if (this.isZero(result)) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -750,11 +688,7 @@ export class Cpu {
   public pla() {
     this._regA.set(this.stackPull());
 
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regA.get());
 
     if (this.isZero(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -790,11 +724,7 @@ export class Cpu {
       this._memWrite(this._context.Address, result);
     }
 
-    if (this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(result);
 
     if (this.isZero(result)) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -828,12 +758,7 @@ export class Cpu {
       this._memWrite(this._context.Address, result);
     }
 
-
-    if (this.isNegative(result)) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(result);
 
     if (this.isZero(result)) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -883,11 +808,7 @@ export class Cpu {
       this.clearStatusBit(StatusBitPositions.Zero);
     }
 
-    if(this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regA.get());
 
     if(this.isCarry(a, b, 1 - carry, false)) {
       this.setStatusBit(StatusBitPositions.Carry);
@@ -935,11 +856,7 @@ export class Cpu {
   public tax() {
     this._regX.set(this._regA.get());
 
-    if (this.isNegative(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regX.get());
 
     if (this.isZero(this._regX.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -951,11 +868,7 @@ export class Cpu {
   public tay() {
     this._regY.set(this._regA.get());
 
-    if (this.isNegative(this._regY.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regY.get());
 
     if (this.isZero(this._regY.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -967,11 +880,7 @@ export class Cpu {
   public tsx() {
     this._regX.set(this._regSP.get());
 
-    if (this.isNegative(this._regX.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regX.get());
 
     if (this.isZero(this._regX.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -983,11 +892,7 @@ export class Cpu {
   public txa() {
     this._regA.set(this._regX.get());
 
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regA.get());
 
     if (this.isZero(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
@@ -1003,11 +908,7 @@ export class Cpu {
   public tya() {
     this._regA.set(this._regY.get());
 
-    if (this.isNegative(this._regA.get())) {
-      this.setStatusBit(StatusBitPositions.Negative);
-    } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
-    }
+    this._setNegative(this._regA.get());
 
     if (this.isZero(this._regA.get())) {
       this.setStatusBit(StatusBitPositions.Zero);
