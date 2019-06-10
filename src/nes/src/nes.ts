@@ -107,8 +107,15 @@ export class Nes {
     cartLoader.loadCartridgeData(this._memory, this._ppuMemory);
   }
 
-  public run(): number {
-    const cpuSteps = this._cpu.step();
+  public run(steps: number): number {
+    let totalCpuSteps: number = 0;
+
+    while(totalCpuSteps < steps) {
+      totalCpuSteps += this._cpu.step();
+    }
+
+    // const cpuSteps = this._cpu.step();
+    const cpuSteps = totalCpuSteps;
 
     let totalPpuSteps = cpuSteps * 3;
     while(totalPpuSteps > 0) {

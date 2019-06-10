@@ -289,16 +289,6 @@ export class Ppu {
   }
 
   public write$2006(dataByte: number) {
-    /*
-    if(!this._w) {
-      this._t = dataByte;
-      this._w = true;
-    } else {
-      this._v =  (this._t << 8) | dataByte;
-      this._w = false;
-    }
-*/
-    
     if (!this._w) {
       this._t = (this._t & 0x80ff) | ((dataByte & 0x3f) << 8);
       this._w = true;
@@ -329,15 +319,6 @@ export class Ppu {
     this.incrementVramAddress();
 
     return value;
-
-    /*
-    const result = this._ppuDataReadBuffer;
-    this._ppuDataReadBuffer = this._ppuMemory.get(this._v);
-
-    this.incrementVramAddress();
-
-    return result;
-    */
   }
 
   public write$4014(dataByte: number) {

@@ -24,11 +24,6 @@ export class Memory {
     this._memory = [];
     this._ppu = ppu;
     this._controller = controller;
-
-    // Blank out the memory
-    for (let i = 0; i <= 0xffff; i++) {
-      this._memory[i] = 0xff;
-    }
   }
 
   public bits(): number[] {

@@ -16,6 +16,7 @@ context.imageSmoothingEnabled = false;
 
 const nes = new Nes();
 let paused = false;
+let consoleShown = false;
 
 const prevBuffer = {
   buffer: [] as string[][]
@@ -80,8 +81,16 @@ document.getElementById("btn-snap-nt").addEventListener("click", () => {
 });
 document.getElementById("btn-dump-log").addEventListener("click", () => {
   const log = nes.log();
-
   document.getElementById("txtarea-console").innerHTML = log;
+});
+document.getElementById("chk-show-console").addEventListener("change", () => {
+  if(consoleShown) {
+    consoleShown = false;
+    document.getElementById("txtarea-console").style.display = "none";
+  } else {
+    consoleShown = true;
+    document.getElementById("txtarea-console").style.display = "initial";
+  }
 });
 
 document.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -176,11 +185,12 @@ function renderFrame() {
     return;
   }
 
-  totalCycles += nes.run();
+  totalCycles += nes.run(497);
 
   if (totalCycles >= CPU_CYCLES_PER_FRAME) {
     totalCycles = 0;
     nes.clearTotalCycles();
+
     requestAnimationFrame(() => {
       drawFrame(nes.frameBuffer());
     });

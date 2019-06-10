@@ -945,7 +945,7 @@ export class Cpu {
       return this._currentCycles - prevCurrentCycles;
     }
 
-    this._logInstruction();
+    // this._logInstruction();
 
     if (this._interrupt === InterruptRequestType.NMI) {
       this._handleNmi();

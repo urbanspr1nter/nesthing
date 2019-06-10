@@ -5,11 +5,6 @@ export class PpuMemory {
 
   constructor() {
     this._memory = [];
-
-    // Blank out
-    for (let i = 0x0000; i <= MaxMemoryAddress; i++) {
-      this._memory[i] = 0xff;
-    }
   }
 
   public bits(): number[] {
