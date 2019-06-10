@@ -78,6 +78,11 @@ document.getElementById("btn-snap-nt").addEventListener("click", () => {
   const data = nes.snapNt();
   document.getElementById("txtarea-console").innerHTML = data;
 });
+document.getElementById("btn-dump-log").addEventListener("click", () => {
+  const log = nes.log();
+
+  document.getElementById("txtarea-console").innerHTML = log;
+});
 
 document.addEventListener("keydown", (e: KeyboardEvent) => {
   if (e.key === keyMap.Start) {
@@ -164,39 +169,21 @@ function drawFrame(frameBuffer: string[][]) {
   }
 }
 
-var currentFrames = 0;
-let currentTimeDelta = 0;
-let totalTime = 0;
 let totalCycles = 0;
 
 function renderFrame() {
-  if(paused) {
+  if (paused) {
     return;
   }
 
-  const start = performance.now();
-
   totalCycles += nes.run();
 
-  currentTimeDelta = performance.now() - start;
   if (totalCycles >= CPU_CYCLES_PER_FRAME) {
     totalCycles = 0;
     nes.clearTotalCycles();
     requestAnimationFrame(() => {
       drawFrame(nes.frameBuffer());
-      currentFrames++;
     });
-  }
-
-  totalTime += currentTimeDelta;
-  showFps();
-}
-
-function showFps() {
-  if (totalTime >= LOGICAL_SECOND_INTERVAL) {
-    document.getElementById("fps").innerHTML = `${currentFrames} fps`;
-    currentFrames = 0;
-    totalTime = 0;
   }
 }
 

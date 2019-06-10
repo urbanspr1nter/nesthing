@@ -201,9 +201,7 @@ export class Ppu {
     this._regPPUCTRL_generateNmiAtVblankStart =
       (dataByte & 0x80) === 0x0 ? false : true;
 
-    if (this._regPPUCTRL_generateNmiAtVblankStart && this._isVblank()) {
-      this._cpu.requestInterrupt(InterruptRequestType.NMI);
-    }
+    this._nmiChange();
 
     this._t = (this._t & 0xf3ff) | ((dataByte & 0x03 & 0xffff) << 10);
   }
@@ -249,6 +247,7 @@ export class Ppu {
     const bit_7 = this._regPPUSTATUS_vblankStarted ? 1 : 0;
 
     this._regPPUSTATUS_vblankStarted = false;
+    this._nmiChange();
     this._w = false;
 
     return (bit_7 << 7) | (bit_6 << 6) | (bit_5 << 5);

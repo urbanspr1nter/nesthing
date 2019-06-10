@@ -97,6 +97,10 @@ export class Nes {
     };
   }
 
+  public log() {
+    return this._cpu.getLog();
+  }
+
   public loadRom() {
     const romContents = rom.raw;
     const cartLoader = new CartLoader(romContents);
