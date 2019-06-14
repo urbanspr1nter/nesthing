@@ -1,5 +1,5 @@
 import { Ppu } from "./ppu";
-import { Controller } from "./controller";
+import { Controller, ControllerPlayer } from "./controller";
 
 /**
  * CPU MEMORY MAP
@@ -59,7 +59,8 @@ export class Memory {
       // Write 1 $4016 to signal the controller to poll its input
       // Write 0 to $4016 to finish the poll
       // 4016/4017 becomes ready for polling
-      this._controller.write(value);
+      this._controller.write(value, ControllerPlayer.One);
+      this._controller.write(value, ControllerPlayer.Two);
     } else {
       this._memory[address & 0xffff] = value;
     }
@@ -81,9 +82,11 @@ export class Memory {
       }
     } else if (address === 0x4016) {
       // Read controller 1
-      return this._controller.read();
+      return this._controller.read(ControllerPlayer.One);
+    
     } else if (address === 0x4017) {
       // read controller 2
+      return this._controller.read(ControllerPlayer.Two);
     }
     return this._memory[address & 0xffff] & 0xff;
   };

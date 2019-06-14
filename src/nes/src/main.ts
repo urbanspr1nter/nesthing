@@ -1,7 +1,7 @@
 // require('./nestest');
 
 import { Nes } from "./nes";
-import { Buttons } from "./controller";
+import { Buttons, ControllerPlayer } from "./controller";
 
 const FPS = 60;
 const TIME_PER_FRAME = Math.ceil(1000 / FPS);
@@ -23,7 +23,7 @@ const prevBuffer = {
 };
 clearPixelBuffer();
 
-const keyMap = {
+const keyMapPlayer1 = {
   Start: "Enter",
   Select: "Shift",
   A: "j",
@@ -32,6 +32,17 @@ const keyMap = {
   Down: "s",
   Left: "a",
   Right: "d"
+};
+
+const keyMapPlayer2 = {
+  Start: "/",
+  Select: ".",
+  A: "m",
+  B: ",",
+  Up: "ArrowUp",
+  Down: "ArrowDown",
+  Left: "ArrowLeft",
+  Right: "ArrowRight"
 };
 
 function scale(times: number) {
@@ -58,7 +69,9 @@ function getDefaultKeySettings(): { [id: number]: boolean } {
   return defaultMap;
 }
 
-const keyPressed: { [id: number]: boolean } = { ...getDefaultKeySettings() };
+const keyPressedPlayer1: { [id: number]: boolean } = { ...getDefaultKeySettings() };
+const keyPressedPlayer2: { [id: number]: boolean } = { ...getDefaultKeySettings() };
+
 
 document.getElementById("btn-scale-1").addEventListener("click", () => {
   scale(1);
@@ -94,62 +107,121 @@ document.getElementById("chk-show-console").addEventListener("change", () => {
 });
 
 document.addEventListener("keydown", (e: KeyboardEvent) => {
-  if (e.key === keyMap.Start) {
-    keyPressed[Buttons.Start] = true;
+  if (e.key === keyMapPlayer1.Start) {
+    keyPressedPlayer1[Buttons.Start] = true;
   }
-  if (e.key === keyMap.Select) {
-    keyPressed[Buttons.Select] = true;
+  if (e.key === keyMapPlayer1.Select) {
+    keyPressedPlayer1[Buttons.Select] = true;
   }
-  if (e.key === keyMap.A) {
-    keyPressed[Buttons.A] = true;
+  if (e.key === keyMapPlayer1.A) {
+    keyPressedPlayer1[Buttons.A] = true;
   }
-  if (e.key === keyMap.B) {
-    keyPressed[Buttons.B] = true;
+  if (e.key === keyMapPlayer1.B) {
+    keyPressedPlayer1[Buttons.B] = true;
   }
-  if (e.key === keyMap.Up) {
-    keyPressed[Buttons.Up] = true;
+  if (e.key === keyMapPlayer1.Up) {
+    keyPressedPlayer1[Buttons.Up] = true;
   }
-  if (e.key === keyMap.Down) {
-    keyPressed[Buttons.Down] = true;
+  if (e.key === keyMapPlayer1.Down) {
+    keyPressedPlayer1[Buttons.Down] = true;
   }
-  if (e.key === keyMap.Left) {
-    keyPressed[Buttons.Left] = true;
+  if (e.key === keyMapPlayer1.Left) {
+    keyPressedPlayer1[Buttons.Left] = true;
   }
-  if (e.key === keyMap.Right) {
-    keyPressed[Buttons.Right] = true;
+  if (e.key === keyMapPlayer1.Right) {
+    keyPressedPlayer1[Buttons.Right] = true;
   }
 
-  nes.controller1.setButtons(keyPressed);
+  nes.controller1.setButtons(keyPressedPlayer1, ControllerPlayer.One);
 });
 
 document.addEventListener("keyup", (e: KeyboardEvent) => {
-  if (e.key === keyMap.Start) {
-    keyPressed[Buttons.Start] = false;
+  if (e.key === keyMapPlayer1.Start) {
+    keyPressedPlayer1[Buttons.Start] = false;
   }
-  if (e.key === keyMap.Select) {
-    keyPressed[Buttons.Select] = false;
+  if (e.key === keyMapPlayer1.Select) {
+    keyPressedPlayer1[Buttons.Select] = false;
   }
-  if (e.key === keyMap.A) {
-    keyPressed[Buttons.A] = false;
+  if (e.key === keyMapPlayer1.A) {
+    keyPressedPlayer1[Buttons.A] = false;
   }
-  if (e.key === keyMap.B) {
-    keyPressed[Buttons.B] = false;
+  if (e.key === keyMapPlayer1.B) {
+    keyPressedPlayer1[Buttons.B] = false;
   }
-  if (e.key === keyMap.Up) {
-    keyPressed[Buttons.Up] = false;
+  if (e.key === keyMapPlayer1.Up) {
+    keyPressedPlayer1[Buttons.Up] = false;
   }
-  if (e.key === keyMap.Down) {
-    keyPressed[Buttons.Down] = false;
+  if (e.key === keyMapPlayer1.Down) {
+    keyPressedPlayer1[Buttons.Down] = false;
   }
-  if (e.key === keyMap.Left) {
-    keyPressed[Buttons.Left] = false;
+  if (e.key === keyMapPlayer1.Left) {
+    keyPressedPlayer1[Buttons.Left] = false;
   }
-  if (e.key === keyMap.Right) {
-    keyPressed[Buttons.Right] = false;
+  if (e.key === keyMapPlayer1.Right) {
+    keyPressedPlayer1[Buttons.Right] = false;
   }
 
-  nes.controller1.setButtons(keyPressed);
+  nes.controller1.setButtons(keyPressedPlayer1, ControllerPlayer.One);
 });
+
+document.addEventListener("keydown", (e: KeyboardEvent) => {
+  if (e.key === keyMapPlayer2.Start) {
+    keyPressedPlayer2[Buttons.Start] = true;
+  }
+  if (e.key === keyMapPlayer2.Select) {
+    keyPressedPlayer2[Buttons.Select] = true;
+  }
+  if (e.key === keyMapPlayer2.A) {
+    keyPressedPlayer2[Buttons.A] = true;
+  }
+  if (e.key === keyMapPlayer2.B) {
+    keyPressedPlayer2[Buttons.B] = true;
+  }
+  if (e.key === keyMapPlayer2.Up) {
+    keyPressedPlayer2[Buttons.Up] = true;
+  }
+  if (e.key === keyMapPlayer2.Down) {
+    keyPressedPlayer2[Buttons.Down] = true;
+  }
+  if (e.key === keyMapPlayer2.Left) {
+    keyPressedPlayer2[Buttons.Left] = true;
+  }
+  if (e.key === keyMapPlayer2.Right) {
+    keyPressedPlayer2[Buttons.Right] = true;
+  }
+
+  nes.controller1.setButtons(keyPressedPlayer2, ControllerPlayer.Two);
+});
+
+document.addEventListener("keyup", (e: KeyboardEvent) => {
+  if (e.key === keyMapPlayer2.Start) {
+    keyPressedPlayer2[Buttons.Start] = false;
+  }
+  if (e.key === keyMapPlayer2.Select) {
+    keyPressedPlayer2[Buttons.Select] = false;
+  }
+  if (e.key === keyMapPlayer2.A) {
+    keyPressedPlayer2[Buttons.A] = false;
+  }
+  if (e.key === keyMapPlayer2.B) {
+    keyPressedPlayer2[Buttons.B] = false;
+  }
+  if (e.key === keyMapPlayer2.Up) {
+    keyPressedPlayer2[Buttons.Up] = false;
+  }
+  if (e.key === keyMapPlayer2.Down) {
+    keyPressedPlayer2[Buttons.Down] = false;
+  }
+  if (e.key === keyMapPlayer2.Left) {
+    keyPressedPlayer2[Buttons.Left] = false;
+  }
+  if (e.key === keyMapPlayer2.Right) {
+    keyPressedPlayer2[Buttons.Right] = false;
+  }
+
+  nes.controller1.setButtons(keyPressedPlayer2, ControllerPlayer.Two);
+});
+
 
 function clearPixelBuffer() {
   for (let i = 0; i < HEIGHT; i++) {
@@ -205,3 +277,6 @@ function run() {
 }
 
 setTimeout(run, 1000);
+
+
+document.getElementById("btn-scale-2").click();

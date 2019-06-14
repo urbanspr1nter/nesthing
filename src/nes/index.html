@@ -1,86 +1,120 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-    <head>
-        <title>
-            NESThing
-        </title>
-        <style>
-            canvas {
-                -webkit-transform: translateZ(0);
-                transform: translateZ(0);
-            }
+  <head>
+    <title>
+      NESThing
+    </title>
+    <style>
+      canvas {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+      }
 
-            td {
-                padding: 4px;
-            }
+      td {
+        padding: 4px;
+      }
 
-            #fps {
-                display: inline;
-                font-weight: bold;
-            }
+      #fps {
+        display: inline;
+        font-weight: bold;
+      }
 
-            #fps-title {
-                display: inline;
-            }
+      #fps-title {
+        display: inline;
+      }
 
-            #txtarea-console {
-                font-family: 'Courier New', Courier, monospace;
-                font-size: small;
-                display: none;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>NESthing</h1>
-        <p>
-            For this demo, you can immediately begin the game by hitting the 
-            <b>START</b> button, which corresponds to the <b>Enter</b> key on your keyboard. 
-        </p>
-        <p>
-            Only 1 player is supported for now.
-        </p>
-        <h3>Player 1: Button Mapping</h3>
+      #txtarea-console {
+        font-family: "Courier New", Courier, monospace;
+        font-size: small;
+        display: none;
+      }
+
+      #button-mapping-container > div {
+        display: inline-block;
+      }
+
+      #developer {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>NESthing</h1>
+    <p>
+      For this demo, you can immediately begin the game by hitting the
+      <b>START</b> button, which corresponds to the <b>Enter</b> key on your
+      keyboard.
+    </p>
+    <div id="button-mapping-container">
+      <div>
+        <strong>Player 1: Button Mapping</strong>
         <table border="1">
-            <tr>
-                <td>START</td>
-                <td>Enter</td>
-            </tr>
-            <tr>
-                <td>SELECT</td>
-                <td>Shift</td>
-            </tr>
-            <tr>
-                <td>Up, Left, Down, Right</td>
-                <td>W, A, S, D</td>
-            </tr>
-            <tr>
-                <td>A, B</td>
-                <td>J, K</td>
-            </tr>
+          <tr>
+            <td>START</td>
+            <td>Enter</td>
+          </tr>
+          <tr>
+            <td>SELECT</td>
+            <td>Shift</td>
+          </tr>
+          <tr>
+            <td>Up, Left, Down, Right</td>
+            <td>W, A, S, D</td>
+          </tr>
+          <tr>
+            <td>A, B</td>
+            <td>J, K</td>
+          </tr>
         </table>
-        <hr/>
-        <canvas id="main" width="256" height="240"></canvas>
-        <div id="controls">
-            <button type="button" id="btn-scale-1">1x View</button>
-            <button type="button" id="btn-scale-2">2x View</button>
-            <button type="button" id="btn-scale-3">3x View</button>
-            <button type="button" id="btn-scale-4">4x View</button>
-        </div>
-        <div id="debug">
-            <button type="button" id="btn-pause">Pause</button>
-            <button type="button" id="btn-dump-log">Log</button>
-            <button type="button" id="btn-snap-nt">Snap Nametable</button>
-            <input type="checkbox" id="chk-show-console" /> Show console
-        </div>
-        <div id="fps-notification">
-            <div id="fps-title">Frames per Second: </div>
-            <div id="fps">0 fps</div>
-        </div>
-        <div id="console">
-            <textarea cols="120" rows="40" id="txtarea-console"></textarea>
-        </div>
-        <script src="./dist/bundle.js" type="text/javascript"></script>
-        <hr/>
-        Roger Ngo. http://rogerngo.com
-    </body>
+      </div>
+      <div>
+        <strong>Player 2: Button Mapping</strong>
+        <table border="1">
+          <tr>
+            <td>START</td>
+            <td>/</td>
+          </tr>
+          <tr>
+            <td>SELECT</td>
+            <td>.</td>
+          </tr>
+          <tr>
+            <td>Up, Left, Down, Right</td>
+            <td>Up, Left, Down, Right</td>
+          </tr>
+          <tr>
+            <td>A, B</td>
+            <td>M, ,</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <hr />
+    <canvas id="main" width="256" height="240"></canvas>
+    <div id="controls">
+      <button type="button" id="btn-scale-1">1x View</button>
+      <button type="button" id="btn-scale-2">2x View</button>
+      <button type="button" id="btn-scale-3">3x View</button>
+      <button type="button" id="btn-scale-4">4x View</button>
+    </div>
+    <div id="developer">
+      <div id="debug">
+        <button type="button" id="btn-pause">Pause</button>
+        <button type="button" id="btn-dump-log">Log</button>
+        <button type="button" id="btn-snap-nt">Snap Nametable</button>
+        <input type="checkbox" id="chk-show-console" /> Show console
+      </div>
+      <div id="fps-notification">
+        <div id="fps-title">Frames per Second:</div>
+        <div id="fps">0 fps</div>
+      </div>
+      <div id="console">
+        <textarea cols="120" rows="40" id="txtarea-console"></textarea>
+      </div>
+    </div>
+    <script src="./dist/bundle.js" type="text/javascript"></script>
+    <hr />
+    Roger Ngo. http://rogerngo.com
+  </body>
 </html>
