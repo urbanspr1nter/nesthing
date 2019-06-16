@@ -332,6 +332,8 @@ export class Apu {
       default:
         break;
     }
+
+    return 0;
   }
 
   public write$addr(address: number, value: number) {
@@ -407,6 +409,25 @@ export class Apu {
     }
   }
 
+  public getAudioChannel() {
+    return this._channel;
+  }
+  
+  public setAudioChannel(channel: number) {
+    this._channel = channel;
+  }
+
+  public setAudioSampleRate(sampleRate: number) {
+    if(sampleRate !== 0) {
+      this._sampleRate = 1789773 / sampleRate;
+      this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 90));
+      this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 440));
+      this._filterChain.addFilters(this._filterChain.lowPassFilter(sampleRate, 14000));
+    } else {
+      this._filterChain.clearFilters();
+    }
+  }
+
   public step() {
     let cycle1 = this._cycles;
     this._cycles++;
@@ -424,7 +445,7 @@ export class Apu {
     const s1 = cycle1 / this._sampleRate;
     const s2 = cycle2 / this._sampleRate;
     if(s1 !== s2) {
-      this.sendSample();
+      this._sendSample();
     }
   }
 
@@ -479,12 +500,12 @@ export class Apu {
     }
   }
 
-  public sendSample() {
-    const output = this._filterChain.step(this.output());
+  private _sendSample() {
+    const output = this._filterChain.step(this._output());
     this._channel = output;
   }
 
-  public output() {
+  private _output() {
     const p1 = this._outputPulse(this._square0);
     const p2 = this._outputPulse(this._square1);
     const t = this._outputTriangle();
@@ -595,14 +616,14 @@ export class Apu {
   private _writePulseTimerLow(p: Pulse, value: number) {
     const bValue = value & 0xff;
 
-    p.TimerPeriod = (p.TimerPeriod & 0xff00) | bValue;
+    p.TimerPeriod = ((p.TimerPeriod & 0xff00) | bValue) & 0xffff;
   }
 
   private _writePulseTimerHigh(p: Pulse, value: number) {
     const bValue = value & 0xff;
 
     p.LengthValue = lengthTable[bValue >>> 3];
-    p.TimerPeriod = (p.TimerPeriod & 0x00ff) | (bValue << 8);
+    p.TimerPeriod = ((p.TimerPeriod & 0x00ff) | ((bValue & 7) << 8)) & 0xffff;
     p.EnvelopeStart = true;
     p.DutyValue = 0;
   }
@@ -618,7 +639,7 @@ export class Apu {
 
   private _stepEnvelopePulse(p: Pulse) {
     if (p.EnvelopeStart) {
-      p.EnvelopeVolume = 14;
+      p.EnvelopeVolume = 15;
       p.EnvelopeValue = p.EnvelopePeriod;
       p.EnvelopeStart = false;
     } else if (p.EnvelopeValue > 0) {
@@ -627,7 +648,7 @@ export class Apu {
       if (p.EnvelopeVolume > 0) {
         p.EnvelopeVolume--;
       } else if (p.EnvelopeLoop) {
-        p.EnvelopeVolume = 14;
+        p.EnvelopeVolume = 15;
       }
       p.EnvelopeValue = p.EnvelopePeriod;
     }
@@ -668,7 +689,7 @@ export class Apu {
     }
   }
 
-  private _outputPulse(p: Pulse) {
+  private _outputPulse(p: Pulse): number {
     if (!p.Enabled) {
       return 0;
     }

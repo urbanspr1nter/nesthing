@@ -11,7 +11,7 @@ interface FirstOrderFilter {
 export class FilterChain {
   private _apu: Apu;
   private _filter: FirstOrderFilter;
-  private _filters: FirstOrderFilter[];
+  private _filters: FirstOrderFilter[]|undefined;
 
   constructor(apu: Apu) {
     this._apu = apu;
@@ -23,6 +23,17 @@ export class FilterChain {
       PrevX: 0,
       PrevY: 0
     };
+  }
+
+  public addFilters(f: FirstOrderFilter) {
+      if(!this._filters) {
+          this._filters = [];
+      }
+      this._filters.push(f);
+  }
+
+  public clearFilters() {
+      this._filters = undefined;
   }
 
   public stepFilterChain(f: FirstOrderFilter, x: number) {
@@ -43,7 +54,9 @@ export class FilterChain {
     return {
       B0: a0i,
       B1: a0i,
-      A1: (1 - c) * a0i
+      A1: (1 - c) * a0i,
+      PrevX: 0,
+      PrevY: 0
     };
   }
 
@@ -57,7 +70,9 @@ export class FilterChain {
     return {
       B0: c * a0i,
       B1: -c * a0i,
-      A1: (1 - c) * a0i
+      A1: (1 - c) * a0i,
+      PrevX: 0,
+      PrevY: 0
     };
   }
 

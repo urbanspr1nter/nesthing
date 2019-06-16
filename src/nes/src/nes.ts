@@ -32,6 +32,8 @@ export class Nes {
   private _cpu: Cpu;
   private _controller: Controller;
 
+  private _audioContext: AudioContext;
+
   constructor() {
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
@@ -41,10 +43,11 @@ export class Nes {
     this._cpu = new Cpu(this._memory);
 
     this._apu.setCpu(this._cpu);
+    this._apu.setAudioSampleRate(44100);
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
-  }
+    }
 
   get controller1(): Controller {
     return this._controller;
@@ -112,6 +115,10 @@ export class Nes {
   }
 
   public run(steps: number): number {
+    if(!    this._audioContext
+    ) {
+      this._audioContext = new AudioContext();
+    }
     let totalCpuSteps: number = 0;
 
     while (totalCpuSteps < steps) {
@@ -124,7 +131,22 @@ export class Nes {
       totalApuSteps--;
     }
 
-    // const cpuSteps = this._cpu.step();
+    const bufferData = this._audioContext.createBuffer(2, 4096, 44100);
+    
+    const bufferSource = this._audioContext.createBufferSource();
+    bufferSource.connect(this._audioContext.destination);
+
+  
+    const channelData = bufferData.getChannelData(1);
+    for(let i = 0; i < 4096; i++) {
+      channelData[i] = this._apu.getAudioChannel();
+
+    }
+
+    bufferSource.buffer = bufferData;
+    bufferSource.start();
+    bufferSource.stop(this._audioContext.currentTime + 1);
+
     const cpuSteps = totalCpuSteps;
 
     let totalPpuSteps = cpuSteps * 3;

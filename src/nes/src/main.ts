@@ -136,6 +136,9 @@ function run() {
   });
 }
 
-setTimeout(run, 1000);
+document.getElementById("btn-play").addEventListener("click", () => {
+  setTimeout(run, 1000);
+
+});
 
 document.getElementById("btn-scale-2").click();
