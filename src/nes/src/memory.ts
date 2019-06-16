@@ -1,5 +1,6 @@
 import { Ppu } from "./ppu";
 import { Controller, ControllerPlayer } from "./controller";
+import { Apu } from "./apu";
 
 /**
  * CPU MEMORY MAP
@@ -17,12 +18,14 @@ import { Controller, ControllerPlayer } from "./controller";
 export class Memory {
   private _memory: number[];
 
+  private _apu: Apu;
   private _ppu: Ppu;
   private _controller: Controller;
 
-  constructor(ppu: Ppu, controller: Controller) {
+  constructor(ppu: Ppu, apu: Apu, controller: Controller) {
     this._memory = [];
     this._ppu = ppu;
+    this._apu = apu;
     this._controller = controller;
   }
 
@@ -61,6 +64,10 @@ export class Memory {
       // 4016/4017 becomes ready for polling
       this._controller.write(value, ControllerPlayer.One);
       this._controller.write(value, ControllerPlayer.Two);
+    } else if (address >= 0x4000 && address <= 0x400f) {
+      this._apu.write$addr(address, value);
+    } else if (address === 0x4015 || address === 0x4017) {
+      this._apu.write$addr(address, value);
     } else {
       this._memory[address & 0xffff] = value;
     }
@@ -80,10 +87,11 @@ export class Memory {
       } else {
         return 0;
       }
+    } else if (address === 0x4015) {
+      return this._apu.read$addr(address);
     } else if (address === 0x4016) {
       // Read controller 1
       return this._controller.read(ControllerPlayer.One);
-    
     } else if (address === 0x4017) {
       // read controller 2
       return this._controller.read(ControllerPlayer.Two);

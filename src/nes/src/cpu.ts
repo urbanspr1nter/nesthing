@@ -91,7 +91,7 @@ export class Cpu {
     this._regY.set(0);
 
     for (let i = 0x0000; i <= 0x07ff; i++) {
-      this._memWrite(i, 0xff);
+      this.memWrite(i, 0xff);
     }
 
     // Perform the RESET Interrupt
@@ -121,8 +121,8 @@ export class Cpu {
     this.setStatusBit(StatusBitPositions.InterruptDisable);
 
     this._regPC.set(
-      (this._memRead(ResetVectorLocation.High) << 8) |
-        this._memRead(ResetVectorLocation.Low)
+      (this.memRead(ResetVectorLocation.High) << 8) |
+        this.memRead(ResetVectorLocation.Low)
     );
 
     this.setStatusBit(StatusBitPositions.InterruptDisable);
@@ -189,25 +189,25 @@ export class Cpu {
   }
 
   private _logInstruction() {
-    const opCode = this._memRead(this._regPC.get());
+    const opCode = this.memRead(this._regPC.get());
     const bytes = InstructionSizes[opCode];
     const name = OpLabel[opCode];
 
-    let fmtOp0 = this._memRead(this._regPC.get())
+    let fmtOp0 = this.memRead(this._regPC.get())
       .toString(16)
       .toUpperCase();
     if (fmtOp0.length < 2) {
       fmtOp0 = `0${fmtOp0}`;
     }
 
-    let fmtOp1 = this._memRead(this._regPC.get() + 1)
+    let fmtOp1 = this.memRead(this._regPC.get() + 1)
       .toString(16)
       .toUpperCase();
     if (fmtOp1.length < 2) {
       fmtOp1 = `0${fmtOp1}`;
     }
 
-    let fmtOp2 = this._memRead(this._regPC.get() + 2)
+    let fmtOp2 = this.memRead(this._regPC.get() + 2)
       .toString(16)
       .toUpperCase();
     if (fmtOp2.length < 2) {
@@ -278,27 +278,27 @@ export class Cpu {
     );
   }
 
-  private _memWrite(address: number, data: number) {
+  public memWrite(address: number, data: number) {
     this._memory.set(address, data);
   }
 
-  private _memRead(address: number): number {
+  public memRead(address: number): number {
     return this._memory.get(address);
   }
 
   private _stackPush(data: number): void {
-    this._memWrite(0x100 | this._regSP.get(), data);
+    this.memWrite(0x100 | this._regSP.get(), data);
     this._regSP.set(this._regSP.get() - 1);
   }
 
   private _stackPull(): number {
     this._regSP.set(this._regSP.get() + 1);
-    return this._memRead(0x100 | this._regSP.get());
+    return this.memRead(0x100 | this._regSP.get());
   }
 
   private _read16(address: number): number {
-    const low = this._memRead(address);
-    const high = this._memRead(address + 1);
+    const low = this.memRead(address);
+    const high = this.memRead(address + 1);
 
     return ((high << 8) | low) & 0xffff;
   }
@@ -306,8 +306,8 @@ export class Cpu {
   private _read16Bug(address: number): number {
     const a = address;
     const b = (a & 0xff00) | (((a & 0xff) + 1) & 0xff);
-    const low = this._memRead(a);
-    const high = this._memRead(b);
+    const low = this.memRead(a);
+    const high = this.memRead(b);
 
     const effAddress = ((high << 8) | low) & 0xffff;
 
@@ -368,8 +368,8 @@ export class Cpu {
 
     this.setStatusBit(StatusBitPositions.InterruptDisable);
     this._regPC.set(
-      (this._memRead(NmiVectorLocation.High) << 8) |
-        this._memRead(NmiVectorLocation.Low)
+      (this.memRead(NmiVectorLocation.High) << 8) |
+        this.memRead(NmiVectorLocation.Low)
     );
     this._currentCycles += 7;
     this._interrupt = InterruptRequestType.None;
@@ -384,8 +384,8 @@ export class Cpu {
     this._php();
     this.setStatusBit(StatusBitPositions.InterruptDisable);
     this._regPC.set(
-      (this._memRead(IrqVectorLocation.High) << 8) |
-        this._memRead(IrqVectorLocation.Low)
+      (this.memRead(IrqVectorLocation.High) << 8) |
+        this.memRead(IrqVectorLocation.Low)
     );
     this._currentCycles += 7;
     this._interrupt = InterruptRequestType.None;
@@ -393,7 +393,7 @@ export class Cpu {
 
   private _adc() {
     const a = this._regA.get();
-    const b = this._memRead(this._context.Address);
+    const b = this.memRead(this._context.Address);
     const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
 
     this._regA.set(a + b + carry);
@@ -415,7 +415,7 @@ export class Cpu {
   }
 
   private _and() {
-    this._regA.set(this._regA.get() & this._memRead(this._context.Address));
+    this._regA.set(this._regA.get() & this.memRead(this._context.Address));
     this._setZero(this._regA.get());
     this._setNegative(this._regA.get());
   }
@@ -429,11 +429,11 @@ export class Cpu {
       this._regA.set(this._regA.get() << 1);
       result = this._regA.get();
     } else {
-      const operand = this._memRead(this._context.Address);
+      const operand = this.memRead(this._context.Address);
       carry = (operand >>> 7) & 1;
       result = operand << 1;
 
-      this._memWrite(this._context.Address, result);
+      this.memWrite(this._context.Address, result);
     }
 
     if (carry === 1) {
@@ -468,7 +468,7 @@ export class Cpu {
   }
 
   private _bit() {
-    const value = this._memRead(this._context.Address);
+    const value = this.memRead(this._context.Address);
     const overflow = (value >>> 6) & 1;
 
     if (overflow > 0) {
@@ -508,8 +508,8 @@ export class Cpu {
     this._php();
     this._sei();
 
-    let interruptVectorLow = this._memRead(IrqVectorLocation.Low);
-    let interruptVectorHigh = this._memRead(IrqVectorLocation.High);
+    let interruptVectorLow = this.memRead(IrqVectorLocation.Low);
+    let interruptVectorHigh = this.memRead(IrqVectorLocation.High);
 
     this._regPC.set((interruptVectorHigh << 8) | interruptVectorLow);
 
@@ -547,23 +547,23 @@ export class Cpu {
   }
 
   private _cmp() {
-    const value = this._memRead(this._context.Address);
+    const value = this.memRead(this._context.Address);
     this._compare(this._regA.get(), value);
   }
 
   private _cpx() {
-    const value = this._memRead(this._context.Address);
+    const value = this.memRead(this._context.Address);
     this._compare(this._regX.get(), value);
   }
 
   private _cpy() {
-    const value = this._memRead(this._context.Address);
+    const value = this.memRead(this._context.Address);
     this._compare(this._regY.get(), value);
   }
 
   private _dec() {
-    const value = this._memRead(this._context.Address) - 1;
-    this._memWrite(this._context.Address, value);
+    const value = this.memRead(this._context.Address) - 1;
+    this.memWrite(this._context.Address, value);
     this._setZero(value);
     this._setNegative(value);
   }
@@ -581,15 +581,15 @@ export class Cpu {
   }
 
   private _eor() {
-    const result = this._regA.get() ^ this._memRead(this._context.Address);
+    const result = this._regA.get() ^ this.memRead(this._context.Address);
     this._regA.set(result);
     this._setNegative(result);
     this._setZero(result);
   }
 
   private _inc() {
-    const value = this._memRead(this._context.Address) + 1;
-    this._memWrite(this._context.Address, value);
+    const value = this.memRead(this._context.Address) + 1;
+    this.memWrite(this._context.Address, value);
     this._setZero(value);
     this._setNegative(value);
   }
@@ -618,19 +618,19 @@ export class Cpu {
   }
 
   private _lda() {
-    this._regA.set(this._memRead(this._context.Address));
+    this._regA.set(this.memRead(this._context.Address));
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
 
   private _ldx() {
-    this._regX.set(this._memRead(this._context.Address));
+    this._regX.set(this.memRead(this._context.Address));
     this._setNegative(this._regX.get());
     this._setZero(this._regX.get());
   }
 
   private _ldy() {
-    this._regY.set(this._memRead(this._context.Address));
+    this._regY.set(this.memRead(this._context.Address));
     this._setNegative(this._regY.get());
     this._setZero(this._regY.get());
   }
@@ -644,10 +644,10 @@ export class Cpu {
       this._regA.set(this._regA.get() >>> 1);
       result = this._regA.get();
     } else {
-      const value = this._memRead(this._context.Address);
+      const value = this.memRead(this._context.Address);
       carry = value & 1;
       result = value >>> 1;
-      this._memWrite(this._context.Address, result);
+      this.memWrite(this._context.Address, result);
     }
 
     this._setNegative(result);
@@ -665,7 +665,7 @@ export class Cpu {
   }
 
   private _ora() {
-    this._regA.set(this._regA.get() | this._memRead(this._context.Address));
+    this._regA.set(this._regA.get() | this.memRead(this._context.Address));
     this._setNegative(this._regA.get());
     this._setZero(this._regA.get());
   }
@@ -701,12 +701,12 @@ export class Cpu {
 
       result = this._regA.get();
     } else {
-      const value = this._memRead(this._context.Address);
+      const value = this.memRead(this._context.Address);
       newCarry = (value >>> 7) & 1;
 
       result = (value << 1) | currCarry;
 
-      this._memWrite(this._context.Address, result);
+      this.memWrite(this._context.Address, result);
     }
 
     this._setNegative(result);
@@ -730,12 +730,12 @@ export class Cpu {
 
       result = this._regA.get();
     } else {
-      const value = this._memRead(this._context.Address);
+      const value = this.memRead(this._context.Address);
       newCarry = value & 1;
 
       result = (value >>> 1) | (currCarry << 7);
 
-      this._memWrite(this._context.Address, result);
+      this.memWrite(this._context.Address, result);
     }
 
     this._setNegative(result);
@@ -765,7 +765,7 @@ export class Cpu {
 
   public _sbc() {
     const a = this._regA.get();
-    const b = this._memRead(this._context.Address);
+    const b = this.memRead(this._context.Address);
     const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
 
     this._regA.set(a - b - (1 - carry));
@@ -799,15 +799,15 @@ export class Cpu {
   }
 
   public _sta() {
-    this._memWrite(this._context.Address, this._regA.get());
+    this.memWrite(this._context.Address, this._regA.get());
   }
 
   public _stx() {
-    this._memWrite(this._context.Address, this._regX.get());
+    this.memWrite(this._context.Address, this._regX.get());
   }
 
   public _sty() {
-    this._memWrite(this._context.Address, this._regY.get());
+    this.memWrite(this._context.Address, this._regY.get());
   }
 
   private _tax() {
@@ -875,7 +875,7 @@ export class Cpu {
         address = this._read16Bug(this._read16(this._regPC.get() + 1));
         break;
       case AddressingModes.DirectPage:
-        address = this._memRead(this._regPC.get() + 1);
+        address = this.memRead(this._regPC.get() + 1);
         break;
       case AddressingModes.AbsoluteIndexedX:
         address = this._read16(this._regPC.get() + 1) + this._regX.get();
@@ -893,20 +893,20 @@ export class Cpu {
         break;
       case AddressingModes.DirectPageIndexedX:
         address =
-          (this._memRead(this._regPC.get() + 1) + this._regX.get()) & 0xff;
+          (this.memRead(this._regPC.get() + 1) + this._regX.get()) & 0xff;
         break;
       case AddressingModes.DirectPageIndexedY:
         address =
-          (this._memRead(this._regPC.get() + 1) + this._regY.get()) & 0xff;
+          (this.memRead(this._regPC.get() + 1) + this._regY.get()) & 0xff;
         break;
       case AddressingModes.DirectPageIndexedIndirectX:
         address = this._read16Bug(
-          this._memRead(this._regPC.get() + 1) + this._regX.get()
+          this.memRead(this._regPC.get() + 1) + this._regX.get()
         );
         break;
       case AddressingModes.DirectPageIndirectIndexedY:
         address =
-          this._read16Bug(this._memRead(this._regPC.get() + 1)) +
+          this._read16Bug(this.memRead(this._regPC.get() + 1)) +
           this._regY.get();
         pageCrossed = this._crossesPageBoundary(
           address - this._regY.get(),
@@ -920,7 +920,7 @@ export class Cpu {
         address = 0;
         break;
       case AddressingModes.Relative:
-        const offset = this._memRead(this._regPC.get() + 1);
+        const offset = this.memRead(this._regPC.get() + 1);
         if (offset < 0x80) {
           address = this._regPC.get() + 2 + offset;
         } else {
@@ -949,6 +949,11 @@ export class Cpu {
 
     if (this._interrupt === InterruptRequestType.NMI) {
       this._handleNmi();
+    } else if (
+      this._interrupt === InterruptRequestType.IRQ &&
+      !this.getStatusBitFlag(StatusBitPositions.InterruptDisable)
+    ) {
+      this.irq();
     }
     this._interrupt = InterruptRequestType.None;
 

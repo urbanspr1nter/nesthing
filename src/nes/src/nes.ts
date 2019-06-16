@@ -4,6 +4,7 @@ import { Cpu } from "./cpu";
 import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
+import { Apu } from "./apu";
 
 const rom = require("./roms/mario.json");
 
@@ -26,6 +27,7 @@ export interface PpuRegisters {
 export class Nes {
   private _memory: Memory;
   private _ppuMemory: PpuMemory;
+  private _apu: Apu;
   private _ppu: Ppu;
   private _cpu: Cpu;
   private _controller: Controller;
@@ -34,9 +36,11 @@ export class Nes {
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
     this._controller = new Controller();
-    this._memory = new Memory(this._ppu, this._controller);
+    this._apu = new Apu();
+    this._memory = new Memory(this._ppu, this._apu, this._controller);
     this._cpu = new Cpu(this._memory);
 
+    this._apu.setCpu(this._cpu);
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
@@ -110,15 +114,21 @@ export class Nes {
   public run(steps: number): number {
     let totalCpuSteps: number = 0;
 
-    while(totalCpuSteps < steps) {
+    while (totalCpuSteps < steps) {
       totalCpuSteps += this._cpu.step();
+    }
+    
+    let totalApuSteps = totalCpuSteps;
+    while(totalApuSteps > 0) {
+      this._apu.step();
+      totalApuSteps--;
     }
 
     // const cpuSteps = this._cpu.step();
     const cpuSteps = totalCpuSteps;
 
     let totalPpuSteps = cpuSteps * 3;
-    while(totalPpuSteps > 0) {
+    while (totalPpuSteps > 0) {
       this._ppu.step();
       totalPpuSteps--;
     }
