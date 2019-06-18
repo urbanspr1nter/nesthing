@@ -1,6 +1,7 @@
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { FilterChain } from "./filterchain";
+import { EventEmitter } from "events";
 
 const frameCounterRate = 1789773 / 240.0;
 
@@ -201,10 +202,11 @@ export class Apu {
   private _cpu: Cpu;
   private _cycles: number;
   private _sampleRate: number;
-  private _channel: number;
+  // private _channel: number;
   private _framePeriod: number;
   private _frameValue: number;
   private _frameIrq: boolean;
+  private _sampleEmitter: EventEmitter;
 
   private _filterChain: FilterChain;
 
@@ -216,7 +218,7 @@ export class Apu {
   private _noise: Noise;
   private _dmc: Dmc;
 
-  constructor() {
+  constructor(emitter: EventEmitter) {
     this._cycles = 0;
 
     this._audioContext = new AudioContext();
@@ -318,6 +320,8 @@ export class Apu {
     };
 
     this._filterChain = new FilterChain(this);
+
+    this._sampleEmitter = emitter;
   }
 
   public setCpu(cpu: Cpu) {
@@ -409,14 +413,6 @@ export class Apu {
     }
   }
 
-  public getAudioChannel() {
-    return this._channel;
-  }
-  
-  public setAudioChannel(channel: number) {
-    this._channel = channel;
-  }
-
   public setAudioSampleRate(sampleRate: number) {
     if(sampleRate !== 0) {
       this._sampleRate = 1789773 / sampleRate;
@@ -502,7 +498,7 @@ export class Apu {
 
   private _sendSample() {
     const output = this._filterChain.step(this._output());
-    this._channel = output;
+    this._sampleEmitter.emit("onsamplereceive", output);
   }
 
   private _output() {

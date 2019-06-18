@@ -5,6 +5,7 @@ import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
 import { Apu } from "./apu";
+import { EventEmitter } from "events";
 
 const rom = require("./roms/mario.json");
 
@@ -31,23 +32,47 @@ export class Nes {
   private _ppu: Ppu;
   private _cpu: Cpu;
   private _controller: Controller;
+  private _audioListener: EventEmitter;
 
+  private _audioBuffer: number[];
   private _audioContext: AudioContext;
 
   constructor() {
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
     this._controller = new Controller();
-    this._apu = new Apu();
+
+    this._audioBuffer = [];
+    this._audioListener = new EventEmitter();
+    this._audioListener.on("onsamplereceive", (value) => {
+      this._audioBuffer.push(value);
+
+      if(this._audioBuffer.length === 4096) {
+        const buffer = this._audioContext.createBuffer(1, 4096, 22050);
+        const channelData = buffer.getChannelData(0);
+        channelData.set(this._audioBuffer);
+
+        this._audioBuffer = [];
+
+        const bufferSource = this._audioContext.createBufferSource();
+        bufferSource.buffer = buffer;
+        bufferSource.connect(this._audioContext.destination);
+        
+        bufferSource.start();
+      }
+    });
+
+    this._apu = new Apu(this._audioListener);
     this._memory = new Memory(this._ppu, this._apu, this._controller);
     this._cpu = new Cpu(this._memory);
 
     this._apu.setCpu(this._cpu);
-    this._apu.setAudioSampleRate(44100);
+    this._apu.setAudioSampleRate(22050);
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
-    }
+
+  }
 
   get controller1(): Controller {
     return this._controller;
@@ -115,8 +140,7 @@ export class Nes {
   }
 
   public run(steps: number): number {
-    if(!    this._audioContext
-    ) {
+    if (!this._audioContext) {
       this._audioContext = new AudioContext();
     }
     let totalCpuSteps: number = 0;
@@ -124,28 +148,12 @@ export class Nes {
     while (totalCpuSteps < steps) {
       totalCpuSteps += this._cpu.step();
     }
-    
+
     let totalApuSteps = totalCpuSteps;
-    while(totalApuSteps > 0) {
+    while (totalApuSteps > 0) {
       this._apu.step();
       totalApuSteps--;
     }
-
-    const bufferData = this._audioContext.createBuffer(2, 4096, 44100);
-    
-    const bufferSource = this._audioContext.createBufferSource();
-    bufferSource.connect(this._audioContext.destination);
-
-  
-    const channelData = bufferData.getChannelData(1);
-    for(let i = 0; i < 4096; i++) {
-      channelData[i] = this._apu.getAudioChannel();
-
-    }
-
-    bufferSource.buffer = bufferData;
-    bufferSource.start();
-    bufferSource.stop(this._audioContext.currentTime + 1);
 
     const cpuSteps = totalCpuSteps;
 
