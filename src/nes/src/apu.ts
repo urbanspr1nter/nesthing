@@ -319,7 +319,7 @@ export class Apu {
       Irq: false
     };
 
-    this._filterChain = new FilterChain(this);
+    this._filterChain = new FilterChain();
 
     this._sampleEmitter = emitter;
   }
@@ -414,14 +414,11 @@ export class Apu {
   }
 
   public setAudioSampleRate(sampleRate: number) {
-    if(sampleRate !== 0) {
-      this._sampleRate = 1789773 / sampleRate;
-      this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 90));
-      this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 440));
-      this._filterChain.addFilters(this._filterChain.lowPassFilter(sampleRate, 14000));
-    } else {
-      this._filterChain.clearFilters();
-    }
+    this._sampleRate = 1789773 / sampleRate;
+
+    this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 90));
+    this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 440));
+    this._filterChain.addFilters(this._filterChain.lowPassFilter(sampleRate, 14000));
   }
 
   public step() {
@@ -498,6 +495,7 @@ export class Apu {
 
   private _sendSample() {
     const output = this._filterChain.step(this._output());
+    // const output = this._output();
     this._sampleEmitter.emit("onsamplereceive", output);
   }
 

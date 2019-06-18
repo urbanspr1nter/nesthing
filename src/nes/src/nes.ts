@@ -48,11 +48,11 @@ export class Nes {
       this._audioBuffer.push(value);
 
       if(this._audioBuffer.length === 4096) {
-        const buffer = this._audioContext.createBuffer(1, 4096, 22050);
+        const buffer = this._audioContext.createBuffer(1, 4096, 44100);
         const channelData = buffer.getChannelData(0);
-        channelData.set(this._audioBuffer);
+        channelData.set(this._audioBuffer.slice(0, 4096));
 
-        this._audioBuffer = [];
+        this._audioBuffer = this._audioBuffer.slice(4096);
 
         const bufferSource = this._audioContext.createBufferSource();
         bufferSource.buffer = buffer;
@@ -67,7 +67,7 @@ export class Nes {
     this._cpu = new Cpu(this._memory);
 
     this._apu.setCpu(this._cpu);
-    this._apu.setAudioSampleRate(22050);
+    this._apu.setAudioSampleRate(44100);
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
