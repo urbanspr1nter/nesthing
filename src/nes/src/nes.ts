@@ -47,16 +47,21 @@ export class Nes {
     this._audioListener.on("onsamplereceive", (value) => {
       this._audioBuffer.push(value);
 
-      if(this._audioBuffer.length === 4096) {
-        const buffer = this._audioContext.createBuffer(1, 4096, 44100);
+      if(this._audioBuffer.length === 1024) {
+        const buffer = this._audioContext.createBuffer(1, 1024, 44100);
         const channelData = buffer.getChannelData(0);
-        channelData.set(this._audioBuffer.slice(0, 4096));
+        channelData.set(this._audioBuffer.slice(0, 1024));
 
-        this._audioBuffer = this._audioBuffer.slice(4096);
+        this._audioBuffer = this._audioBuffer.slice(1024);
 
         const bufferSource = this._audioContext.createBufferSource();
         bufferSource.buffer = buffer;
-        bufferSource.connect(this._audioContext.destination);
+
+        const gainNode = this._audioContext.createGain();
+        gainNode.gain.value = 0.75;
+        gainNode.connect(this._audioContext.destination);
+
+        bufferSource.connect(gainNode);
         
         bufferSource.start();
       }

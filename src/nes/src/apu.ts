@@ -190,19 +190,12 @@ const dmcTable = [
 ];
 
 const pulseTable = [];
-for(let i = 0; i < 31; i++) {
-  pulseTable.push(95.52 / (8128.0/i + 100));
-}
 const tndTable = [];
-for(let i = 0; i < 203; i++) {
-  tndTable.push(163.67 / (24329.0/i + 100));
-}
 
 export class Apu {
   private _cpu: Cpu;
   private _cycles: number;
   private _sampleRate: number;
-  // private _channel: number;
   private _framePeriod: number;
   private _frameValue: number;
   private _frameIrq: boolean;
@@ -219,6 +212,13 @@ export class Apu {
   private _dmc: Dmc;
 
   constructor(emitter: EventEmitter) {
+    for(let i = 0; i < 31; i++) {
+      pulseTable.push(95.52 / (8128.0/i + 100));
+    }
+    for(let i = 0; i < 203; i++) {
+      tndTable.push(163.67 / (24329.0/i + 100));
+    }
+
     this._cycles = 0;
 
     this._audioContext = new AudioContext();
@@ -428,15 +428,15 @@ export class Apu {
 
     this._stepTimer();
 
-    const f1 = cycle1 / frameCounterRate;
-    const f2 = cycle2 / frameCounterRate;
+    const f1 = Math.trunc(cycle1 / frameCounterRate);
+    const f2 = Math.trunc(cycle2 / frameCounterRate);
 
     if(f1 !== f2) {
       this._stepFrameCounter();
     }
 
-    const s1 = cycle1 / this._sampleRate;
-    const s2 = cycle2 / this._sampleRate;
+    const s1 = Math.trunc(cycle1 / this._sampleRate);
+    const s2 = Math.trunc(cycle2 / this._sampleRate);
     if(s1 !== s2) {
       this._sendSample();
     }
@@ -495,7 +495,6 @@ export class Apu {
 
   private _sendSample() {
     const output = this._filterChain.step(this._output());
-    // const output = this._output();
     this._sampleEmitter.emit("onsamplereceive", output);
   }
 
@@ -507,7 +506,7 @@ export class Apu {
     const d = this._outputDmc();
 
     const pulseOut = pulseTable[p1 + p2];
-    const tndOut = tndTable[3*t+2*n+d];
+    const tndOut = tndTable[3 * t + 2 * n + d];
     return pulseOut + tndOut;
   }
   

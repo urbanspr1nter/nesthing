@@ -1,30 +1,28 @@
-import { Apu } from "./apu";
-
 interface FirstOrderFilter {
   B0: number;
   B1: number;
   A1: number;
-  PrevX?: number;
-  PrevY?: number;
+  PrevX: number;
+  PrevY: number;
 }
 
 export class FilterChain {
-  private _filters: FirstOrderFilter[]|undefined;
+  private _filters: FirstOrderFilter[] | undefined;
 
   constructor() {
     this._filters = [];
   }
 
   public addFilters(f: FirstOrderFilter) {
-      this._filters.push(f);
+    this._filters.push(f);
   }
 
   public clearFilters() {
-      this._filters = undefined;
+    this._filters = undefined;
   }
 
   public stepFilterChain(f: FirstOrderFilter, x: number) {
-    const y = f.B0 * x + f.B1 * f.PrevX + f.A1 * f.PrevY;
+    const y = f.B0 * x + f.B1 * f.PrevX - f.A1 * f.PrevY;
     f.PrevY = y;
     f.PrevX = x;
 
@@ -38,11 +36,15 @@ export class FilterChain {
     const c = sampleRate / Math.PI / cutoffFrequency;
     const a0i = 1 / (1 + c);
 
-    return {
+    const filter = {
       B0: a0i,
       B1: a0i,
-      A1: (1 - c) * a0i
+      A1: (1 - c) * a0i,
+      PrevX: 0,
+      PrevY: 0
     };
+
+    return filter;
   }
 
   public highPassFilter(
@@ -52,22 +54,22 @@ export class FilterChain {
     const c = sampleRate / Math.PI / cutoffFrequency;
     const a0i = 1 / (1 + c);
 
-    return {
+    const filter = {
       B0: c * a0i,
       B1: -c * a0i,
-      A1: (1 - c) * a0i
+      A1: (1 - c) * a0i,
+      PrevX: 0,
+      PrevY: 0
     };
+
+    return filter;
   }
 
   public step(x: number) {
-      let workingX = x;
-      if(this._filters) {
-        for(let f of this._filters) {
-            workingX = this.stepFilterChain(f, x);
-        }
-      }
-
-      return workingX;
+    let workingX = x;
+    for (let f of this._filters) {
+      workingX = this.stepFilterChain(f, workingX);
+    }
+    return workingX;
   }
-
 }
