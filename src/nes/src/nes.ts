@@ -46,7 +46,6 @@ export class Nes {
 
     this._audioContext = new AudioContext();
 
-
     const gainNode = this._audioContext.createGain();
     gainNode.gain.value = 0.75;
     gainNode.connect(this._audioContext.destination);
@@ -59,14 +58,13 @@ export class Nes {
     this._audioBuffer = [];
     this._audioListener = new EventEmitter();
     this._audioListener.on("onsamplereceive", (value) => {
-
       if(this._audioBuffer.length === 8192) {
         const channelData = this._audioAudioBuffer.getChannelData(0);
 
-        channelData.set(this._audioBuffer.slice(0, 8192));
+        channelData.set(this._audioBuffer);
 
-        this._audioBuffer= [];
-
+        this._audioBuffer = [];
+        
         const bufferSource = this._audioContext.createBufferSource();
         bufferSource.buffer = this._audioAudioBuffer;
 
@@ -75,7 +73,6 @@ export class Nes {
       }
 
       this._audioBuffer.push(value);
-
     });
 
     this._apu = new Apu(this._audioListener);
