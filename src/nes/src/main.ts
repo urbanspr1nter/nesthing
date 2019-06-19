@@ -14,7 +14,7 @@ const canvas = document.getElementById("main") as HTMLCanvasElement;
 const context = canvas.getContext("2d", { alpha: false });
 context.imageSmoothingEnabled = false;
 
-const nes = new Nes();
+let nes;
 let paused = false;
 let consoleShown = false;
 
@@ -63,24 +63,6 @@ document.getElementById("chk-show-console").addEventListener("change", () => {
     consoleShown = true;
     document.getElementById("txtarea-console").style.display = "initial";
   }
-});
-
-const uiKeyHandler = new UiKeyHandler(nes.controller1);
-
-document.addEventListener("keydown", (e: KeyboardEvent) => {
-  uiKeyHandler.handlePlayerOneKeyDown(e.key);
-});
-
-document.addEventListener("keyup", (e: KeyboardEvent) => {
-  uiKeyHandler.handlePlayerOneKeyUp(e.key);
-});
-
-document.addEventListener("keydown", (e: KeyboardEvent) => {
-  uiKeyHandler.handlePlayerTwoKeyDown(e.key);
-});
-
-document.addEventListener("keyup", (e: KeyboardEvent) => {
-  uiKeyHandler.handlePlayerTwoKeyUp(e.key);
 });
 
 function clearPixelBuffer() {
@@ -137,8 +119,27 @@ function run() {
 }
 
 document.getElementById("btn-play").addEventListener("click", () => {
-  setTimeout(run, 1000);
+  nes = new Nes();
 
+  const uiKeyHandler = new UiKeyHandler(nes.controller1);
+
+  document.addEventListener("keydown", (e: KeyboardEvent) => {
+    uiKeyHandler.handlePlayerOneKeyDown(e.key);
+  });
+
+  document.addEventListener("keyup", (e: KeyboardEvent) => {
+    uiKeyHandler.handlePlayerOneKeyUp(e.key);
+  });
+
+  document.addEventListener("keydown", (e: KeyboardEvent) => {
+    uiKeyHandler.handlePlayerTwoKeyDown(e.key);
+  });
+
+  document.addEventListener("keyup", (e: KeyboardEvent) => {
+    uiKeyHandler.handlePlayerTwoKeyUp(e.key);
+  });
+
+  setTimeout(run, 1000);
 });
 
 document.getElementById("btn-scale-2").click();

@@ -36,35 +36,46 @@ export class Nes {
 
   private _audioBuffer: number[];
   private _audioContext: AudioContext;
+  private _gainNode: GainNode;
+  private _audioAudioBuffer: AudioBuffer;
 
   constructor() {
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
     this._controller = new Controller();
 
+    this._audioContext = new AudioContext();
+
+
+    const gainNode = this._audioContext.createGain();
+    gainNode.gain.value = 0.75;
+    gainNode.connect(this._audioContext.destination);
+
+    const buffer = this._audioContext.createBuffer(1, 8192, 44100);
+    this._audioAudioBuffer = buffer;
+
+    this._gainNode = gainNode;
+
     this._audioBuffer = [];
     this._audioListener = new EventEmitter();
     this._audioListener.on("onsamplereceive", (value) => {
-      this._audioBuffer.push(value);
 
-      if(this._audioBuffer.length === 1024) {
-        const buffer = this._audioContext.createBuffer(1, 1024, 44100);
-        const channelData = buffer.getChannelData(0);
-        channelData.set(this._audioBuffer.slice(0, 1024));
+      if(this._audioBuffer.length === 8192) {
+        const channelData = this._audioAudioBuffer.getChannelData(0);
 
-        this._audioBuffer = this._audioBuffer.slice(1024);
+        channelData.set(this._audioBuffer.slice(0, 8192));
+
+        this._audioBuffer= [];
 
         const bufferSource = this._audioContext.createBufferSource();
-        bufferSource.buffer = buffer;
+        bufferSource.buffer = this._audioAudioBuffer;
 
-        const gainNode = this._audioContext.createGain();
-        gainNode.gain.value = 0.75;
-        gainNode.connect(this._audioContext.destination);
-
-        bufferSource.connect(gainNode);
-        
+        bufferSource.connect(this._gainNode);
         bufferSource.start();
       }
+
+      this._audioBuffer.push(value);
+
     });
 
     this._apu = new Apu(this._audioListener);
@@ -145,9 +156,6 @@ export class Nes {
   }
 
   public run(steps: number): number {
-    if (!this._audioContext) {
-      this._audioContext = new AudioContext();
-    }
     let totalCpuSteps: number = 0;
 
     while (totalCpuSteps < steps) {

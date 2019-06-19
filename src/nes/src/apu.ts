@@ -2,8 +2,9 @@ import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { FilterChain } from "./filterchain";
 import { EventEmitter } from "events";
+import { CpuFrequencyHz, ApuDutyTable, ApuLengthTable, ApuTriangleTable } from "./constants";
 
-const frameCounterRate = 1789773 / 240.0;
+const frameCounterRate = CpuFrequencyHz / 240.0;
 
 interface Pulse {
   Enabled: boolean;
@@ -73,83 +74,6 @@ interface Dmc {
   Loop: boolean;
   Irq: boolean;
 }
-
-const lengthTable = [
-  10,
-  254,
-  20,
-  2,
-  40,
-  4,
-  80,
-  6,
-  160,
-  8,
-  60,
-  10,
-  14,
-  12,
-  26,
-  14,
-  12,
-  16,
-  24,
-  18,
-  48,
-  20,
-  96,
-  22,
-  192,
-  24,
-  72,
-  26,
-  16,
-  28,
-  32,
-  30
-];
-
-const dutyTable = [
-  [0, 1, 0, 0, 0, 0, 0, 0],
-  [0, 1, 1, 0, 0, 0, 0, 0],
-  [0, 1, 1, 1, 1, 0, 0, 0],
-  [1, 0, 0, 1, 1, 1, 1, 1]
-];
-
-const triangleTable = [
-  15,
-  14,
-  13,
-  12,
-  11,
-  10,
-  9,
-  8,
-  7,
-  6,
-  5,
-  4,
-  3,
-  2,
-  1,
-  0,
-  0,
-  1,
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  8,
-  9,
-  10,
-  11,
-  12,
-  13,
-  14,
-  15
-];
 
 const noiseTable = [
   4,
@@ -414,7 +338,7 @@ export class Apu {
   }
 
   public setAudioSampleRate(sampleRate: number) {
-    this._sampleRate = 1789773 / sampleRate;
+    this._sampleRate = CpuFrequencyHz / sampleRate;
 
     this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 90));
     this._filterChain.addFilters(this._filterChain.highPassFilter(sampleRate, 440));
@@ -615,7 +539,7 @@ export class Apu {
   private _writePulseTimerHigh(p: Pulse, value: number) {
     const bValue = value & 0xff;
 
-    p.LengthValue = lengthTable[bValue >>> 3];
+    p.LengthValue = ApuLengthTable[bValue >>> 3];
     p.TimerPeriod = ((p.TimerPeriod & 0x00ff) | ((bValue & 7) << 8)) & 0xffff;
     p.EnvelopeStart = true;
     p.DutyValue = 0;
@@ -690,7 +614,7 @@ export class Apu {
       return 0;
     }
 
-    if (dutyTable[p.DutyMode][p.DutyValue] === 0) {
+    if (ApuDutyTable[p.DutyMode][p.DutyValue] === 0) {
       return 0;
     }
 
@@ -721,7 +645,7 @@ export class Apu {
   private _writeTriangleTimerHigh(value: number) {
     const bValue = value & 0xff;
 
-    this._triangle.LengthValue = lengthTable[bValue >>> 3];
+    this._triangle.LengthValue = ApuLengthTable[bValue >>> 3];
     this._triangle.TimerPeriod =
       (this._triangle.TimerPeriod & 0x00ff) | (bValue << 8);
     this._triangle.TimerValue = this._triangle.TimerPeriod;
@@ -767,7 +691,7 @@ export class Apu {
       return 0;
     }
 
-    return triangleTable[this._triangle.DutyValue];
+    return ApuTriangleTable[this._triangle.DutyValue];
   }
 
   private _writeNoiseControl(value: number) {
@@ -791,7 +715,7 @@ export class Apu {
   private _writeNoiseLength(value: number) {
     const bValue = value & 0xff;
 
-    this._noise.LengthValue = lengthTable[bValue >>> 3];
+    this._noise.LengthValue = ApuLengthTable[bValue >>> 3];
     this._noise.EnvelopeStart = true;
   }
 
