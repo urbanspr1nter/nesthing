@@ -2,7 +2,7 @@ import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { FilterChain } from "./filterchain";
 import { EventEmitter } from "events";
-import { CpuFrequencyHz, ApuDutyTable, ApuLengthTable, ApuTriangleTable } from "./constants";
+import { CpuFrequencyHz, ApuDutyTable, ApuLengthTable, ApuTriangleTable, ApuNoiseTable, ApuDmcTable } from "./constants";
 
 const frameCounterRate = CpuFrequencyHz / 240.0;
 
@@ -74,44 +74,6 @@ interface Dmc {
   Loop: boolean;
   Irq: boolean;
 }
-
-const noiseTable = [
-  4,
-  8,
-  16,
-  32,
-  64,
-  96,
-  128,
-  160,
-  202,
-  254,
-  380,
-  508,
-  762,
-  1016,
-  2034,
-  4068
-];
-
-const dmcTable = [
-  214,
-  190,
-  170,
-  160,
-  143,
-  127,
-  113,
-  107,
-  95,
-  80,
-  71,
-  64,
-  53,
-  42,
-  36,
-  27
-];
 
 const pulseTable = [];
 const tndTable = [];
@@ -709,7 +671,7 @@ export class Apu {
     const bValue = value & 0xff;
 
     this._noise.Mode = (bValue & 0x80) === 0x80;
-    this._noise.TimerPeriod = noiseTable[bValue & 0x0f];
+    this._noise.TimerPeriod = ApuNoiseTable[bValue & 0x0f];
   }
 
   private _writeNoiseLength(value: number) {
@@ -787,7 +749,7 @@ export class Apu {
 
     this._dmc.Irq = (bValue & 0x80) === 0x80;
     this._dmc.Loop = (bValue & 0x40) === 0x40;
-    this._dmc.TickPeriod = dmcTable[bValue & 0x0f];
+    this._dmc.TickPeriod = ApuDmcTable[bValue & 0x0f];
   }
 
   private _writeDmcValue(value: number) {

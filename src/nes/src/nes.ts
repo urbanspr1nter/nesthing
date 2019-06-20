@@ -25,7 +25,7 @@ export interface PpuRegisters {
   w: boolean;
 }
 
-const AUDIO_BUFFER_LENGTH = 4096;
+const AUDIO_BUFFER_LENGTH = 256;
 const AUDIO_SAMPLE_RATE = 44100;
 
 export class Nes {
