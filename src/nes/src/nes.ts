@@ -25,6 +25,9 @@ export interface PpuRegisters {
   w: boolean;
 }
 
+const AUDIO_BUFFER_LENGTH = 4096;
+const AUDIO_SAMPLE_RATE = 44100;
+
 export class Nes {
   private _memory: Memory;
   private _ppuMemory: PpuMemory;
@@ -35,6 +38,9 @@ export class Nes {
   private _audioListener: EventEmitter;
 
   private _audioBuffer: number[];
+  private _workingAudioBuffer: number[];
+  private _audioBufferQueue: number[][];
+  private _audioBufferSource: AudioBufferSourceNode;
   private _audioContext: AudioContext;
   private _gainNode: GainNode;
   private _audioAudioBuffer: AudioBuffer;
@@ -50,29 +56,47 @@ export class Nes {
     gainNode.gain.value = 0.75;
     gainNode.connect(this._audioContext.destination);
 
-    const buffer = this._audioContext.createBuffer(1, 8192, 44100);
+    const buffer = this._audioContext.createBuffer(
+      1,
+      AUDIO_BUFFER_LENGTH,
+      AUDIO_SAMPLE_RATE
+    );
     this._audioAudioBuffer = buffer;
-
     this._gainNode = gainNode;
 
     this._audioBuffer = [];
+    this._workingAudioBuffer = [];
+    this._audioBufferQueue = [];
+
     this._audioListener = new EventEmitter();
-    this._audioListener.on("onsamplereceive", (value) => {
-      if(this._audioBuffer.length === 8192) {
-        const channelData = this._audioAudioBuffer.getChannelData(0);
 
-        channelData.set(this._audioBuffer);
+    this._audioListener.on("onsamplereceive", value => {
+      if (this._workingAudioBuffer.length >= AUDIO_BUFFER_LENGTH) {
+        this._audioBufferQueue.push(this._workingAudioBuffer);
+        this._workingAudioBuffer = [];
 
-        this._audioBuffer = [];
-        
-        const bufferSource = this._audioContext.createBufferSource();
-        bufferSource.buffer = this._audioAudioBuffer;
+        if(!this._audioBuffer) {
+          this._audioBuffer = this._audioBufferQueue.shift();
+          const channelData0 = this._audioAudioBuffer.getChannelData(0);
+          channelData0.set(this._audioBuffer);
+        }
 
-        bufferSource.connect(this._gainNode);
-        bufferSource.start();
+        this._audioBufferSource = this._audioContext.createBufferSource();
+
+        this._audioBufferSource.onended = () => {
+          if(this._audioBufferQueue.length > 0) {
+            this._audioBuffer = this._audioBufferQueue.shift();
+          }
+          const channelData0 = this._audioAudioBuffer.getChannelData(0);
+          channelData0.set(this._audioBuffer);
+        };
+
+        this._audioBufferSource.connect(this._gainNode);
+        this._audioBufferSource.buffer = this._audioAudioBuffer;
+        this._audioBufferSource.start();
       }
 
-      this._audioBuffer.push(value);
+      this._workingAudioBuffer.push(value);
     });
 
     this._apu = new Apu(this._audioListener);
@@ -80,11 +104,10 @@ export class Nes {
     this._cpu = new Cpu(this._memory);
 
     this._apu.setCpu(this._cpu);
-    this._apu.setAudioSampleRate(44100);
+    this._apu.setAudioSampleRate(AUDIO_SAMPLE_RATE);
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
-
   }
 
   get controller1(): Controller {

@@ -1,5 +1,3 @@
-// require('./nestest');
-
 import { Nes } from "./nes";
 import { UiKeyHandler } from "./ui-key-handler";
 
@@ -32,38 +30,42 @@ function scale(times: number) {
   drawFrame(nes.frameBuffer());
 }
 
-document.getElementById("btn-scale-1").addEventListener("click", () => {
-  scale(1);
-});
-document.getElementById("btn-scale-2").addEventListener("click", () => {
-  scale(2);
-});
-document.getElementById("btn-scale-3").addEventListener("click", () => {
-  scale(3);
-});
-document.getElementById("btn-scale-4").addEventListener("click", () => {
-  scale(4);
-});
-document.getElementById("btn-pause").addEventListener("click", () => {
-  paused = !paused;
-});
-document.getElementById("btn-snap-nt").addEventListener("click", () => {
-  const data = nes.snapNt();
-  document.getElementById("txtarea-console").innerHTML = data;
-});
-document.getElementById("btn-dump-log").addEventListener("click", () => {
-  const log = nes.log();
-  document.getElementById("txtarea-console").innerHTML = log;
-});
-document.getElementById("chk-show-console").addEventListener("change", () => {
-  if (consoleShown) {
-    consoleShown = false;
-    document.getElementById("txtarea-console").style.display = "none";
-  } else {
-    consoleShown = true;
-    document.getElementById("txtarea-console").style.display = "initial";
-  }
-});
+function setupDOM(nes: Nes) {
+  document.getElementById("btn-scale-1").addEventListener("click", () => {
+    scale(1);
+  });
+  document.getElementById("btn-scale-2").addEventListener("click", () => {
+    scale(2);
+  });
+  document.getElementById("btn-scale-3").addEventListener("click", () => {
+    scale(3);
+  });
+  document.getElementById("btn-scale-4").addEventListener("click", () => {
+    scale(4);
+  });
+  document.getElementById("btn-pause").addEventListener("click", () => {
+    paused = !paused;
+  });
+  document.getElementById("btn-snap-nt").addEventListener("click", () => {
+    const data = nes.snapNt();
+    document.getElementById("txtarea-console").innerHTML = data;
+  });
+  document.getElementById("btn-dump-log").addEventListener("click", () => {
+    const log = nes.log();
+    document.getElementById("txtarea-console").innerHTML = log;
+  });
+  document.getElementById("chk-show-console").addEventListener("change", () => {
+    if (consoleShown) {
+      consoleShown = false;
+      document.getElementById("txtarea-console").style.display = "none";
+    } else {
+      consoleShown = true;
+      document.getElementById("txtarea-console").style.display = "initial";
+    }
+  });
+}
+
+
 
 function clearPixelBuffer() {
   for (let i = 0; i < HEIGHT; i++) {
@@ -99,7 +101,7 @@ function renderFrame() {
     return;
   }
 
-  totalCycles += nes.run(497);
+  totalCycles += nes.run(1985);
 
   if (totalCycles >= CPU_CYCLES_PER_FRAME) {
     totalCycles = 0;
@@ -120,6 +122,8 @@ function run() {
 
 document.getElementById("btn-play").addEventListener("click", () => {
   nes = new Nes();
+
+  setupDOM(nes);
 
   const uiKeyHandler = new UiKeyHandler(nes.controller1);
 
