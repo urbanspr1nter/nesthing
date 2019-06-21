@@ -58,39 +58,27 @@ export class CartLoader {
 
   public loadCartridgeData(cpuMemory: Memory, ppuMemory: PpuMemory) {
     let romData;
-    if (
-      this._romBytes[0] === 0x4e &&
-      this._romBytes[1] === 0x45 &&
-      this._romBytes[2] === 0x53
-    ) {
-      // NES in header, so it is a .nes format.
-      romData = this._romBytes.slice(16);
+    // NES in header, so it is a .nes format.
+    romData = this._romBytes.slice(16);
 
-      let startAddressPrgBank0 = 0x8000;
-      for (let address = 0; address < 0x4000; address++) {
-        cpuMemory.set(startAddressPrgBank0, romData[address]);
-        startAddressPrgBank0++;
-      }
+    let startAddressPrgBank0 = 0x8000;
+    for (let address = 0; address < 0x4000; address++) {
+      cpuMemory.set(startAddressPrgBank0, romData[address]);
+      startAddressPrgBank0++;
+    }
 
-      let startAddressPrgBank1 = 0xc000;
-      for (let address = 0x4000; address < 0x8000; address++) {
-        cpuMemory.set(startAddressPrgBank1, romData[address]);
-        startAddressPrgBank1++;
-      }
+    let startAddressPrgBank1 = 0xc000;
+    for (let address = 0; address < 0x4000; address++) {
+      cpuMemory.set(startAddressPrgBank1, romData[address]);
+      startAddressPrgBank1++;
+    }
 
-      let startAddressChrBank0 = 0x0;
-      for (let address = 0x8000; address < 0x8000 + 0x2000; address++) {
-        ppuMemory.set(startAddressChrBank0, romData[address]);
-        startAddressChrBank0++;
-      }
-    } else {
-      romData = this._romBytes;
+    console.log(`cpuMemory ${cpuMemory.get(0xfffc)} ${cpuMemory.get(0xfffd)}`)
 
-      let startAddressPrgBank1 = 0xc000;
-      for (let address = 0; address < 0x6000; address++) {
-        cpuMemory.set(startAddressPrgBank1, romData[address]);
-        startAddressPrgBank1++;
-      }
+    let startAddressChrBank0 = 0x0;
+    for (let address = 0x8000; address < 0x8000 + 0x2000; address++) {
+      ppuMemory.set(startAddressChrBank0, romData[address]);
+      startAddressChrBank0++;
     }
   }
 

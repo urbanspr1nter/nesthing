@@ -126,14 +126,6 @@ export class Nes {
     return this._ppuMemory.bits();
   }
 
-  public cpuTotalCycles(): number {
-    return this._cpu.totalCycles();
-  }
-
-  public clearTotalCycles(): void {
-    this._cpu.clearCycles();
-  }
-
   public snapNt() {
     return this._ppuMemory.snapNt();
   }

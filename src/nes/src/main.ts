@@ -5,7 +5,6 @@ import { EventEmitter } from "events";
 const FPS = 60;
 const TIME_PER_FRAME = Math.ceil(1000 / FPS);
 const LOGICAL_SECOND_INTERVAL = TIME_PER_FRAME * FPS;
-const CPU_CYCLES_PER_FRAME = 29780;
 const WIDTH = 256;
 const HEIGHT = 240;
 
@@ -14,7 +13,7 @@ const context = canvas.getContext("2d", { alpha: false });
 context.imageSmoothingEnabled = false;
 
 let nesEventListener = new EventEmitter();
-let nes;
+let nes: Nes;
 let paused = false;
 let consoleShown = false;
 
@@ -67,8 +66,6 @@ function setupDOM(nes: Nes) {
   });
 }
 
-
-
 function clearPixelBuffer() {
   for (let i = 0; i < HEIGHT; i++) {
     if (prevBuffer.buffer[i]) {
@@ -97,7 +94,7 @@ function drawFrame(frameBuffer: string[][]) {
 }
 
 function run() {
-  setImmediate(function() {
+  setImmediate(function () {
     nes.run(497);
     run();
   });
@@ -107,7 +104,6 @@ document.getElementById("btn-play").addEventListener("click", () => {
   nes = new Nes(nesEventListener);
 
   nesEventListener.on("renderFrame", () => {
-    nes.clearTotalCycles();
     requestAnimationFrame(() => {
       drawFrame(nes.frameBuffer());
     });

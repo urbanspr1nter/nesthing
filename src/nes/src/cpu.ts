@@ -74,6 +74,7 @@ export class Cpu {
   public stallCycles(): number {
     return this._stallCycles;
   }
+
   public totalCycles(): number {
     return this._currentCycles;
   }
@@ -83,6 +84,7 @@ export class Cpu {
   public clearCycles() {
     this._currentCycles = 0;
   }
+
   public powerUp(): void {
     this._regP.set(0x24);
     this._regSP.set(0x01fd);
@@ -122,7 +124,7 @@ export class Cpu {
 
     this._regPC.set(
       (this.memRead(ResetVectorLocation.High) << 8) |
-        this.memRead(ResetVectorLocation.Low)
+      this.memRead(ResetVectorLocation.Low)
     );
 
     this.setStatusBit(StatusBitPositions.InterruptDisable);
@@ -369,7 +371,7 @@ export class Cpu {
     this.setStatusBit(StatusBitPositions.InterruptDisable);
     this._regPC.set(
       (this.memRead(NmiVectorLocation.High) << 8) |
-        this.memRead(NmiVectorLocation.Low)
+      this.memRead(NmiVectorLocation.Low)
     );
     this._currentCycles += 7;
     this._interrupt = InterruptRequestType.None;
@@ -385,7 +387,7 @@ export class Cpu {
     this.setStatusBit(StatusBitPositions.InterruptDisable);
     this._regPC.set(
       (this.memRead(IrqVectorLocation.High) << 8) |
-        this.memRead(IrqVectorLocation.Low)
+      this.memRead(IrqVectorLocation.Low)
     );
     this._currentCycles += 7;
     this._interrupt = InterruptRequestType.None;
@@ -844,16 +846,16 @@ export class Cpu {
     this._setZero(this._regA.get());
   }
 
-  private _dcp() {}
-  private _ign() {}
-  private _isb() {}
-  private _lax() {}
-  private _rla() {}
-  private _rra() {}
-  private _sax() {}
-  private _skb() {}
-  private _slo() {}
-  private _sre() {}
+  private _dcp() { }
+  private _ign() { }
+  private _isb() { }
+  private _lax() { }
+  private _rla() { }
+  private _rra() { }
+  private _sax() { }
+  private _skb() { }
+  private _slo() { }
+  private _sre() { }
 
   private _runStallCycle() {
     this._stallCycles--;
