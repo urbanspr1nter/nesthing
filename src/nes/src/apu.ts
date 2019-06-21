@@ -13,39 +13,44 @@ const tndTable = [];
 
 export class Apu {
   private _cpu: Cpu;
+  private _currentCyclesForFrame: number;
+  private _cyclesPerFrame: number;
   private _cycles: number;
   private _sampleRate: number;
   private _framePeriod: number;
   private _frameValue: number;
   private _frameIrq: boolean;
   private _sampleEmitter: EventEmitter;
-
   private _filterChain: FilterChain;
-
   private _square0: PulseWave;
   private _square1: PulseWave;
   private _triangle: TriangleWave;
   private _noise: NoiseWave;
   private _dmc: DmcSample;
 
-  constructor(emitter: EventEmitter) {
+  constructor(emitter: EventEmitter, audioSampleRate: number) {
     for (let i = 0; i < 31; i++) {
       pulseTable.push(95.52 / (8128.0 / i + 100));
     }
+
     for (let i = 0; i < 203; i++) {
       tndTable.push(163.67 / (24329.0 / i + 100));
     }
+    this._filterChain = new FilterChain();
+
 
     this._cycles = 0;
+    this._currentCyclesForFrame = 0;
+    this._cyclesPerFrame = (audioSampleRate / 60) | 0;
+    this.setAudioSampleRate(audioSampleRate);
 
     this._square0 = new PulseWave(1);
     this._square1 = new PulseWave(2);
     this._triangle = new TriangleWave();
     this._noise = new NoiseWave();
 
-    this._filterChain = new FilterChain();
-
     this._sampleEmitter = emitter;
+
   }
 
   public setCpu(cpu: Cpu) {
@@ -153,21 +158,28 @@ export class Apu {
 
   public step() {
     const cycle1 = this._cycles;
+    
     this._cycles++;
+
     const cycle2 = this._cycles;
 
     this._stepTimer();
 
-    const f1 = Math.trunc(cycle1 / ApuFrameCounterRate);
-    const f2 = Math.trunc(cycle2 / ApuFrameCounterRate);
+    const f1 = (cycle1 / ApuFrameCounterRate) | 0;
+    const f2 = (cycle2 / ApuFrameCounterRate) | 0;
 
     if (f1 !== f2) {
       this._stepFrameCounter();
     }
 
-    const s1 = Math.trunc(cycle1 / this._sampleRate);
-    const s2 = Math.trunc(cycle2 / this._sampleRate);
+    const s1 = (cycle1 / this._sampleRate) | 0;
+    const s2 = (cycle2 / this._sampleRate) | 0;
     if (s1 !== s2) {
+      this._currentCyclesForFrame++;
+      if(this._currentCyclesForFrame === this._cyclesPerFrame) {
+        this._sampleEmitter.emit("renderFrame");
+        this._currentCyclesForFrame = 0;
+      }
       this._sendSample();
     }
   }

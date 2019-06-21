@@ -25,7 +25,7 @@ export interface PpuRegisters {
   w: boolean;
 }
 
-const AUDIO_BUFFER_LENGTH = 256;
+const AUDIO_BUFFER_LENGTH = 4096;
 const AUDIO_SAMPLE_RATE = 44100;
 
 export class Nes {
@@ -35,7 +35,7 @@ export class Nes {
   private _ppu: Ppu;
   private _cpu: Cpu;
   private _controller: Controller;
-  private _audioListener: EventEmitter;
+  private _eventListener: EventEmitter;
 
   private _audioBuffer: number[];
   private _workingAudioBuffer: number[];
@@ -45,7 +45,7 @@ export class Nes {
   private _gainNode: GainNode;
   private _audioAudioBuffer: AudioBuffer;
 
-  constructor() {
+  constructor(eventEmitter: EventEmitter) {
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
     this._controller = new Controller();
@@ -68,9 +68,9 @@ export class Nes {
     this._workingAudioBuffer = [];
     this._audioBufferQueue = [];
 
-    this._audioListener = new EventEmitter();
+    this._eventListener = eventEmitter;
 
-    this._audioListener.on("onsamplereceive", value => {
+    this._eventListener.on("onsamplereceive", value => {
       if (this._workingAudioBuffer.length >= AUDIO_BUFFER_LENGTH) {
         this._audioBufferQueue.push(this._workingAudioBuffer);
         this._workingAudioBuffer = [];
@@ -99,7 +99,7 @@ export class Nes {
       this._workingAudioBuffer.push(value);
     });
 
-    this._apu = new Apu(this._audioListener);
+    this._apu = new Apu(this._eventListener, AUDIO_SAMPLE_RATE);
     this._memory = new Memory(this._ppu, this._apu, this._controller);
     this._cpu = new Cpu(this._memory);
 

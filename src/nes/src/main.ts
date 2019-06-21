@@ -1,5 +1,6 @@
 import { Nes } from "./nes";
 import { UiKeyHandler } from "./ui-key-handler";
+import { EventEmitter } from "events";
 
 const FPS = 60;
 const TIME_PER_FRAME = Math.ceil(1000 / FPS);
@@ -12,6 +13,7 @@ const canvas = document.getElementById("main") as HTMLCanvasElement;
 const context = canvas.getContext("2d", { alpha: false });
 context.imageSmoothingEnabled = false;
 
+let nesEventListener = new EventEmitter();
 let nes;
 let paused = false;
 let consoleShown = false;
@@ -94,34 +96,22 @@ function drawFrame(frameBuffer: string[][]) {
   }
 }
 
-let totalCycles = 0;
-
-function renderFrame() {
-  if (paused) {
-    return;
-  }
-
-  totalCycles += nes.run(1985);
-
-  if (totalCycles >= CPU_CYCLES_PER_FRAME) {
-    totalCycles = 0;
-    nes.clearTotalCycles();
-
-    requestAnimationFrame(() => {
-      drawFrame(nes.frameBuffer());
-    });
-  }
-}
-
 function run() {
   setImmediate(function() {
-    renderFrame();
+    nes.run(497);
     run();
   });
 }
 
 document.getElementById("btn-play").addEventListener("click", () => {
-  nes = new Nes();
+  nes = new Nes(nesEventListener);
+
+  nesEventListener.on("renderFrame", () => {
+    nes.clearTotalCycles();
+    requestAnimationFrame(() => {
+      drawFrame(nes.frameBuffer());
+    });
+  });
 
   setupDOM(nes);
 
