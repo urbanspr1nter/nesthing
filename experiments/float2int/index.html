@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Float2Int Performance Benchmark</title>
+        <style>
+            button {
+                width: 192px;
+                height: 64px;
+                font-size: large;
+            }
+        </style>
+    </head>
+    <body>
+        <a href="http://rogerngo.com">Back to Home Page</a>
+        <hr/>
+        <h1>Which is faster?</h1>
+        <h2>
+            <code>Math.trunc</code> or the Bitwise OR trick?
+        </h2>
+
+        <p>
+            In ES6, <code>Math.trunc</code> was introduced as an easy way to 
+            convert a floating point number to an integer representation.
+        </p>
+
+        <p>
+            Prior to this, it was popular to actually use the bitwise-OR with 0 
+            trick to actually simulate this effect. For example: 
+            <code>a = 1.123123</code> would have been:
+        </p>
+        <pre>
+            a =| 0
+        </pre>
+        <p>
+            Which would have given back <code>a = 1</code>.
+        </p>
+        <p>
+            This test aims to see which is actually faster. 
+            Should we use <code>Math.trunc</code>, or bitwise-OR with 0? 
+        </p>
+        <h3>Test Methodology</h3>
+        <p>
+            32_000_000 random floating point numbers in the ranges of [0, 100) are 
+            initially generated.
+        </p>
+        <p>
+            The benchmark starts when these numbers are populated in an array and measures 
+            the time it takes convert all floating point numbers into a new array of integers. 
+        </p>
+        <p>
+            <strong>10 tests are run for each method</strong>, and the sum of the times are given.
+        </p>
+        <p>
+            Turns out, they're pretty close.
+        </p>
+
+        <button type="button" id="bench-math-trunc">Math.trunc</button>
+        <button type="button" id="bench-bitwise-or">Bitwise OR</button>
+
+        <h3 id="result-math-trunc"></h3>
+        <h3 id="result-bitwise-or"></h3>
+
+        <script src="float2int.js"></script>
+
+        <h2>Code</h2>
+        <p>
+            JS code can be found here <a href="float2int.js">float2int.js</a>.
+        </p>
+        <hr/>
+        Roger Ngo <a href="http://rogerngo.com">http://rogerngo.com</a>
+    </body>
+</html>
