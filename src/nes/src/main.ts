@@ -1,7 +1,7 @@
 import { Nes, Roms } from "./nes";
-import { UiKeyHandler } from "./ui.keyhandler";
+import { UiKeyHandler } from "./ui/ui.keyhandler";
 import { EventEmitter } from "events";
-import { UiFrameBuffer } from "./ui.framebuffer";
+import { UiFrameBuffer } from "./ui/ui.framebuffer";
 
 let nesEventListener = new EventEmitter();
 let nes: Nes;
@@ -23,7 +23,7 @@ function setupDOM(nes: Nes, uiFrameBuffer: UiFrameBuffer) {
 
 function run() {
   setImmediate(function () {
-    nes.run(497);
+    nes.run(147);
     run();
   });
 }

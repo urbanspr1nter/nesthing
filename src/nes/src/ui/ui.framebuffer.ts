@@ -1,4 +1,4 @@
-import { Nes } from "./nes";
+import { Nes } from "../nes";
 
 const WIDTH = 256;
 const HEIGHT = 240;

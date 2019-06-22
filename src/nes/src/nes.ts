@@ -122,7 +122,6 @@ export class Nes {
     this._cpu = new Cpu(this._memory);
 
     this._apu.setCpu(this._cpu);
-    this._apu.setAudioSampleRate(AUDIO_SAMPLE_RATE);
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();

@@ -30,19 +30,30 @@ export class Apu {
 
   constructor(emitter: EventEmitter, audioSampleRate: number) {
     for (let i = 0; i < 31; i++) {
-      pulseTable.push(95.52 / (8128.0 / i + 100));
+      pulseTable.push(Math.fround(95.52 / (8128.0 / Math.fround(i) + 100)));
     }
 
     for (let i = 0; i < 203; i++) {
-      tndTable.push(163.67 / (24329.0 / i + 100));
+      tndTable.push(Math.fround(163.67 / (24329.0 / Math.fround(i) + 100)));
     }
-    this._filterChain = new FilterChain();
 
+    this._filterChain = new FilterChain();
 
     this._cycles = 0;
     this._currentCyclesForFrame = 0;
     this._cyclesPerFrame = (audioSampleRate / 60) | 0;
-    this.setAudioSampleRate(audioSampleRate);
+
+    this._sampleRate = CpuFrequencyHz / audioSampleRate;
+
+    this._filterChain.addFilters(
+      this._filterChain.highPassFilter(audioSampleRate, 90)
+    );
+    this._filterChain.addFilters(
+      this._filterChain.highPassFilter(audioSampleRate, 440)
+    );
+    this._filterChain.addFilters(
+      this._filterChain.lowPassFilter(audioSampleRate, 14000)
+    );
 
     this._square0 = new PulseWave(1);
     this._square1 = new PulseWave(2);
@@ -141,24 +152,10 @@ export class Apu {
         break;
     }
   }
-
-  public setAudioSampleRate(sampleRate: number) {
-    this._sampleRate = CpuFrequencyHz / sampleRate;
-
-    this._filterChain.addFilters(
-      this._filterChain.highPassFilter(sampleRate, 90)
-    );
-    this._filterChain.addFilters(
-      this._filterChain.highPassFilter(sampleRate, 440)
-    );
-    this._filterChain.addFilters(
-      this._filterChain.lowPassFilter(sampleRate, 14000)
-    );
-  }
-
+  
   public step() {
     const cycle1 = this._cycles;
-    
+
     this._cycles++;
 
     const cycle2 = this._cycles;
@@ -176,10 +173,12 @@ export class Apu {
     const s2 = (cycle2 / this._sampleRate) | 0;
     if (s1 !== s2) {
       this._currentCyclesForFrame++;
-      if(this._currentCyclesForFrame === this._cyclesPerFrame) {
+
+      if (this._currentCyclesForFrame === this._cyclesPerFrame) {
         this._sampleEmitter.emit("renderFrame");
         this._currentCyclesForFrame = 0;
       }
+
       this._sendSample();
     }
   }
@@ -206,13 +205,11 @@ export class Apu {
   }
 
   private _writeControl(value: number) {
-    const bValue = value & 0xff;
-
-    this._square0.pulse.Enabled = (bValue & 1) === 1;
-    this._square1.pulse.Enabled = (bValue & 2) === 2;
-    this._triangle.triangle.Enabled = (bValue & 4) === 4;
-    this._noise.noise.Enabled = (bValue & 8) === 8;
-    this._dmc.dmc.Enabled = (bValue & 16) === 16;
+    this._square0.pulse.Enabled = (value & 1) === 1;
+    this._square1.pulse.Enabled = (value & 2) === 2;
+    this._triangle.triangle.Enabled = (value & 4) === 4;
+    this._noise.noise.Enabled = (value & 8) === 8;
+    this._dmc.dmc.Enabled = (value & 16) === 16;
 
     if (!this._square0.pulse.Enabled) {
       this._square0.pulse.LengthValue = 0;
@@ -249,7 +246,7 @@ export class Apu {
 
     const pulseOut = pulseTable[p1 + p2];
     const tndOut = tndTable[3 * t + 2 * n + d];
-    return pulseOut + tndOut;
+    return Math.fround(pulseOut + tndOut);
   }
 
   private _stepFrameCounter() {
@@ -315,10 +312,8 @@ export class Apu {
   }
 
   private _writeFrameCounter(value: number) {
-    const bValue = value & 0xff;
-
-    this._framePeriod = 4 + ((bValue >>> 7) & 1);
-    this._frameIrq = ((bValue >>> 6) & 1) === 0;
+    this._framePeriod = 4 + ((value >>> 7) & 1);
+    this._frameIrq = ((value >>> 6) & 1) === 0;
     if (this._framePeriod === 5) {
       this._stepEnvelope();
       this._stepSweep();

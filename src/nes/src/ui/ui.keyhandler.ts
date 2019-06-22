@@ -1,4 +1,4 @@
-import { Controller, Buttons, ControllerPlayer } from "./controller";
+import { Controller, Buttons, ControllerPlayer } from "../controller";
 
 export const PlayerOneKeyMap = {
   Start: "Enter",

@@ -34,39 +34,31 @@ export class PulseWave {
   }
 
   public writeControl(value: number) {
-    const bValue = value & 0xff;
-
-    this._p.DutyMode = (bValue >>> 6) & 3;
-    this._p.LengthEnabled = ((bValue >>> 5) & 1) === 0;
-    this._p.EnvelopeLoop = ((bValue >>> 5) & 1) === 0;
-    this._p.EnvelopeEnabled = ((bValue >>> 4) & 1) === 0;
-    this._p.EnvelopePeriod = bValue & 15;
-    this._p.ConstantVolume = bValue & 15;
+    this._p.DutyMode = (value >>> 6) & 3;
+    this._p.LengthEnabled = ((value >>> 5) & 1) === 0;
+    this._p.EnvelopeLoop = ((value >>> 5) & 1) === 1;
+    this._p.EnvelopeEnabled = ((value >>> 4) & 1) === 0;
+    this._p.EnvelopePeriod = value & 15;
+    this._p.ConstantVolume = value & 15;
     this._p.EnvelopeStart = true;
   }
 
   public writeSweep(value: number) {
-    const bValue = value & 0xff;
-
-    this._p.SweepEnabled = ((bValue >>> 7) & 1) === 1;
-    this._p.SweepPeriod = ((bValue >>> 4) & 7) + 1;
-    this._p.SweepNegate = ((bValue >>> 3) & 1) === 1;
+    this._p.SweepEnabled = ((value >>> 7) & 1) === 1;
+    this._p.SweepPeriod = ((value >>> 4) & 7) + 1;
+    this._p.SweepNegate = ((value >>> 3) & 1) === 1;
     this._p.SweepShift = value & 7;
     this._p.SweepReload = true;
   }
 
   public writeTimerLow(value: number) {
-    const bValue = value & 0xff;
-
-    this._p.TimerPeriod = ((this._p.TimerPeriod & 0xff00) | bValue) & 0xffff;
+    this._p.TimerPeriod = ((this._p.TimerPeriod & 0xff00) | value) & 0xffff;
   }
 
   public writeTimerHigh(value: number) {
-    const bValue = value & 0xff;
-
-    this._p.LengthValue = ApuLengthTable[bValue >>> 3];
+    this._p.LengthValue = ApuLengthTable[value >>> 3];
     this._p.TimerPeriod =
-      ((this._p.TimerPeriod & 0x00ff) | ((bValue & 7) << 8)) & 0xffff;
+      ((this._p.TimerPeriod & 0x00ff) | ((value & 7) << 8) & 0xffff);
     this._p.EnvelopeStart = true;
     this._p.DutyValue = 0;
   }

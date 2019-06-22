@@ -27,27 +27,21 @@ export class NoiseWave {
   }
 
   public writeControl(value: number) {
-    const bValue = value & 0xff;
-
-    this._noise.LengthEnabled = ((bValue >>> 5) & 1) === 0;
-    this._noise.EnvelopeLoop = ((bValue >>> 5) & 1) === 1;
-    this._noise.EnvelopeEnabled = ((bValue >>> 4) & 1) === 0;
-    this._noise.EnvelopePeriod = bValue & 15;
-    this._noise.ConstantVolume = bValue & 15;
+    this._noise.LengthEnabled = ((value >>> 5) & 1) === 0;
+    this._noise.EnvelopeLoop = ((value >>> 5) & 1) === 1;
+    this._noise.EnvelopeEnabled = ((value >>> 4) & 1) === 0;
+    this._noise.EnvelopePeriod = value & 15;
+    this._noise.ConstantVolume = value & 15;
     this._noise.EnvelopeStart = true;
   }
 
   public writePeriod(value: number) {
-    const bValue = value & 0xff;
-
-    this._noise.Mode = (bValue & 0x80) === 0x80;
-    this._noise.TimerPeriod = ApuNoiseTable[bValue & 0x0f];
+    this._noise.Mode = (value & 0x80) === 0x80;
+    this._noise.TimerPeriod = ApuNoiseTable[value & 0x0f];
   }
 
   public writeLength(value: number) {
-    const bValue = value & 0xff;
-
-    this._noise.LengthValue = ApuLengthTable[bValue >>> 3];
+    this._noise.LengthValue = ApuLengthTable[value >>> 3];
     this._noise.EnvelopeStart = true;
   }
 
@@ -62,7 +56,7 @@ export class NoiseWave {
       }
 
       const b1 = this._noise.ShiftRegister & 1;
-      const b2 = (this._noise.ShiftRegister >>> 3) & 1;
+      const b2 = (this._noise.ShiftRegister >>> shift) & 1;
 
       this._noise.ShiftRegister >>>= 1;
       this._noise.ShiftRegister |= (b1 ^ b2) << 14;

@@ -22,24 +22,18 @@ export class TriangleWave {
   }
 
   public writeControl(value: number) {
-    const bValue = value & 0xff;
-
-    this._triangle.LengthEnabled = ((bValue >>> 7) & 1) === 0;
+    this._triangle.LengthEnabled = ((value >>> 7) & 1) === 0;
     this._triangle.CounterPeriod = value & 0x7f;
   }
 
   public writeTimerLow(value: number) {
-    const bValue = value & 0xff;
-
-    this._triangle.TimerPeriod = (this._triangle.TimerPeriod & 0xff00) | bValue;
+    this._triangle.TimerPeriod = (this._triangle.TimerPeriod & 0xff00) | value;
   }
 
   public writeTimerHigh(value: number) {
-    const bValue = value & 0xff;
-
-    this._triangle.LengthValue = ApuLengthTable[bValue >>> 3];
+    this._triangle.LengthValue = ApuLengthTable[value >>> 3];
     this._triangle.TimerPeriod =
-      (this._triangle.TimerPeriod & 0x00ff) | (bValue << 8);
+      (this._triangle.TimerPeriod & 0x00ff) | ((value << 8) & 0xffff);
     this._triangle.TimerValue = this._triangle.TimerPeriod;
     this._triangle.CounterReload = true;
   }

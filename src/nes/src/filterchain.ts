@@ -6,70 +6,77 @@ interface FirstOrderFilter {
   PrevY: number;
 }
 
+export class Filter {
+  private _filter: FirstOrderFilter;
+
+  constructor(filter: FirstOrderFilter) {
+    this._filter = filter;
+  }
+
+  public step(x: number): number {
+    const y = Math.fround(this._filter.B0 * x) 
+      + Math.fround(this._filter.B1 * this._filter.PrevX) 
+      - Math.fround(this._filter.A1 * this._filter.PrevY);
+
+    this._filter.PrevY = Math.fround(y);
+    this._filter.PrevX = Math.fround(x);
+
+    return Math.fround(y);
+  }
+}
+
 export class FilterChain {
-  private _filters: FirstOrderFilter[] | undefined;
+  private _filters: Filter[];
 
   constructor() {
     this._filters = [];
   }
 
-  public addFilters(f: FirstOrderFilter) {
+  public addFilters(f: Filter) {
     this._filters.push(f);
-  }
-
-  public clearFilters() {
-    this._filters = undefined;
-  }
-
-  public stepFilterChain(f: FirstOrderFilter, x: number) {
-    const y = f.B0 * x + f.B1 * f.PrevX - f.A1 * f.PrevY;
-    f.PrevY = y;
-    f.PrevX = x;
-
-    return y;
   }
 
   public lowPassFilter(
     sampleRate: number,
     cutoffFrequency: number
-  ): FirstOrderFilter {
-    const c = sampleRate / Math.PI / cutoffFrequency;
-    const a0i = 1 / (1 + c);
+  ): Filter {
+    const c = Math.fround(sampleRate / Math.PI / Math.fround(cutoffFrequency));
+    const a0i = Math.fround(1 / (1 + c));
 
-    const filter = {
+    const fof = {
       B0: a0i,
       B1: a0i,
-      A1: (1 - c) * a0i,
+      A1: Math.fround((1 - c) * a0i),
       PrevX: 0,
       PrevY: 0
     };
 
-    return filter;
+    return new Filter(fof);
   }
 
   public highPassFilter(
     sampleRate: number,
     cutoffFrequency: number
-  ): FirstOrderFilter {
-    const c = sampleRate / Math.PI / cutoffFrequency;
-    const a0i = 1 / (1 + c);
+  ): Filter {
+    const c = Math.fround(sampleRate / Math.PI / Math.fround(cutoffFrequency));
+    const a0i = Math.fround(1 / (1 + c));
 
-    const filter = {
-      B0: c * a0i,
-      B1: -c * a0i,
-      A1: (1 - c) * a0i,
+    const fof = {
+      B0: Math.fround(c * a0i),
+      B1: Math.fround(-c * a0i),
+      A1: Math.fround((1 - c) * a0i),
       PrevX: 0,
       PrevY: 0
     };
 
-    return filter;
+    return new Filter(fof);
   }
 
   public step(x: number) {
     let workingX = x;
     for (let f of this._filters) {
-      workingX = this.stepFilterChain(f, workingX);
+      workingX = f.step(workingX);
     }
-    return workingX;
+    return Math.fround(workingX);
   }
 }

@@ -27,17 +27,13 @@ export class DmcSample {
   }
 
   public writeControl(value: number) {
-    const bValue = value & 0xff;
-
-    this._dmc.Irq = (bValue & 0x80) === 0x80;
-    this._dmc.Loop = (bValue & 0x40) === 0x40;
-    this._dmc.TickPeriod = ApuDmcTable[bValue & 0x0f];
+    this._dmc.Irq = (value & 0x80) === 0x80;
+    this._dmc.Loop = (value & 0x40) === 0x40;
+    this._dmc.TickPeriod = ApuDmcTable[value & 0x0f];
   }
 
   public writeValue(value: number) {
-    const bValue = value & 0xff;
-
-    this._dmc.Value = bValue & 0x7f;
+    this._dmc.Value = value & 0x7f;
   }
 
   public writeAddress(value: number) {
@@ -47,9 +43,7 @@ export class DmcSample {
   }
 
   public writeLength(value: number) {
-    const bValue = value & 0xff;
-
-    this._dmc.SampleLength = (bValue << 4) | 1;
+    this._dmc.SampleLength = (value << 4) | 1;
   }
 
   public restart() {
