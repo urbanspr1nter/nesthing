@@ -7,7 +7,14 @@ import { Controller } from "./controller";
 import { Apu } from "./apu";
 import { EventEmitter } from "events";
 
-const rom = require("./roms/mario.json");
+export enum Roms {
+  MarioBros,
+  DonkeyKong
+}
+export const RomFiles = {
+  MarioBros: require("./roms/mario.json"),
+  DonkeyKong: require("./roms/donkey.json")
+}
 
 export interface CpuRegisters {
   pc: number;
@@ -29,6 +36,7 @@ const AUDIO_BUFFER_LENGTH = 4096;
 const AUDIO_SAMPLE_RATE = 44100;
 
 export class Nes {
+  private _rom: any;
   private _memory: Memory;
   private _ppuMemory: PpuMemory;
   private _apu: Apu;
@@ -45,7 +53,13 @@ export class Nes {
   private _gainNode: GainNode;
   private _audioAudioBuffer: AudioBuffer;
 
-  constructor(eventEmitter: EventEmitter) {
+  constructor(eventEmitter: EventEmitter, rom: Roms) {
+    if(rom === Roms.MarioBros) {
+      this._rom = RomFiles.MarioBros;
+    } else if(rom === Roms.DonkeyKong) {
+      this._rom = RomFiles.DonkeyKong;
+    }
+
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory);
     this._controller = new Controller();
@@ -162,7 +176,7 @@ export class Nes {
   }
 
   public loadRom() {
-    const romContents = rom.raw;
+    const romContents = this._rom.raw as number[];
     const cartLoader = new CartLoader(romContents);
     cartLoader.loadCartridgeData(this._memory, this._ppuMemory);
   }

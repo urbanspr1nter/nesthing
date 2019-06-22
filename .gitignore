@@ -109,3 +109,4 @@ typings/
 .dynamodb/
 
 */**/nes/dist
+*/**/nes/src/roms/original

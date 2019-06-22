@@ -61,22 +61,22 @@ export class CartLoader {
     // NES in header, so it is a .nes format.
     romData = this._romBytes.slice(16);
 
-    let startAddressPrgBank0 = 0x8000;
-    for (let address = 0; address < 0x4000; address++) {
-      cpuMemory.set(startAddressPrgBank0, romData[address]);
-      startAddressPrgBank0++;
+    for (let i = 0; i < this._headerInfo.PrgRomUnits; i++) {
+      let startAddressPrgBank = 0xFFFF - (0x3fff * (i + 1));
+      let romStartAddress = 0 + (0x4000 * i);
+      for (let address = romStartAddress; address < (romStartAddress + 0x4000); address++) {
+        cpuMemory.set(startAddressPrgBank, romData[address]);
+        startAddressPrgBank++;
+      }
     }
 
-    let startAddressPrgBank1 = 0xc000;
-    for (let address = 0; address < 0x4000; address++) {
-      cpuMemory.set(startAddressPrgBank1, romData[address]);
-      startAddressPrgBank1++;
-    }
-    
-    let startAddressChrBank0 = 0x0;
-    for (let address = 0x8000; address < 0x8000 + 0x2000; address++) {
-      ppuMemory.set(startAddressChrBank0, romData[address]);
-      startAddressChrBank0++;
+    for (let i = 0; i < this._headerInfo.ChrRomUnits; i++) {
+      let startAddressChrBank = 0x0;
+      let romStartAddress = (0x4000 * this._headerInfo.PrgRomUnits) + (0x2000 * i);
+      for (let address = romStartAddress; address < romStartAddress + 0x2000; address++) {
+        ppuMemory.set(startAddressChrBank, romData[address]);
+        startAddressChrBank++;
+      }
     }
   }
 
@@ -90,5 +90,7 @@ export class CartLoader {
       (this._romBytes[6] & 0x04) === 0x0 ? false : true;
     this._headerInfo.IgnoreMirroring =
       (this._romBytes[6] & 0x08) === 0x0 ? false : true;
+
+    console.log(JSON.stringify(this._headerInfo));
   }
 }

@@ -1,4 +1,4 @@
-import { Nes } from "./nes";
+import { Nes, Roms } from "./nes";
 import { UiKeyHandler } from "./ui-key-handler";
 import { EventEmitter } from "events";
 
@@ -44,26 +44,6 @@ function setupDOM(nes: Nes) {
   document.getElementById("btn-scale-4").addEventListener("click", () => {
     scale(4);
   });
-  document.getElementById("btn-pause").addEventListener("click", () => {
-    paused = !paused;
-  });
-  document.getElementById("btn-snap-nt").addEventListener("click", () => {
-    const data = nes.snapNt();
-    document.getElementById("txtarea-console").innerHTML = data;
-  });
-  document.getElementById("btn-dump-log").addEventListener("click", () => {
-    const log = nes.log();
-    document.getElementById("txtarea-console").innerHTML = log;
-  });
-  document.getElementById("chk-show-console").addEventListener("change", () => {
-    if (consoleShown) {
-      consoleShown = false;
-      document.getElementById("txtarea-console").style.display = "none";
-    } else {
-      consoleShown = true;
-      document.getElementById("txtarea-console").style.display = "initial";
-    }
-  });
 }
 
 function clearPixelBuffer() {
@@ -101,7 +81,12 @@ function run() {
 }
 
 document.getElementById("btn-play").addEventListener("click", () => {
-  nes = new Nes(nesEventListener);
+  const selectElement = (document.getElementById("select-game") as HTMLSelectElement);
+  const selectedGame = Number(selectElement.options[selectElement.selectedIndex].value);
+
+  const game = selectedGame === 0 ? Roms.MarioBros : Roms.DonkeyKong;
+
+  nes = new Nes(nesEventListener, game);
 
   nesEventListener.on("renderFrame", () => {
     requestAnimationFrame(() => {
