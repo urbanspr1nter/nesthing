@@ -20,21 +20,4 @@ export class PpuMemory {
     const decodedAddress = address % 0x4000;
     return this._memory[decodedAddress] & 0xff;
   };
-
-  public snapNt() {
-      let data = "";
-      for(let address = 0x2000; address <= 0x23BF; address++) {
-          if(address % 0x20 === 0) {
-              data += "&#13;";
-          }
-
-          let byte = this._memory[address].toString(16).toUpperCase();
-          if(byte.length < 2) {
-              byte = `0${byte}`;
-          }
-          data += `${byte} `;
-      }
-
-      return data;
-  }
 }

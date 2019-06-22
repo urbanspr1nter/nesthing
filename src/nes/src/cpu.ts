@@ -36,8 +36,6 @@ export class Cpu {
   private _regSP: ByteRegister;
   private _regP: ByteRegister;
 
-  private _log: string[];
-
   // Helpers
   private _interrupt: InterruptRequestType;
 
@@ -64,8 +62,6 @@ export class Cpu {
       Address: 0,
       Mode: AddressingModes.Immediate
     };
-
-    this._log = [];
   }
 
   public setStallCycles(cycles: number) {
@@ -188,96 +184,6 @@ export class Cpu {
         (modifiedFirst & 0xff) - (modifiedSecond & 0xff) - modifiedCarry >= 0
       );
     }
-  }
-
-  private _logInstruction() {
-    const opCode = this.memRead(this._regPC.get());
-    const bytes = InstructionSizes[opCode];
-    const name = OpLabel[opCode];
-
-    let fmtOp0 = this.memRead(this._regPC.get())
-      .toString(16)
-      .toUpperCase();
-    if (fmtOp0.length < 2) {
-      fmtOp0 = `0${fmtOp0}`;
-    }
-
-    let fmtOp1 = this.memRead(this._regPC.get() + 1)
-      .toString(16)
-      .toUpperCase();
-    if (fmtOp1.length < 2) {
-      fmtOp1 = `0${fmtOp1}`;
-    }
-
-    let fmtOp2 = this.memRead(this._regPC.get() + 2)
-      .toString(16)
-      .toUpperCase();
-    if (fmtOp2.length < 2) {
-      fmtOp2 = `0${fmtOp2}`;
-    }
-
-    if (bytes < 2) {
-      fmtOp1 = "  ";
-    }
-    if (bytes < 3) {
-      fmtOp2 = "  ";
-    }
-
-    if (this._log.length > 30000) {
-      this._log = [];
-    }
-
-    let fmtA = this._regA
-      .get()
-      .toString(16)
-      .toUpperCase();
-    if (fmtA.length < 2) {
-      fmtA = `0${fmtA}`;
-    }
-
-    let fmtX = this._regX
-      .get()
-      .toString(16)
-      .toUpperCase();
-    if (fmtX.length < 2) {
-      fmtX = `0${fmtX}`;
-    }
-
-    let fmtY = this._regY
-      .get()
-      .toString(16)
-      .toUpperCase();
-    if (fmtY.length < 2) {
-      fmtY = `0${fmtY}`;
-    }
-
-    let fmtP = this._regP
-      .get()
-      .toString(16)
-      .toUpperCase();
-    if (fmtP.length < 2) {
-      fmtP = `0${fmtP}`;
-    }
-
-    let fmtSP = this._regSP
-      .get()
-      .toString(16)
-      .toUpperCase();
-    if (fmtSP.length < 2) {
-      fmtSP = `0${fmtSP}`;
-    }
-
-    let fmtPC = this._regPC
-      .get()
-      .toString(16)
-      .toUpperCase();
-    while (fmtPC.length < 4) {
-      fmtPC = `0${fmtPC}`;
-    }
-
-    this._log.push(
-      `${fmtPC}     ${fmtOp0} ${fmtOp1} ${fmtOp2}     ${name} ${fmtOp2}${fmtOp1}          A:${fmtA} X:${fmtX} Y:${fmtY} P:${fmtP} SP:${fmtSP}`
-    );
   }
 
   public memWrite(address: number, data: number) {
@@ -934,10 +840,6 @@ export class Cpu {
     return { address: address & 0xffff, pageCrossed };
   }
 
-  public getLog() {
-    return JSON.stringify(this._log);
-  }
-
   // Returns cycles ran
   public step(): number {
     const prevCurrentCycles = this._currentCycles;
@@ -946,9 +848,6 @@ export class Cpu {
       this._runStallCycle();
       return this._currentCycles - prevCurrentCycles;
     }
-
-    // this._logInstruction();
-
     if (this._interrupt === InterruptRequestType.NMI) {
       this._handleNmi();
     } else if (

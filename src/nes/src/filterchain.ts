@@ -14,12 +14,12 @@ export class Filter {
   }
 
   public step(x: number): number {
-    const y = Math.fround(this._filter.B0 * x) 
-      + Math.fround(this._filter.B1 * this._filter.PrevX) 
-      - Math.fround(this._filter.A1 * this._filter.PrevY);
+    const y = (this._filter.B0 * x) 
+      + (this._filter.B1 * this._filter.PrevX) 
+      - (this._filter.A1 * this._filter.PrevY);
 
-    this._filter.PrevY = Math.fround(y);
-    this._filter.PrevX = Math.fround(x);
+    this._filter.PrevY = y;
+    this._filter.PrevX = x;
 
     return Math.fround(y);
   }
@@ -40,13 +40,13 @@ export class FilterChain {
     sampleRate: number,
     cutoffFrequency: number
   ): Filter {
-    const c = Math.fround(sampleRate / Math.PI / Math.fround(cutoffFrequency));
-    const a0i = Math.fround(1 / (1 + c));
+    const c = sampleRate / Math.PI / cutoffFrequency;
+    const a0i = 1 / (1 + c);
 
     const fof = {
       B0: a0i,
       B1: a0i,
-      A1: Math.fround((1 - c) * a0i),
+      A1: (1 - c) * a0i,
       PrevX: 0,
       PrevY: 0
     };
@@ -58,13 +58,13 @@ export class FilterChain {
     sampleRate: number,
     cutoffFrequency: number
   ): Filter {
-    const c = Math.fround(sampleRate / Math.PI / Math.fround(cutoffFrequency));
-    const a0i = Math.fround(1 / (1 + c));
+    const c = sampleRate / Math.PI / cutoffFrequency;
+    const a0i = 1 / (1 + c);
 
     const fof = {
-      B0: Math.fround(c * a0i),
-      B1: Math.fround(-c * a0i),
-      A1: Math.fround((1 - c) * a0i),
+      B0: c * a0i,
+      B1: -c * a0i,
+      A1: (1 - c) * a0i,
       PrevX: 0,
       PrevY: 0
     };
