@@ -28,12 +28,25 @@ function run() {
   });
 }
 
+let frames = 0;
+let currentStartTime = performance.now();
 document.getElementById("btn-play").addEventListener("click", () => {
 
   const selectElement = (document.getElementById("select-game") as HTMLSelectElement);
   const selectedGame = Number(selectElement.options[selectElement.selectedIndex].value);
 
-  const game = selectedGame === 0 ? Roms.MarioBros : Roms.DonkeyKong;
+  let game;
+  switch (selectedGame) {
+    case 0:
+      game = Roms.MarioBros;
+      break;
+    case 1:
+      game = Roms.DonkeyKong;
+      break;
+    case 2:
+      game = Roms.SpaceInvaders;
+      break;
+  }
 
   nes = new Nes(nesEventListener, game);
 
@@ -44,7 +57,13 @@ document.getElementById("btn-play").addEventListener("click", () => {
 
   nesEventListener.on("renderFrame", () => {
     requestAnimationFrame(() => {
+      frames++;
       uiFrameBuffer.drawFrame();
+      if (performance.now() - currentStartTime >= 1000) {
+        document.getElementById("fps").innerHTML = `${frames} fps`;
+        currentStartTime = performance.now();
+        frames = 0;
+      }
     });
   });
 

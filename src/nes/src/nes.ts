@@ -9,11 +9,13 @@ import { EventEmitter } from "events";
 
 export enum Roms {
   MarioBros,
-  DonkeyKong
+  DonkeyKong,
+  SpaceInvaders
 }
 export const RomFiles = {
   MarioBros: require("./roms/mario.json"),
-  DonkeyKong: require("./roms/donkey.json")
+  DonkeyKong: require("./roms/donkey.json"),
+  SpaceInvaders: require("./roms/space.json")
 }
 
 export interface CpuRegisters {
@@ -58,6 +60,8 @@ export class Nes {
       this._rom = RomFiles.MarioBros;
     } else if(rom === Roms.DonkeyKong) {
       this._rom = RomFiles.DonkeyKong;
+    } else if(rom === Roms.SpaceInvaders) {
+      this._rom = RomFiles.SpaceInvaders;
     }
 
     this._ppuMemory = new PpuMemory();
