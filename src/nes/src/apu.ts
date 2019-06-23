@@ -28,6 +28,8 @@ export class Apu {
   private _noise: NoiseWave;
   private _dmc: DmcSample;
 
+  public readyToRender: boolean = false;
+
   constructor(emitter: EventEmitter, audioSampleRate: number) {
     for (let i = 0; i < 31; i++) {
       pulseTable.push(Math.fround(95.52 / (8128.0 / Math.fround(i) + 100)));
@@ -175,7 +177,8 @@ export class Apu {
       this._currentCyclesForFrame++;
 
       if (this._currentCyclesForFrame === this._cyclesPerFrame) {
-        this._sampleEmitter.emit("renderFrame");
+        this.readyToRender = true;
+        //this._sampleEmitter.emit("renderFrame");
         this._currentCyclesForFrame = 0;
       }
 

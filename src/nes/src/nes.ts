@@ -19,23 +19,6 @@ export const RomFiles = {
   SpaceInvaders: require("./roms/space.json")
 }
 
-export interface CpuRegisters {
-  pc: number;
-  a: number;
-  x: number;
-  y: number;
-  sp: number;
-  p: number;
-}
-
-export interface PpuRegisters {
-  v: number;
-  t: number;
-  x: number;
-  w: boolean;
-}
-
-
 export class Nes {
   private _rom: any;
   private _memory: Memory;
@@ -47,6 +30,11 @@ export class Nes {
   private _eventListener: EventEmitter;
   private _uiSoundHandler: UiSoundHandler;
   private _readyToRender: boolean;
+
+  private _cpuTimeInFrame: number;
+  private _apuTimeInFrame: number;
+  private _ppuTimeInFrame: number;
+  private _startTime: number;
 
   constructor(eventEmitter: EventEmitter, rom: Roms) {
     if(rom === Roms.MarioBros) {
@@ -76,6 +64,23 @@ export class Nes {
     this._ppu.setCpuMemory(this._memory);
     this._ppu.setCpu(this._cpu);
     this._initialize();
+
+    this._cpuTimeInFrame = 0;
+    this._ppuTimeInFrame = 0;
+    this._apuTimeInFrame = 0;
+    this._startTime = 0;
+
+    this._readyToRender = false;
+  }
+
+  private _resetTimes() {
+    this._cpuTimeInFrame = 0;
+    this._ppuTimeInFrame = 0;
+    this._apuTimeInFrame = 0;
+  }
+
+  private _markStart() {
+    this._startTime = performance.now();
   }
 
   get controller1(): Controller {
@@ -88,6 +93,7 @@ export class Nes {
 
   public setReadyToRender(value: boolean) {
     this._readyToRender = value;
+    this._apu.readyToRender = value;
   }
 
   public frameBuffer(): string[][] {
@@ -109,25 +115,6 @@ export class Nes {
   public ppuCycles(): number {
     return this._ppu.getCycles();
   }
-  public ppuRegisers(): PpuRegisters {
-    return {
-      v: this._ppu.vramAddress(),
-      t: this._ppu.tVramAddress(),
-      x: this._ppu.fineX(),
-      w: this._ppu.vramAddressWriteToggle()
-    };
-  }
-
-  public cpuRegisters(): CpuRegisters {
-    return {
-      pc: this._cpu.getPC(),
-      a: this._cpu.getA(),
-      x: this._cpu.getX(),
-      y: this._cpu.getY(),
-      sp: this._cpu.getSP(),
-      p: this._cpu.getP()
-    };
-  }
 
   public loadRom() {
     const romContents = this._rom.raw as number[];
@@ -136,23 +123,26 @@ export class Nes {
   }
 
   public run(): number {
-    let start = performance.now();
+    this._markStart();
+    var totalCpuSteps = this._cpu.step();
+    //this._cpuTimeInFrame += (performance.now() - this._startTime);
 
-    let totalCpuSteps: number = 0;
-
-    totalCpuSteps += this._cpu.step();
-
-    let totalApuSteps = totalCpuSteps;
-    while (totalApuSteps > 0) {
+    //this._markStart();
+    for(let i = 0 ; i < totalCpuSteps; i++) {
       this._apu.step();
-      totalApuSteps--;
+    }
+    //this._apuTimeInFrame += (performance.now() - this._startTime);
+
+    if(this._apu.readyToRender) {
+      this._readyToRender = true;
     }
 
-    let totalPpuSteps = totalCpuSteps * 3;
-    while (totalPpuSteps > 0) {
+    // this._markStart();
+    var totalPpuSteps = totalCpuSteps * 3;
+    for(let i = 0; i < totalPpuSteps; i++) {
       this._ppu.step();
-      totalPpuSteps--;
     }
+    //this._ppuTimeInFrame += (performance.now() - this._startTime);
 
     return totalCpuSteps;
   }
