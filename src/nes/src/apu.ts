@@ -1,6 +1,6 @@
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
-import { FilterChain } from "./filterchain";
+import { FilterChain } from "./apu/filterchain";
 import { EventEmitter } from "events";
 import { CpuFrequencyHz, ApuFrameCounterRate } from "./constants";
 import { PulseWave } from "./apu.pulsewave";
@@ -152,7 +152,7 @@ export class Apu {
         break;
     }
   }
-  
+
   public step() {
     const cycle1 = this._cycles;
 
@@ -162,15 +162,15 @@ export class Apu {
 
     this._stepTimer();
 
-    const f1 = (cycle1 / ApuFrameCounterRate) | 0;
-    const f2 = (cycle2 / ApuFrameCounterRate) | 0;
+    const f1 = Math.trunc(cycle1 / ApuFrameCounterRate);
+    const f2 = Math.trunc(cycle2 / ApuFrameCounterRate);
 
     if (f1 !== f2) {
       this._stepFrameCounter();
     }
 
-    const s1 = (cycle1 / this._sampleRate) | 0;
-    const s2 = (cycle2 / this._sampleRate) | 0;
+    const s1 = Math.trunc(cycle1 / this._sampleRate);
+    const s2 = Math.trunc(cycle2 / this._sampleRate);
     if (s1 !== s2) {
       this._currentCyclesForFrame++;
 

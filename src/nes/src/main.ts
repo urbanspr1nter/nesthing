@@ -6,54 +6,70 @@ import { UiFrameBuffer } from "./ui/ui.framebuffer";
 interface NesOptions {
   keyHandler: UiKeyHandler;
   frameRenderer: UiFrameBuffer;
+  rom: Roms;
 };
 
-let nesEventListener = new EventEmitter();
-let nes: Nes;
+class NesConsole {
+  private _nes: Nes;
+  private _options: NesOptions;
 
-function setupDOM(options: NesOptions) {
-  document.getElementById("btn-scale-1").addEventListener("click", () => {
-    options.frameRenderer.scale(1);
-  });
-  document.getElementById("btn-scale-2").addEventListener("click", () => {
-    options.frameRenderer.scale(2);
-  });
-  document.getElementById("btn-scale-3").addEventListener("click", () => {
-    options.frameRenderer.scale(3);
-  });
-  document.getElementById("btn-scale-4").addEventListener("click", () => {
-    options.frameRenderer.scale(4);
-  });
+  constructor(rom: Roms) {
+    this._nes = new Nes(new EventEmitter, rom);
 
-  document.addEventListener("keydown", (e: KeyboardEvent) => {
-    options.keyHandler.handlePlayerOneKeyDown(e.key);
-  });
-  document.addEventListener("keyup", (e: KeyboardEvent) => {
-    options.keyHandler.handlePlayerOneKeyUp(e.key);
-  });
-  document.addEventListener("keydown", (e: KeyboardEvent) => {
-    options.keyHandler.handlePlayerTwoKeyDown(e.key);
-  });
-  document.addEventListener("keyup", (e: KeyboardEvent) => {
-    options.keyHandler.handlePlayerTwoKeyUp(e.key);
-  });
+    this._options = {
+      keyHandler: new UiKeyHandler(this._nes.controller1),
+      frameRenderer: new UiFrameBuffer(this._nes),
+      rom
+    };
+  }
 
+  get nes() {
+    return this._nes;
+  }
+
+  get uiKeyHandler() {
+    return this._options.keyHandler;
+  }
+
+  get uiFrameBuffer() {
+    return this._options.frameRenderer;
+  }
+
+  public setupDOM() {
+    document.getElementById("btn-scale-1").addEventListener("click", () => {
+      this._options.frameRenderer.scale(1);
+    });
+    document.getElementById("btn-scale-2").addEventListener("click", () => {
+      this._options.frameRenderer.scale(2);
+    });
+    document.getElementById("btn-scale-3").addEventListener("click", () => {
+      this._options.frameRenderer.scale(3);
+    });
+    document.getElementById("btn-scale-4").addEventListener("click", () => {
+      this._options.frameRenderer.scale(4);
+    });
+
+    document.addEventListener("keydown", (e: KeyboardEvent) => {
+      this._options.keyHandler.handlePlayerOneKeyDown(e.key);
+    });
+    document.addEventListener("keyup", (e: KeyboardEvent) => {
+      this._options.keyHandler.handlePlayerOneKeyUp(e.key);
+    });
+    document.addEventListener("keydown", (e: KeyboardEvent) => {
+      this._options.keyHandler.handlePlayerTwoKeyDown(e.key);
+    });
+    document.addEventListener("keyup", (e: KeyboardEvent) => {
+      this._options.keyHandler.handlePlayerTwoKeyUp(e.key);
+    });
+  }
 }
 
-function run() {
-  setImmediate(function () {
-    nes.run();
-    run();
-  });
-}
-
-let frames = 0;
-let currentStartTime = performance.now();
+let gameConsole: NesConsole;
 document.getElementById("btn-play").addEventListener("click", () => {
   const selectElement = (document.getElementById("select-game") as HTMLSelectElement);
   const selectedGame = Number(selectElement.options[selectElement.selectedIndex].value);
 
-  let game;
+  var game;
   switch (selectedGame) {
     case 0:
       game = Roms.MarioBros;
@@ -66,30 +82,41 @@ document.getElementById("btn-play").addEventListener("click", () => {
       break;
   }
 
-  nes = new Nes(nesEventListener, game);
+  gameConsole = new NesConsole(game);
+  gameConsole.setupDOM();
 
-  const uiFrameBuffer = new UiFrameBuffer(nes);
-  const uiKeyHandler = new UiKeyHandler(nes.controller1);
-
-  const options: NesOptions = {
-    keyHandler: uiKeyHandler,
-    frameRenderer: uiFrameBuffer
-  }
-
-  setupDOM(options);
   document.getElementById("btn-scale-2").click();
 
-  nesEventListener.on("renderFrame", () => {
-    requestAnimationFrame(() => {
-      frames++;
-      uiFrameBuffer.drawFrame();
-      if (performance.now() - currentStartTime >= 1000) {
-        document.getElementById("fps").innerHTML = `${frames} fps`;
-        currentStartTime = performance.now();
-        frames = 0;
-      }
-    });
-  });
-
-  setTimeout(run, 1000);
+  setTimeout(function () {
+    triggerRun(gameConsole.uiFrameBuffer);
+  }, 1000);
 });
+
+var msPerFrame = 16;
+var frameTime = 0;
+function triggerRun(uiFrameBuffer) {
+  var startTime = performance.now();
+  setImmediate(() => {
+    gameConsole.nes.run();
+    frameTime += (performance.now() - startTime);
+
+    if (gameConsole.nes.readyToRender) {
+      if (frameTime >= msPerFrame) {
+        requestAnimationFrame(uiFrameBuffer.drawFrame.bind(uiFrameBuffer));
+
+        document.getElementById("fps").innerHTML = `Frame rendered in: ${frameTime} ms`;
+        frameTime = 0;
+        gameConsole.nes.setReadyToRender(false);
+
+        triggerRun(uiFrameBuffer);
+      } else {
+        setTimeout(function () { triggerRun(uiFrameBuffer); }, msPerFrame - frameTime);
+        frameTime = 0;
+      }
+    } else {
+      triggerRun(uiFrameBuffer);
+    }
+  });
+}
+
+

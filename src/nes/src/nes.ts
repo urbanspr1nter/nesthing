@@ -46,6 +46,7 @@ export class Nes {
   private _controller: Controller;
   private _eventListener: EventEmitter;
   private _uiSoundHandler: UiSoundHandler;
+  private _readyToRender: boolean;
 
   constructor(eventEmitter: EventEmitter, rom: Roms) {
     if(rom === Roms.MarioBros) {
@@ -61,6 +62,9 @@ export class Nes {
     this._controller = new Controller();
 
     this._eventListener = eventEmitter;
+    this._eventListener.on("renderFrame", () => {
+      this._readyToRender = true;
+    });
 
     this._uiSoundHandler = new UiSoundHandler(0.8, this._eventListener);
 
@@ -76,6 +80,14 @@ export class Nes {
 
   get controller1(): Controller {
     return this._controller;
+  }
+
+  get readyToRender() {
+    return this._readyToRender;
+  }
+
+  public setReadyToRender(value: boolean) {
+    this._readyToRender = value;
   }
 
   public frameBuffer(): string[][] {
@@ -124,13 +136,11 @@ export class Nes {
   }
 
   public run(): number {
+    let start = performance.now();
+
     let totalCpuSteps: number = 0;
 
-    while (totalCpuSteps < 124) {
-      totalCpuSteps += this._cpu.step();
-    }
-
-    // totalCpuSteps += this._cpu.step();
+    totalCpuSteps += this._cpu.step();
 
     let totalApuSteps = totalCpuSteps;
     while (totalApuSteps > 0) {
