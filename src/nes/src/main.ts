@@ -1,7 +1,9 @@
-import { Nes, Roms } from "./nes";
-import { UiKeyHandler } from "./ui/ui.keyhandler";
 import { EventEmitter } from "events";
+
+import { Nes, Roms } from "./nes";
+
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
+import { UiKeyHandler } from "./ui/ui.keyhandler";
 
 interface NesOptions {
   keyHandler: UiKeyHandler;
@@ -88,20 +90,20 @@ document.getElementById("btn-play").addEventListener("click", () => {
   document.getElementById("btn-scale-2").click();
 
   setTimeout(function () {
-    triggerRun(gameConsole.uiFrameBuffer);
+    triggerRun(performance.now(), gameConsole.uiFrameBuffer);
   }, 1000);
 });
 
 var msPerFrame = 1000 / 16;
 var frameTime = 0;
 var lastFrameTime = 0;
-function triggerRun(uiFrameBuffer) {
-  if(!lastFrameTime) {
-    lastFrameTime = performance.now();
+function triggerRun(time, uiFrameBuffer) {
+  if(!!lastFrameTime) {
+    lastFrameTime = time;
   }
 
-  frameTime += (performance.now() - lastFrameTime);
-  lastFrameTime = performance.now();
+  frameTime += (time - lastFrameTime);
+  lastFrameTime = time;
 
   while(lastFrameTime >= msPerFrame) {
     while(true) {
@@ -117,7 +119,7 @@ function triggerRun(uiFrameBuffer) {
     break;
   }
 
-  requestAnimationFrame((t) => triggerRun(uiFrameBuffer));
+  requestAnimationFrame((t) => triggerRun(t, uiFrameBuffer));
 }
 
 
