@@ -99,6 +99,8 @@ export class Ppu {
 
   private _nmiPrevious: boolean;
   private _nmiDelay: number;
+  
+  private _frameDrawn: boolean;
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
@@ -125,8 +127,18 @@ export class Ppu {
       DataLow32: 0
     };
 
+    this._frameDrawn = false;
+
     this._initializeOam();
     this._initializeSprites();
+  }
+
+  get frameDrawn(): boolean {
+    return this._frameDrawn;
+  }
+
+  set frameDrawn(value: boolean) {
+    this._frameDrawn = value;
   }
 
   private _initializeOam() {
@@ -810,6 +822,7 @@ export class Ppu {
     }
 
     if (this._scanlines === 241 && this._cycles === 1) {
+      this._frameDrawn = true;
       this._setVblank();
     }
     if (isPrerenderLine && this._cycles === 1) {

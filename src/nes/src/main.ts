@@ -92,28 +92,32 @@ document.getElementById("btn-play").addEventListener("click", () => {
   }, 1000);
 });
 
-var msPerFrame = 16;
+var msPerFrame = 1000 / 16;
 var frameTime = 0;
+var lastFrameTime = 0;
 function triggerRun(uiFrameBuffer) {
-  var run = true;
-  while(run) {
-    var startTime = performance.now();
-    gameConsole.nes.run();
-    frameTime += (performance.now() - startTime);
-
-    if (gameConsole.nes.readyToRender) {
-      uiFrameBuffer.drawFrame();
-      gameConsole.nes.setReadyToRender(false);
-      if (frameTime < msPerFrame) {
-        run = false;
-        // what to do here?! we need to at least process the event loop... hmm..
-        setImmediate(() => { 
-          triggerRun(gameConsole.uiFrameBuffer); 
-        });
-      }
-      frameTime = 0;
-    }
+  if(!lastFrameTime) {
+    lastFrameTime = performance.now();
   }
+
+  frameTime += (performance.now() - lastFrameTime);
+  lastFrameTime = performance.now();
+
+  while(lastFrameTime >= msPerFrame) {
+    while(true) {
+      gameConsole.nes.run();
+
+      if(gameConsole.nes.readyToRender) {
+        uiFrameBuffer.drawFrame();
+        gameConsole.nes.setReadyToRender(false);
+        break;
+      }
+    }
+    frameTime -= msPerFrame;
+    break;
+  }
+
+  requestAnimationFrame((t) => triggerRun(uiFrameBuffer));
 }
 
 

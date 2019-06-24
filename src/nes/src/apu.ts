@@ -177,7 +177,7 @@ export class Apu {
       this._currentCyclesForFrame++;
 
       if (this._currentCyclesForFrame === this._cyclesPerFrame) {
-        this.readyToRender = true;
+        // this.readyToRender = true;
         //this._sampleEmitter.emit("renderFrame");
         this._currentCyclesForFrame = 0;
       }
