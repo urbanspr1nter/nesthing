@@ -742,9 +742,7 @@ export class Ppu {
 
     this._cycles++;
     if (this._cycles > 340) {
-      if(this._scanlines < 240) {
-        this._uiFrameBuffer.drawScanline(this._scanlines);
-      }
+      this._drawScanline();
       this._scanlines++;
       this._cycles = 0;
 
@@ -757,6 +755,12 @@ export class Ppu {
           this._evenFrame = false;
         }
       }
+    }
+  }
+
+  private _drawScanline() {
+    if(this._scanlines < 240) {
+      this._uiFrameBuffer.drawScanline(this._scanlines);
     }
   }
 

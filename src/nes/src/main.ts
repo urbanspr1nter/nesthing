@@ -110,7 +110,6 @@ function triggerRun(time, uiFrameBuffer) {
       gameConsole.nes.run();
 
       if(gameConsole.nes.readyToRender) {
-        //uiFrameBuffer.drawFrame();
         gameConsole.nes.setReadyToRender(false);
         break;
       }
