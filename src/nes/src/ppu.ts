@@ -8,6 +8,7 @@ import { PpuPalette } from "./colors";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
+import { UiFrameBuffer } from "./ui/ui.framebuffer";
 
 /**
  * The data structure to encapsulate the various sprite information
@@ -35,6 +36,7 @@ interface BackgroundData {
 const MAX_SPRITES_PER_SCANLINE = 8;
 
 export class Ppu {
+  private _uiFrameBuffer: UiFrameBuffer;
   private _frameBuffer: FrameBuffer;
   private _ppuMemory: PpuMemory;
   private _ppuDataReadBuffer: number;
@@ -104,6 +106,8 @@ export class Ppu {
 
   constructor(ppuMemory: PpuMemory) {
     this._frameBuffer = new FrameBuffer();
+
+    this._uiFrameBuffer = new UiFrameBuffer(this._frameBuffer);
 
     this._ppuMemory = ppuMemory;
 
@@ -738,6 +742,9 @@ export class Ppu {
 
     this._cycles++;
     if (this._cycles > 340) {
+      if(this._scanlines < 240) {
+        this._uiFrameBuffer.drawScanline(this._scanlines);
+      }
       this._scanlines++;
       this._cycles = 0;
 

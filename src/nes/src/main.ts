@@ -20,7 +20,7 @@ class NesConsole {
 
     this._options = {
       keyHandler: new UiKeyHandler(this._nes.controller1),
-      frameRenderer: new UiFrameBuffer(this._nes),
+      frameRenderer: null,
       rom
     };
   }
@@ -39,16 +39,16 @@ class NesConsole {
 
   public setupDOM() {
     document.getElementById("btn-scale-1").addEventListener("click", () => {
-      this._options.frameRenderer.scale(1);
+      //this._options.frameRenderer.scale(1);
     });
     document.getElementById("btn-scale-2").addEventListener("click", () => {
-      this._options.frameRenderer.scale(2);
+      //this._options.frameRenderer.scale(2);
     });
     document.getElementById("btn-scale-3").addEventListener("click", () => {
-      this._options.frameRenderer.scale(3);
+      //this._options.frameRenderer.scale(3);
     });
     document.getElementById("btn-scale-4").addEventListener("click", () => {
-      this._options.frameRenderer.scale(4);
+      //this._options.frameRenderer.scale(4);
     });
 
     document.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -110,7 +110,7 @@ function triggerRun(time, uiFrameBuffer) {
       gameConsole.nes.run();
 
       if(gameConsole.nes.readyToRender) {
-        uiFrameBuffer.drawFrame();
+        //uiFrameBuffer.drawFrame();
         gameConsole.nes.setReadyToRender(false);
         break;
       }
