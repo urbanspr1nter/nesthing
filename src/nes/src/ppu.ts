@@ -3,7 +3,6 @@
  */
 
 import { PpuMemory } from "./ppumemory";
-import { FrameBuffer } from "./framebuffer";
 import { PpuPalette } from "./colors";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
@@ -37,7 +36,6 @@ const MAX_SPRITES_PER_SCANLINE = 8;
 
 export class Ppu {
   private _uiFrameBuffer: UiFrameBuffer;
-  private _frameBuffer: FrameBuffer;
   private _ppuMemory: PpuMemory;
   private _ppuDataReadBuffer: number;
   private _cycles: number;
@@ -105,9 +103,7 @@ export class Ppu {
   private _frameDrawn: boolean;
 
   constructor(ppuMemory: PpuMemory) {
-    this._frameBuffer = new FrameBuffer();
-
-    this._uiFrameBuffer = new UiFrameBuffer(this._frameBuffer);
+    this._uiFrameBuffer = new UiFrameBuffer();
 
     this._ppuMemory = ppuMemory;
 
@@ -186,13 +182,6 @@ export class Ppu {
 
   public vramAddressWriteToggle() {
     return this._w;
-  }
-
-  /**
-   * Gets the framebuffer
-   */
-  public frameBuffer(): string[][] {
-    return this._frameBuffer.buffer();
   }
 
   public getCycles(): number {
@@ -743,7 +732,6 @@ export class Ppu {
 
     this._cycles++;
     if (this._cycles > 340) {
-      // this._drawScanline();
       this._scanlines++;
       this._cycles = 0;
 
@@ -756,12 +744,6 @@ export class Ppu {
           this._evenFrame = false;
         }
       }
-    }
-  }
-
-  private _drawScanline() {
-    if(this._scanlines < 240) {
-      this._uiFrameBuffer.drawScanline();
     }
   }
 
@@ -835,7 +817,7 @@ export class Ppu {
 
     if (this._scanlines === 241 && this._cycles === 1) {
       this._frameDrawn = true;
-      this._uiFrameBuffer.drawScanline();
+      this._uiFrameBuffer.draw();
       this._setVblank();
     }
     if (isPrerenderLine && this._cycles === 1) {

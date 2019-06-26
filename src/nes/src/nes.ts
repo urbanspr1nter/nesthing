@@ -29,7 +29,6 @@ export class Nes {
   private _controller: Controller;
   private _eventListener: EventEmitter;
   private _uiSoundHandler: UiSoundHandler;
-  private _readyToRender: boolean;
 
   private _cpuTimeInFrame: number;
   private _apuTimeInFrame: number;
@@ -50,9 +49,6 @@ export class Nes {
     this._controller = new Controller();
 
     this._eventListener = eventEmitter;
-    this._eventListener.on("renderFrame", () => {
-      this._readyToRender = true;
-    });
 
     this._uiSoundHandler = new UiSoundHandler(0.8, this._eventListener);
 
@@ -69,8 +65,6 @@ export class Nes {
     this._ppuTimeInFrame = 0;
     this._apuTimeInFrame = 0;
     this._startTime = 0;
-
-    this._readyToRender = false;
   }
 
   private _resetTimes() {
@@ -88,18 +82,13 @@ export class Nes {
   }
 
   get readyToRender() {
-    return this._readyToRender;
+    return this._ppu.frameDrawn;
   }
 
   public setReadyToRender(value: boolean) {
-    this._readyToRender = value;
     this._ppu.frameDrawn = value;
   }
-
-  public frameBuffer(): string[][] {
-    return this._ppu.frameBuffer();
-  }
-
+  
   public cpuMemory(): number[] {
     return this._memory.bits();
   }
@@ -123,25 +112,15 @@ export class Nes {
   }
 
   public run(): number {
-    // this._markStart();
     var totalCpuSteps = this._cpu.step();
-    //this._cpuTimeInFrame += (performance.now() - this._startTime);
 
-    //this._markStart();
     for(let i = 0 ; i < totalCpuSteps; i++) {
       this._apu.step();
     }
-    //this._apuTimeInFrame += (performance.now() - this._startTime);
 
-    // this._markStart();
     var totalPpuSteps = totalCpuSteps * 3;
     for(let i = 0; i < totalPpuSteps; i++) {
       this._ppu.step();
-    }
-    //this._ppuTimeInFrame += (performance.now() - this._startTime);
-
-    if(this._ppu.frameDrawn) {
-      this._readyToRender = true;
     }
 
     return totalCpuSteps;
