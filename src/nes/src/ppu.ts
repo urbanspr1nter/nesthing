@@ -527,7 +527,8 @@ export class Ppu {
       basePaletteAddress + (paletteOffset - 1)
     );
 
-    this._frameBuffer.draw(y, x, PpuPalette[colorByte]);
+    // this._frameBuffer.draw(y, x, PpuPalette[colorByte]);
+    this._uiFrameBuffer.drawPixel(x, y, PpuPalette[colorByte]);
   }
 
   private _getSpritePixel(): number[] {
@@ -742,7 +743,7 @@ export class Ppu {
 
     this._cycles++;
     if (this._cycles > 340) {
-      this._drawScanline();
+      // this._drawScanline();
       this._scanlines++;
       this._cycles = 0;
 
@@ -760,7 +761,7 @@ export class Ppu {
 
   private _drawScanline() {
     if(this._scanlines < 240) {
-      this._uiFrameBuffer.drawScanline(this._scanlines);
+      this._uiFrameBuffer.drawScanline();
     }
   }
 
@@ -834,6 +835,7 @@ export class Ppu {
 
     if (this._scanlines === 241 && this._cycles === 1) {
       this._frameDrawn = true;
+      this._uiFrameBuffer.drawScanline();
       this._setVblank();
     }
     if (isPrerenderLine && this._cycles === 1) {

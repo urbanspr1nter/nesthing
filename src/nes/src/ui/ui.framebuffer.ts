@@ -7,7 +7,11 @@ const HEIGHT = 240;
 export class UiFrameBuffer {
   private _canvas: HTMLCanvasElement;
   private _context: CanvasRenderingContext2D;
-  private _prevBuffer: { buffer: string[][] }
+  private _imageData: ImageData;
+  private _bufferView: ArrayBuffer;
+  private _image8Buffer: Uint8ClampedArray;
+  private _image32Buffer: Uint32Array;
+  private _prevBuffer: { buffer: string[][] };
   private _buffer: string[][];
   private _frameBuffer: FrameBuffer;
 
@@ -21,6 +25,10 @@ export class UiFrameBuffer {
     this._canvas = document.getElementById("main") as HTMLCanvasElement;
     this._context = this._canvas.getContext("2d", { alpha: false });
     this._context.imageSmoothingEnabled = false;
+    this._imageData = this._context.createImageData(WIDTH, HEIGHT);
+    this._bufferView = new ArrayBuffer(this._imageData.data.length);
+    this._image8Buffer = new Uint8ClampedArray(this._bufferView);
+    this._image32Buffer = new Uint32Array(this._bufferView);
 
     this.drawFrame();
   }
@@ -34,28 +42,17 @@ export class UiFrameBuffer {
     this.drawFrame();
   }
 
-  public drawScanline(scanline: number) {
-    this._buffer = this._frameBuffer.buffer();
-
-    for(let i = 0; i < WIDTH; i++) {
-      if (this._prevBuffer.buffer[scanline][i] === this._buffer[scanline][i]) {
-        continue;
-      }
-
-      this._prevBuffer.buffer[scanline][i] = this._buffer[scanline][i];
-      this._context.fillStyle = this._prevBuffer.buffer[scanline][i];
-      this._context.fillRect(i, scanline, 1, 1);
-    }
+  public drawScanline() {
+    this._imageData.data.set(this._image8Buffer);
+    this._context.putImageData(this._imageData, 0, 0);
   }
 
-  public drawPixel(dot: number, scanline: number, color: string) {
-    if(this._prevBuffer.buffer[scanline][dot] === color) {
-      return;
-    }
-
-    this._prevBuffer.buffer[scanline][dot] = color;
-    this._context.fillStyle = this._prevBuffer.buffer[scanline][dot];
-    this._context.fillRect(dot, scanline, 1, 1);
+  public drawPixel(dot: number, scanline: number, color: number) {
+    this._image32Buffer[scanline * WIDTH + dot] =
+      (0xff << 24) |
+      ((color & 0x0000ff) << 16) |
+      (color & 0x00ff00) |
+      (color >>> 16);
   }
 
   public drawFrame() {
