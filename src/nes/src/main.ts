@@ -1,28 +1,28 @@
 import { EventEmitter } from "events";
 
-import { Nes, Roms } from "./nes";
+import { Nes, Roms, NesOptions } from "./nes";
 
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
 import { UiKeyHandler } from "./ui/ui.keyhandler";
+import { Controller } from "./controller";
 
-interface NesOptions {
-  keyHandler: UiKeyHandler;
-  frameRenderer: UiFrameBuffer;
-  rom: Roms;
-};
 
 class NesConsole {
   private _nes: Nes;
   private _options: NesOptions;
 
   constructor(rom: Roms) {
-    this._nes = new Nes(new EventEmitter, rom);
-
+    const controller = new Controller();
     this._options = {
-      keyHandler: new UiKeyHandler(this._nes.controller1),
-      frameRenderer: null,
+      keyHandler: new UiKeyHandler(controller),
+      frameRenderer: new UiFrameBuffer(),
+      controller: controller,
       rom
     };
+
+    this._nes = new Nes(new EventEmitter, this._options);
+
+
   }
 
   get nes() {
@@ -39,16 +39,16 @@ class NesConsole {
 
   public setupDOM() {
     document.getElementById("btn-scale-1").addEventListener("click", () => {
-      //this._options.frameRenderer.scale(1);
+      this._options.frameRenderer.scale(1);
     });
     document.getElementById("btn-scale-2").addEventListener("click", () => {
-      //this._options.frameRenderer.scale(2);
+      this._options.frameRenderer.scale(2);
     });
     document.getElementById("btn-scale-3").addEventListener("click", () => {
-      //this._options.frameRenderer.scale(3);
+      this._options.frameRenderer.scale(3);
     });
     document.getElementById("btn-scale-4").addEventListener("click", () => {
-      //this._options.frameRenderer.scale(4);
+      this._options.frameRenderer.scale(4);
     });
 
     document.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -105,7 +105,7 @@ function triggerRun(time, uiFrameBuffer) {
   frameTime += (time - lastFrameTime);
   lastFrameTime = time;
 
-  while(lastFrameTime >= msPerFrame) {
+  //while(lastFrameTime >= msPerFrame) {
     while(true) {
       gameConsole.nes.run();
 
@@ -114,9 +114,9 @@ function triggerRun(time, uiFrameBuffer) {
         break;
       }
     }
-    frameTime -= msPerFrame;
-    break;
-  }
+    //frameTime -= msPerFrame;
+    //break;
+  //}
 
   requestAnimationFrame((t) => triggerRun(t, uiFrameBuffer));
 }

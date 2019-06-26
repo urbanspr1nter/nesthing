@@ -7,6 +7,15 @@ import { Controller } from "./controller";
 import { Apu } from "./apu";
 import { EventEmitter } from "events";
 import { UiSoundHandler } from "./ui/ui.soundhandler";
+import { UiFrameBuffer } from "./ui/ui.framebuffer";
+import { UiKeyHandler } from "./ui/ui.keyhandler";
+
+export interface NesOptions {
+  keyHandler: UiKeyHandler;
+  frameRenderer: UiFrameBuffer;
+  controller: Controller;
+  rom: Roms;
+};
 
 export enum Roms {
   MarioBros,
@@ -26,27 +35,27 @@ export class Nes {
   private _apu: Apu;
   private _ppu: Ppu;
   private _cpu: Cpu;
-  private _controller: Controller;
   private _eventListener: EventEmitter;
   private _uiSoundHandler: UiSoundHandler;
+  private _controller: Controller;
 
   private _cpuTimeInFrame: number;
   private _apuTimeInFrame: number;
   private _ppuTimeInFrame: number;
   private _startTime: number;
 
-  constructor(eventEmitter: EventEmitter, rom: Roms) {
-    if(rom === Roms.MarioBros) {
+  constructor(eventEmitter: EventEmitter, options: NesOptions) {
+    if(options.rom === Roms.MarioBros) {
       this._rom = RomFiles.MarioBros;
-    } else if(rom === Roms.DonkeyKong) {
+    } else if(options.rom === Roms.DonkeyKong) {
       this._rom = RomFiles.DonkeyKong;
-    } else if(rom === Roms.SpaceInvaders) {
+    } else if(options.rom === Roms.SpaceInvaders) {
       this._rom = RomFiles.SpaceInvaders;
     }
 
     this._ppuMemory = new PpuMemory();
-    this._ppu = new Ppu(this._ppuMemory);
-    this._controller = new Controller();
+    this._ppu = new Ppu(this._ppuMemory, options.frameRenderer);
+    this._controller = options.controller;
 
     this._eventListener = eventEmitter;
 

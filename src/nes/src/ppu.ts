@@ -102,8 +102,8 @@ export class Ppu {
   
   private _frameDrawn: boolean;
 
-  constructor(ppuMemory: PpuMemory) {
-    this._uiFrameBuffer = new UiFrameBuffer();
+  constructor(ppuMemory: PpuMemory, uiFrameBuffer: UiFrameBuffer) {
+    this._uiFrameBuffer = uiFrameBuffer;
 
     this._ppuMemory = ppuMemory;
 
