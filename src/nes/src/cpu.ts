@@ -87,11 +87,17 @@ export class Cpu {
   }
 
   private _setCurrentContext(address: number, addressingMode: AddressingModes) {
-    this._context = {
-      PC: this.PC,
-      Address: address & 0xffff,
-      Mode: addressingMode
-    };
+    if(this._context === undefined) {
+      this._context = {
+        PC: 0,
+        Address: 0,
+        Mode: AddressingModes.Immediate
+      };
+    }
+    
+    this._context.PC = this.PC;
+    this._context.Address = address & 0xffff;
+    this._context.Mode = addressingMode;
   }
 
   private _interruptReset(): void {
@@ -835,6 +841,7 @@ export class Cpu {
       this._runStallCycle();
       return this._currentCycles - prevCurrentCycles;
     }
+    
     if (this._interrupt === InterruptRequestType.NMI) {
       this._handleNmi();
     } else if (
@@ -843,6 +850,7 @@ export class Cpu {
     ) {
       this.irq();
     }
+    
     this._interrupt = InterruptRequestType.None;
 
     const op = this._memory.get(this.PC);

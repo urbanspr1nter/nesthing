@@ -61,9 +61,7 @@ export class Apu {
     this._square1 = new PulseWave(2);
     this._triangle = new TriangleWave();
     this._noise = new NoiseWave();
-
     this._sampleEmitter = emitter;
-
   }
 
   public setCpu(cpu: Cpu) {
@@ -112,7 +110,6 @@ export class Apu {
         this._triangle.writeControl(value);
         break;
       case 0x4009:
-        // Intentionally blank :)
         break;
       case 0x400a:
         this._triangle.writeTimerLow(value);
@@ -124,7 +121,6 @@ export class Apu {
         this._noise.writeControl(value);
         break;
       case 0x400d:
-        // Intentionally blank :)
         break;
       case 0x400e:
         this._noise.writePeriod(value);
@@ -173,6 +169,7 @@ export class Apu {
 
     const s1 = Math.trunc(cycle1 / this._sampleRate);
     const s2 = Math.trunc(cycle2 / this._sampleRate);
+
     if (s1 !== s2) {
       this._currentCyclesForFrame++;
 
