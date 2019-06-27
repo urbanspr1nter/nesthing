@@ -15,7 +15,7 @@ export interface NesOptions {
   frameRenderer: UiFrameBuffer;
   controller: Controller;
   rom: Roms;
-};
+}
 
 export enum Roms {
   MarioBros,
@@ -26,7 +26,7 @@ export const RomFiles = {
   MarioBros: require("./roms/mario.json"),
   DonkeyKong: require("./roms/donkey.json"),
   SpaceInvaders: require("./roms/space.json")
-}
+};
 
 export class Nes {
   private _rom: any;
@@ -45,11 +45,11 @@ export class Nes {
   private _startTime: number;
 
   constructor(eventEmitter: EventEmitter, options: NesOptions) {
-    if(options.rom === Roms.MarioBros) {
+    if (options.rom === Roms.MarioBros) {
       this._rom = RomFiles.MarioBros;
-    } else if(options.rom === Roms.DonkeyKong) {
+    } else if (options.rom === Roms.DonkeyKong) {
       this._rom = RomFiles.DonkeyKong;
-    } else if(options.rom === Roms.SpaceInvaders) {
+    } else if (options.rom === Roms.SpaceInvaders) {
       this._rom = RomFiles.SpaceInvaders;
     }
 
@@ -97,7 +97,7 @@ export class Nes {
   set readyToRender(value: boolean) {
     this._ppu.frameDrawn = value;
   }
-  
+
   public cpuMemory(): number[] {
     return this._memory.bits();
   }
@@ -123,22 +123,33 @@ export class Nes {
   public run(): number {
     this._markStart();
     var totalCpuSteps = this._cpu.step();
-    this._cpuTimeInFrame += (performance.now() - this._startTime);
+    this._cpuTimeInFrame += performance.now() - this._startTime;
 
     this._markStart();
-    for(let i = 0 ; i < totalCpuSteps; i++) {
+    for (let i = 0; i < totalCpuSteps; i++) {
       this._apu.step();
     }
-    this._apuTimeInFrame += (performance.now() - this._startTime);
+    this._apuTimeInFrame += performance.now() - this._startTime;
 
     this._markStart();
     var totalPpuSteps = totalCpuSteps * 3;
-    for(let i = 0; i < totalPpuSteps; i++) {
+    for (let i = 0; i < totalPpuSteps; i++) {
       this._ppu.step();
     }
-    this._ppuTimeInFrame += (performance.now() - this._startTime);
+    this._ppuTimeInFrame += performance.now() - this._startTime;
 
-    if(!!this.readyToRender) {
+    if (!!this.readyToRender) {
+      {
+        let totalTimeInFrame =
+          this._cpuTimeInFrame + this._apuTimeInFrame + this._ppuTimeInFrame;
+        let maxFrameTime = 1000 / 60;
+        if (totalTimeInFrame > maxFrameTime) {
+          console.warn(
+            `Total frame time: ${totalTimeInFrame} has exceeded max time per frame: ${maxFrameTime} by ${totalTimeInFrame -
+              maxFrameTime}`
+          );
+        }
+      }
       this._resetTimes();
     }
     return totalCpuSteps;

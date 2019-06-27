@@ -107,7 +107,7 @@ function triggerRun(timestamp: number, uiFrameBuffer: UiFrameBuffer) {
   frameTime += (timestamp - lastFrameTime);
   lastFrameTime = timestamp;
 
-  while(frameTime >= msPerFrame) {
+  //while(frameTime >= msPerFrame) {
     while(true){
       gameConsole.nes.run();
 
@@ -115,8 +115,8 @@ function triggerRun(timestamp: number, uiFrameBuffer: UiFrameBuffer) {
         break;
       }
     }
-    frameTime -= msPerFrame;
-  }
+    //frameTime -= msPerFrame;
+  //}
 
   requestAnimationFrame((t) => triggerRun(t, uiFrameBuffer));
 }

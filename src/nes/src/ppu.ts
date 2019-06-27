@@ -470,7 +470,7 @@ export class Ppu {
     const b = backgroundPixel % 4 !== 0;
     const s = spritePixelColor % 4 !== 0;
 
-    let color;
+    var color: number;
     if (!b && !s) {
       color = 0;
       usingBackgroundPixel = true;
@@ -504,7 +504,6 @@ export class Ppu {
       basePaletteAddress + (paletteOffset - 1)
     );
 
-    // this._frameBuffer.draw(y, x, PpuPalette[colorByte]);
     this._uiFrameBuffer.drawPixel(x, y, PpuPalette[colorByte]);
   }
 
@@ -604,8 +603,8 @@ export class Ppu {
 
     const attributePalette = (attributes & 3) << 2;
     for (let i = 0; i < 8; i++) {
-      let p1;
-      let p2;
+      var p1: number;
+      var p2: number;
       if ((attributes & 0x40) === 0x40) {
         p1 = lowTileByte & 1;
         p2 = (highTileByte & 1) << 1;
