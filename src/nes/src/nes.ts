@@ -94,7 +94,7 @@ export class Nes {
     return this._ppu.frameDrawn;
   }
 
-  public setReadyToRender(value: boolean) {
+  set readyToRender(value: boolean) {
     this._ppu.frameDrawn = value;
   }
   
@@ -121,17 +121,26 @@ export class Nes {
   }
 
   public run(): number {
+    this._markStart();
     var totalCpuSteps = this._cpu.step();
+    this._cpuTimeInFrame += (performance.now() - this._startTime);
 
+    this._markStart();
     for(let i = 0 ; i < totalCpuSteps; i++) {
       this._apu.step();
     }
+    this._apuTimeInFrame += (performance.now() - this._startTime);
 
+    this._markStart();
     var totalPpuSteps = totalCpuSteps * 3;
     for(let i = 0; i < totalPpuSteps; i++) {
       this._ppu.step();
     }
+    this._ppuTimeInFrame += (performance.now() - this._startTime);
 
+    if(!!this.readyToRender) {
+      this._resetTimes();
+    }
     return totalCpuSteps;
   }
 

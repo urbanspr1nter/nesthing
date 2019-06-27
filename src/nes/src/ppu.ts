@@ -1,13 +1,19 @@
 /**
+ * ppu.ts
+ *
  * This PPU is heavily based on fogleman's NES PPU written in Go.
  */
-
 import { PpuMemory } from "./ppumemory";
 import { PpuPalette } from "./colors";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
+
+/**
+ * Constants
+ */
+const PPU_MAX_SPRITES_PER_SCANLINE = 8;
 
 /**
  * The data structure to encapsulate the various sprite information
@@ -21,18 +27,19 @@ interface SpriteData {
 }
 
 /**
- * JS gives us no native "pretty" way to handle 64 bit numbers. BigInt
- * is also too slow.
+ * JS gives us no native "pretty" way to handle 64 bit numbers.
  *
- * So we'll just slam 2 numbers together with a high and low property
- * to serve the same purpose.
+ * I have personally found that BigInt tends to be a bit too slow
+ * a lot of the frequent shifts we would be required to do for background
+ * pattern tiles.
+ *
+ * In order to get some sort of speed, we can slam 2 numbers together with
+ * a "high" and "low" property to serve the same purpose.
  */
 interface BackgroundData {
   DataHigh32: number;
   DataLow32: number;
 }
-
-const MAX_SPRITES_PER_SCANLINE = 8;
 
 export class Ppu {
   private _uiFrameBuffer: UiFrameBuffer;
@@ -99,7 +106,7 @@ export class Ppu {
 
   private _nmiPrevious: boolean;
   private _nmiDelay: number;
-  
+
   private _frameDrawn: boolean;
 
   constructor(ppuMemory: PpuMemory, uiFrameBuffer: UiFrameBuffer) {
@@ -141,23 +148,9 @@ export class Ppu {
     this._frameDrawn = value;
   }
 
-  private _initializeOam() {
-    this._oam = [];
-    for (let i = 0; i <= 0xff; i++) {
-      this._oam[i] = 0x0;
-    }
-  }
-
-  private _initializeSprites() {
-    this._onScreenSprites = [];
-    for (let i = 0; i < 8; i++) {
-      this._onScreenSprites.push({
-        BaseOamAddress: 0,
-        PositionX: 0,
-        Data: 0,
-        Priority: 0
-      });
-    }
+  public step(): void {
+    this._tick();
+    this._processTick();
   }
 
   public setCpuMemory(memory: Memory) {
@@ -347,10 +340,6 @@ export class Ppu {
     this._v += this._regPPUCTRL_vramIncrement;
   }
 
-  private _isVblank(): boolean {
-    return this._regPPUSTATUS_vblankStarted;
-  }
-
   private _setVblank() {
     this._regPPUSTATUS_vblankStarted = true;
     this._nmiChange();
@@ -362,8 +351,10 @@ export class Ppu {
   }
 
   private _nmiChange() {
-    const nmi = this._regPPUCTRL_generateNmiAtVblankStart && this._regPPUSTATUS_vblankStarted;
-    if(nmi && !this._nmiPrevious) {
+    const nmi =
+      this._regPPUCTRL_generateNmiAtVblankStart &&
+      this._regPPUSTATUS_vblankStarted;
+    if (nmi && !this._nmiPrevious) {
       this._nmiDelay = 15;
     }
 
@@ -467,37 +458,34 @@ export class Ppu {
     let usingBackgroundPixel = false;
 
     let backgroundPixel = this._getBackgroundPixel(x, y);
-    let spritePixel = this._getSpritePixel();
+    var [spriteIndex, spritePixelColor] = this._getSpritePixel();
 
     if (x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
       backgroundPixel = 0;
     }
     if (x < 8 && !this._regPPUMASK_showSpritesLeftMost8pxOfScreen) {
-      spritePixel[1] = 0;
+      spritePixelColor = 0;
     }
 
     const b = backgroundPixel % 4 !== 0;
-    const s = spritePixel[1] % 4 !== 0;
+    const s = spritePixelColor % 4 !== 0;
 
     let color;
     if (!b && !s) {
       color = 0;
       usingBackgroundPixel = true;
     } else if (!b && s) {
-      color = spritePixel[1] | 0x10;
+      color = spritePixelColor | 0x10;
       usingBackgroundPixel = false;
     } else if (b && !s) {
       color = backgroundPixel;
       usingBackgroundPixel = true;
     } else {
-      if (
-        this._onScreenSprites[spritePixel[0]].BaseOamAddress === 0 &&
-        x < 255
-      ) {
+      if (this._onScreenSprites[spriteIndex].BaseOamAddress === 0 && x < 255) {
         this._regPPUSTATUS_spriteHit = true;
       }
-      if (this._onScreenSprites[spritePixel[0]].Priority === 0) {
-        color = spritePixel[1] | 0x10;
+      if (this._onScreenSprites[spriteIndex].Priority === 0) {
+        color = spritePixelColor | 0x10;
         usingBackgroundPixel = false;
       } else {
         color = backgroundPixel;
@@ -666,8 +654,8 @@ export class Ppu {
       spriteCount++;
     }
 
-    if (spriteCount > MAX_SPRITES_PER_SCANLINE) {
-      spriteCount = MAX_SPRITES_PER_SCANLINE;
+    if (spriteCount > PPU_MAX_SPRITES_PER_SCANLINE) {
+      spriteCount = PPU_MAX_SPRITES_PER_SCANLINE;
       this._regPPUSTATUS_spriteOverflow = true;
     }
 
@@ -709,9 +697,13 @@ export class Ppu {
   }
 
   private _tick(): void {
-    if(this._nmiDelay > 0) {
+    if (this._nmiDelay > 0) {
       this._nmiDelay--;
-      if(this._nmiDelay && this._regPPUCTRL_generateNmiAtVblankStart && this._regPPUSTATUS_vblankStarted) {
+      if (
+        this._nmiDelay &&
+        this._regPPUCTRL_generateNmiAtVblankStart &&
+        this._regPPUSTATUS_vblankStarted
+      ) {
         this._cpu.requestInterrupt(InterruptRequestType.NMI);
       }
     }
@@ -827,8 +819,22 @@ export class Ppu {
     }
   }
 
-  public step(): void {
-    this._tick();
-    this._processTick();
+  private _initializeOam() {
+    this._oam = [];
+    for (let i = 0; i <= 0xff; i++) {
+      this._oam[i] = 0x0;
+    }
+  }
+
+  private _initializeSprites() {
+    this._onScreenSprites = [];
+    for (let i = 0; i < 8; i++) {
+      this._onScreenSprites.push({
+        BaseOamAddress: 0,
+        PositionX: 0,
+        Data: 0,
+        Priority: 0
+      });
+    }
   }
 }

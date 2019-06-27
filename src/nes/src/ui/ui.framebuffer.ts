@@ -8,6 +8,7 @@ export class UiFrameBuffer {
   private _bufferView: ArrayBuffer;
   private _image8Buffer: Uint8ClampedArray;
   private _image32Buffer: Uint32Array;
+  private _factor: number;
 
   constructor() {
     this._canvas = document.getElementById("main") as HTMLCanvasElement;
@@ -19,14 +20,16 @@ export class UiFrameBuffer {
     this._image8Buffer = new Uint8ClampedArray(this._bufferView);
     this._image32Buffer = new Uint32Array(this._bufferView);
 
+    this._factor = 1;
     this._clearPixelBuffer();
     this.draw();
   }
 
   public scale(factor: number) {
-    this._canvas.width = factor * WIDTH;
-    this._canvas.height = factor * HEIGHT;
-    this._context.scale(factor, factor);
+    this._factor = factor;
+    this._canvas.width = this._factor * WIDTH;
+    this._canvas.height = this._factor * HEIGHT;
+    this._context.scale(this._factor, this._factor);
 
     this._clearPixelBuffer();
     this.draw();
@@ -46,7 +49,7 @@ export class UiFrameBuffer {
   }
 
   private _clearPixelBuffer() {
-    this._context.fillStyle = "#000000";
-    this._context.fillRect(0, 0, WIDTH, HEIGHT);
+    this._context.fillStyle = "#0000C0";
+    this._context.fillRect(0, 0, this._factor * WIDTH, this._factor * HEIGHT);
   }
 }

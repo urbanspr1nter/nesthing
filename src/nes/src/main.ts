@@ -87,36 +87,36 @@ document.getElementById("btn-play").addEventListener("click", () => {
   gameConsole = new NesConsole(game);
   gameConsole.setupDOM();
 
-  document.getElementById("btn-scale-2").click();
-
   setTimeout(function () {
     triggerRun(performance.now(), gameConsole.uiFrameBuffer);
   }, 1000);
 });
 
-var msPerFrame = 1000 / 16;
+var msPerFrame = 1000 / 60;
 var frameTime = 0;
 var lastFrameTime = 0;
-function triggerRun(time, uiFrameBuffer) {
-  if(!!lastFrameTime) {
-    lastFrameTime = time;
+function triggerRun(timestamp: number, uiFrameBuffer: UiFrameBuffer) {
+  if(lastFrameTime === 0) {
+    lastFrameTime = timestamp;
   }
 
-  frameTime += (time - lastFrameTime);
-  lastFrameTime = time;
+  if(gameConsole.nes.readyToRender) {
+    gameConsole.nes.readyToRender = false;
+  }
 
-  //while(lastFrameTime >= msPerFrame) {
-    while(true) {
+  frameTime += (timestamp - lastFrameTime);
+  lastFrameTime = timestamp;
+
+  while(frameTime >= msPerFrame) {
+    while(true){
       gameConsole.nes.run();
 
       if(gameConsole.nes.readyToRender) {
-        gameConsole.nes.setReadyToRender(false);
         break;
       }
     }
-    //frameTime -= msPerFrame;
-    //break;
-  //}
+    frameTime -= msPerFrame;
+  }
 
   requestAnimationFrame((t) => triggerRun(t, uiFrameBuffer));
 }
