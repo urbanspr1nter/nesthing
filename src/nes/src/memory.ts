@@ -74,7 +74,7 @@ export class Memory {
 
   public get(address: number) {
     address &= 0xffff;
-    
+
     if (address < 0x2000) {
       return this._memory[address % 0x800] & 0xff;
     } else if (address >= 0x2000 && address <= 0x3fff) {

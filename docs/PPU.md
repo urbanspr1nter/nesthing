@@ -4,49 +4,95 @@
 
 Probably one of the more difficult things when writing an NES emulator from my experience so far is just knowing where to begin when it comes to implementing the PPU. 
 
-After a while, running `nestest.nes` a few times, you will get a sense of some security in that your emulated 2A03 CPU is "good enough". Another thing is that you will need something new to show off!  
+After a while, running `nestest.nes` a few times, you will some sense of some security in that your emulated 2A03 CPU is "good enough". Another thing is that you will need something new to show off!  
 
-Now it's time to implement the PPU! But, where do we begin? This document aims to give one a "first start" when it comes to writing a basic NES PPU emulation. As of this current time, NesThing doesn't really have a full-featured PPU -- yet. But it can output some background frames of *Donkey Kong*. 
+Now it's time to implement the PPU (Picture Processing Unit)! Where do we begin? This document aims to give the programmer a "first start" when it comes to writing basic NES PPU emulation. 
+
+At this current time, `NesThing` doesn't really have a full-featured PPU -- yet. However, *Mario Bros.* and *Donkey Kong* are somewhat playable, so the document aims to explain the PPU in this context. 
 
 The following discussion aims to give the reader an approach to achieve the same thing with their own implementation. 
 
-I should also warn that everything that will be discussed in this document is in the context of NTSC video. However, most of the information is applicable to PAL too... it's just that the *exact* numbers will be slightly differet, but if you're familiar with video, you will know what to look out for... refresh rates, timings, etc. These are all easily referenced elsewhere.
+I should also warn that everything that will be discussed in this document is in the context of **NTSC video**. However, most of the information is applicable to PAL too. I suppose that it's just the *exact* numbers will be slightly different, but if you're familiar with video, you will know what to look out for: refresh rates, timings, etc. These are all easily referenced elsewhere.
 
 ## The Facts
 
-The system architecture of the NES is not **von Neumann**. That is, it is **not** a system architecture that is designed for components to work serially, where all input is given to the CPU, and the CPU works to give output to some other device. The basic diagram from this [article](https://en.wikipedia.org/wiki/Von_Neumann_architecture) is shown below:
+The system architecture of the NES is not **von Neumann**. In other words, it is **not** a system architecture that is designed for components to work serially, where all input is given to the CPU, and the CPU works to give output to some other device. The basic diagram from this [article](https://en.wikipedia.org/wiki/Von_Neumann_architecture) is shown below:
 
 ![von Neumann architecture](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Von_Neumann_Architecture.svg/2560px-Von_Neumann_Architecture.svg.png)
 
+Notice that the central processing unit is literally the **central** processing unit. All input data from I/O devices is passed through some bus where the CPU receives this information, and processes this information for output.
 
-Since the NES is not a von Neumann machine, and the CPU and PPU do not execute serially. These 2 components execute in parallel. Therefore, since the CPU and PPU share the same data bus, they can really mess each other up depending on how programs are written! 
+To give a very dumbed-down example, think of the von Neumann architecture in the perspective of a desktop computer. With input data being passed through to the CPU, this means that a key stroke from the keyboard would be registered as a binary stream of data from a controller to the CPU. The CPU is then responsible for interpreting this data and then outputting it onto another component in the system, such as a monitor. 
 
-When first thinking about how the CPU and PPU execute alongside one another, it is not obvious. One approach is to write a multi-threaded emulator where the CPU and PPU are executed in 2 different threads at once and access each other through calls. This is very complicated, and generally not a recommend approach at all.
+Since the NES is not a von Neumann machine, and the CPU and PPU do not execute serially. These two components then execute in parallel. To make matters more interesting, the CPU and PPU share the same data bus. In effect, these components can interfere with each other through corruption of data depending on how programs (games) are written.
 
-Since the NES CPU and PPU execute at the same time in real-life, we will compensate by emulating this parallel execution through explotation of the fact that modern computers are generally very fast. We can execute the CPU and PPU separately, in the smallest possible time periods we can manage. We can define a "small time period" as a single CPU instruction. Then we can decide that for every CPU instruction, the emulator will execute the number of PPU cycles needed to "catch-up" to the CPU. See the discussion on [emulator catchup](https://wiki.nesdev.com/w/index.php/Catch-up).
+To the beginner emulator author such as myself, I have found that understanding the pattern on how the CPU and PPU execute alongside one another, is not immediately obvious. Personally, I was used to the von Neumann style architecture of execution, and could not accept the fact that the CPU and PPU were independent and must cooperate with each other through the use of various registers and flags found within them.
 
-## Execution
+## Emulating Execution
 
-The CPU runs at a clock rate of 1.79 MHz, and since the PPU runs 3x the number of cycles the CPU runs for every instruction, the hardware PPU can be deduced to have a clock of 5.37 MHz. All these clock speeds are derived by a main clock with the CPU and PPU clock values being some divided value of it.
-
-In the case of the NES, the main clock is `21.4772 MHz` with the CPU clock being `21.4772/12` and PPU being `21.4772/4`.
-
-In our implementation, we will execute 3 PPU cycles for every CPU cycle. For every instruction, where the number of cycles it had taken the emulated CPU core to execute, we can define it by `cpuCyclesExecuted`. The PPU cycles then can be found by multiplying this number by 3 -- which can be represented as: `ppuCyclesToRun = 3 * cpuCyclesExecuted`.
-
-
-Forgetting about optimizations, we can visualize pseudo-code to be a loop like this for "parallel" CPU and PPU execution: 
+The typical execution loop of our emulator, in pseudo code is probably similar to this:
 
 ```
-while(cpuIsRunning) {
-    cpuCyclesExecuted = cpu.Run();
+while (true) {
+    cpu.step();
+}
+```
 
-    let ppuCyclesToRun = 3 * cpuCyclesExecuted;
-    while(ppuCycles > 0) {
-        ppu.run(); // the ppu.run() method runs the PPU for 1 cycle.
-        ppuCyclesToRun--;
+Where `step` executes a single CPU instruction.
+
+We need to figure out where, and when we can execute the PPU during this emulation cycle. Again, the components aren't executed serially, but we can emulate parallel execution through stepping through each cycle and executing the number of appropriate cycles to stay synchronized.
+
+The PPU executes 3 PPU cycles per 1 CPU cycle as it is clocked 3 times faster than the CPU. Therefore, an approach to synchronize the PPU to the CPU is to execute the exact number of PPU cycles based off of the CPU cycles:
+
+```
+while (true) {
+    var cpuCycles = cpu.step();
+
+    var ppuCycles = 3 * cpuCycles;
+
+    for (let i = 0; i < ppuCycles; i++) {
+        ppu.step();
     }
 }
 ```
+
+Since the NES CPU and PPU execute at the same time in real-life, we will compensate by emulating this parallel execution through explotation of the fact that modern computers are generally very fast.
+
+We can execute the CPU and PPU separately, in the smallest possible time periods we can manage. We can define a "small time period" as a single CPU instruction. 
+
+This approach relies on the CPU to be the "master" of the system and have the PPU be emulated to execute at the same time as the CPU by synchronizing the number of cycles exceuted by the CPU by 3 times. 
+
+Since your desktop computer runs very fast, doing this frequently will create the illusion of parallel execution.
+
+The approach I have described here is called *catch-up*. A good resource is to read up on emulator catch up from **NesDev**. See the discussion on [emulator catchup](https://wiki.nesdev.com/w/index.php/Catch-up).
+
+One temptation for an approach to emulate the CPU and PPU executing with each other is to write a multi-threaded emulator where the CPU and PPU are executed in 2 different threads at once, and access each other through calls. This is very complicated, and generally not a recommend approach at all. 
+
+## Execution
+
+The CPU runs at a clock rate of 1.79 MHz, and since the PPU runs 3x the number of cycles the CPU runs for every instruction, the hardware PPU can be calculated to have a clock of about 5.37 MHz. All these clock speeds are derived by a main clock with the CPU and PPU clock values being some divided value of it.
+
+In the case of the NES, the main clock is `21.4772 MHz` with the CPU clock being `21.4772/12` and PPU being `21.4772/4`.
+
+In our implementation, we will execute 3 PPU cycles for every CPU cycle. For every instruction, where the number of cycles it had taken the emulated CPU core to execute, we can define it by `cpuCycles`. The PPU cycles then can be found by multiplying this number by 3 -- which can be represented as: `ppuCycles = 3 * cpuCycles`.
+
+As shown previously, our emulated catch-up routine looks like this:
+
+```
+while (true) {
+    var cpuCycles = cpu.step();
+
+    var ppuCycles = 3 * cpuCycles;
+
+    for (let i = 0; i < ppuCycles; i++) {
+        ppu.step();
+    }
+}
+```
+
+It's now time to dive into how the CPU and PPU can communicate with each other.
+
+First, we need to think about how their data is passed back and forth.
 
 ## Interfacing Between the CPU and PPU
 
