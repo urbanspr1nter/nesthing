@@ -61,9 +61,6 @@ export class Memory {
     } else if (address === 0x4014) {
       return this._ppu.write$4014(value);
     } else if (address === 0x4016) {
-      // Write 1 $4016 to signal the controller to poll its input
-      // Write 0 to $4016 to finish the poll
-      // 4016/4017 becomes ready for polling
       this._controllerOne.write(value);
       this._controllerTwo.write(value);
     } else if (address >= 0x4000 && address <= 0x400f) {
@@ -76,6 +73,8 @@ export class Memory {
   };
 
   public get(address: number) {
+    address &= 0xffff;
+    
     if (address < 0x2000) {
       return this._memory[address % 0x800] & 0xff;
     } else if (address >= 0x2000 && address <= 0x3fff) {

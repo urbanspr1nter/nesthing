@@ -27,65 +27,53 @@ export class UiKeyHandler {
   private _controllerOne: Controller;
   private _controllerTwo: Controller;
 
-  private _keyPressedPlayer1: { [id: number]: boolean } = {
-    ...this._getDefaultKeySettings()
-  };
-  private _keyPressedPlayer2: { [id: number]: boolean } = {
-    ...this._getDefaultKeySettings()
-  };
+  private _keyPressedPlayer1: { [id: number]: boolean };
+  private _keyPressedPlayer2: { [id: number]: boolean };
 
   constructor(controllerOne: Controller, controllerTwo: Controller) {
     this._controllerOne = controllerOne;
     this._controllerTwo = controllerTwo;
+
+    this._keyPressedPlayer1 = {
+      ...this._getDefaultKeySettings()
+    };
+
+    this._keyPressedPlayer2 = {
+      ...this._getDefaultKeySettings()
+    };
   }
 
   public handlePlayerOneKeyDown(key: string) {
     if (key === PlayerOneKeyMap.Start) {
       this._keyPressedPlayer1[Buttons.Start] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.Start] = false;
     }
 
     if (key === PlayerOneKeyMap.Select) {
       this._keyPressedPlayer1[Buttons.Select] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.Select] = false;
     }
 
     if (key === PlayerOneKeyMap.A) {
       this._keyPressedPlayer1[Buttons.A] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.A] = false;
     }
 
     if (key === PlayerOneKeyMap.B) {
       this._keyPressedPlayer1[Buttons.B] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.B] = false;
     }
 
     if (key === PlayerOneKeyMap.Up) {
       this._keyPressedPlayer1[Buttons.Up] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.Up] = false;
     }
 
     if (key === PlayerOneKeyMap.Down) {
       this._keyPressedPlayer1[Buttons.Down] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.Down] = false;
     }
 
     if (key === PlayerOneKeyMap.Left) {
       this._keyPressedPlayer1[Buttons.Left] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.Left] = false;
     }
 
     if (key === PlayerOneKeyMap.Right) {
       this._keyPressedPlayer1[Buttons.Right] = true;
-    } else {
-      this._keyPressedPlayer1[Buttons.Right] = false;
     }
 
     this._controllerOne.setButtons(this._keyPressedPlayer1);

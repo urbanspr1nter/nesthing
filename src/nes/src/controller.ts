@@ -15,13 +15,13 @@ export enum ControllerPlayer {
 }
 
 export class Controller {
-  private _buttonMapPlayer1: { [id: number]: boolean };
+  private _buttonMapPlayer: { [id: number]: boolean };
 
-  private _strobePlayer1: number;
-  private _indexPlayer1: number;
+  private _strobePlayer: number;
+  private _indexPlayer: number;
 
   constructor() {
-    this._buttonMapPlayer1 = {
+    this._buttonMapPlayer = {
       0: false,
       1: false,
       2: false,
@@ -32,33 +32,33 @@ export class Controller {
       7: false
     };
 
-    this._strobePlayer1 = 0;
-    this._indexPlayer1 = 0;
+    this._strobePlayer = 0;
+    this._indexPlayer = 0;
   }
 
   public setButtons(map: { [id: number]: boolean }) {
-    this._buttonMapPlayer1 = map;
+    this._buttonMapPlayer = map;
   }
 
   public write(value: number) {
-    this._strobePlayer1 = value;
-    if ((this._strobePlayer1 & 1) === 1) {
-      this._indexPlayer1 = 0;
+    this._strobePlayer = value;
+    if ((this._strobePlayer & 1) === 1) {
+      this._indexPlayer = 0;
     }
   }
 
   public read() {
     let value = 0;
 
-    if (this._indexPlayer1 < 8 && this._buttonMapPlayer1[this._indexPlayer1]) {
+    if (this._indexPlayer < 8 && this._buttonMapPlayer[this._indexPlayer]) {
       value = 1;
     }
-    this._indexPlayer1++;
+    this._indexPlayer++;
 
-    if ((this._strobePlayer1 & 1) === 1) {
-      this._indexPlayer1 = 0;
+    if ((this._strobePlayer & 1) === 1) {
+      this._indexPlayer = 0;
     }
 
-    return value;
+    return value & 0xff;
   }
 }
