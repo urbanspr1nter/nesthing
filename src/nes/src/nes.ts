@@ -5,7 +5,6 @@ import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
 import { Apu } from "./apu";
-import { EventEmitter } from "events";
 import { UiSoundHandler } from "./ui/ui.soundhandler";
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
 import { UiKeyHandler } from "./ui/ui.keyhandler";
@@ -35,7 +34,6 @@ export class Nes {
   private _apu: Apu;
   private _ppu: Ppu;
   private _cpu: Cpu;
-  private _eventListener: EventEmitter;
   private _uiSoundHandler: UiSoundHandler;
   private _controller: Controller;
 
@@ -44,7 +42,7 @@ export class Nes {
   private _ppuTimeInFrame: number;
   private _startTime: number;
 
-  constructor(eventEmitter: EventEmitter, options: NesOptions) {
+  constructor(options: NesOptions) {
     if (options.rom === Roms.MarioBros) {
       this._rom = RomFiles.MarioBros;
     } else if (options.rom === Roms.DonkeyKong) {
@@ -57,11 +55,9 @@ export class Nes {
     this._ppu = new Ppu(this._ppuMemory, options.frameRenderer);
     this._controller = options.controller;
 
-    this._eventListener = eventEmitter;
+    this._uiSoundHandler = new UiSoundHandler(0.8);
 
-    this._uiSoundHandler = new UiSoundHandler(0.8, this._eventListener);
-
-    this._apu = new Apu(this._eventListener, 44100);
+    this._apu = new Apu(this._uiSoundHandler, 44100);
     this._memory = new Memory(this._ppu, this._apu, this._controller);
     this._cpu = new Cpu(this._memory);
 

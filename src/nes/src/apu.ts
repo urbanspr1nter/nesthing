@@ -7,6 +7,7 @@ import { PulseWave } from "./apu.pulsewave";
 import { TriangleWave } from "./apu.trianglewave";
 import { NoiseWave } from "./apu.noisewave";
 import { DmcSample } from "./apu.dmcsample";
+import { UiSoundHandler } from "./ui/ui.soundhandler";
 
 const pulseTable = [];
 const tndTable = [];
@@ -20,17 +21,17 @@ export class Apu {
   private _framePeriod: number;
   private _frameValue: number;
   private _frameIrq: boolean;
-  private _sampleEmitter: EventEmitter;
   private _filterChain: FilterChain;
   private _square0: PulseWave;
   private _square1: PulseWave;
   private _triangle: TriangleWave;
   private _noise: NoiseWave;
   private _dmc: DmcSample;
+  private _uiSoundHandler: UiSoundHandler;
 
   public readyToRender: boolean = false;
 
-  constructor(emitter: EventEmitter, audioSampleRate: number) {
+  constructor(uiSoundHandler: UiSoundHandler, audioSampleRate: number) {
     for (let i = 0; i < 31; i++) {
       pulseTable.push(Math.fround(95.52 / (8128.0 / Math.fround(i) + 100)));
     }
@@ -61,7 +62,7 @@ export class Apu {
     this._square1 = new PulseWave(2);
     this._triangle = new TriangleWave();
     this._noise = new NoiseWave();
-    this._sampleEmitter = emitter;
+    this._uiSoundHandler = uiSoundHandler;
   }
 
   public setCpu(cpu: Cpu) {
@@ -232,7 +233,7 @@ export class Apu {
 
   private _sendSample() {
     const output = this._filterChain.step(this._output());
-    this._sampleEmitter.emit("onsamplereceive", output);
+    this._uiSoundHandler.receiveSample(output);
   }
 
   private _output() {

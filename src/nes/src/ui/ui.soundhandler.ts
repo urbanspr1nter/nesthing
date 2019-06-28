@@ -10,9 +10,8 @@ export class UiSoundHandler {
     private _buffer: AudioBuffer;
     private _bufferSource: AudioBufferSourceNode;
     private _bufferDataQueue: number[];
-    private _eventListener: EventEmitter;
 
-    constructor(masterVolume: number, eventListener: EventEmitter) {
+    constructor(masterVolume: number) {
         this._audioContext = new AudioContext();
         this._masterVolume = masterVolume;
 
@@ -27,12 +26,9 @@ export class UiSoundHandler {
         );
 
         this._bufferDataQueue = [];
-        this._eventListener = eventListener;
-
-        this._eventListener.on("onsamplereceive", this._receivedAudioSample);
     }
 
-    private _receivedAudioSample = (value: number) => {
+    public receiveSample(value: number) {
         if(this._bufferDataQueue.length >= AUDIO_BUFFER_LENGTH) {
             
             const bufferData = this._buffer.getChannelData(0);
