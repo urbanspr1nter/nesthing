@@ -36,11 +36,7 @@ export class UiFrameBuffer {
   }
 
   public drawPixel(dot: number, scanline: number, color: number) {
-    this._image32Buffer[scanline * WIDTH + dot] =
-      (0xff << 24) |
-      ((color & 0x0000ff) << 16) |
-      (color & 0x00ff00) |
-      (color >>> 16);
+    this._image32Buffer[scanline * WIDTH + dot] = color;
   }
 
   public draw() {

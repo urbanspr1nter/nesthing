@@ -10,6 +10,16 @@ import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
 
+for (let i = 0; i < PpuPalette.length; i++) {
+  const color = PpuPalette[i];
+
+  PpuPalette[i] =
+    0xff000000 |
+    ((color & 0x0000ff) << 16) |
+    (color & 0x00ff00) |
+    (color >>> 16);
+}
+
 /**
  * Constants
  */
@@ -440,7 +450,7 @@ export class Ppu {
     }
 
     const pixel =
-      (this._bgTile.DataHigh32 >>> ((7 - this._regPPUSCROLL_x) * 4)) & 0xf;
+      (this._bgTile.DataHigh32 >>> ((7 - this._regPPUSCROLL_x) << 2)) & 0xf;
 
     return pixel;
   }
@@ -712,7 +722,7 @@ export class Ppu {
         this._cycles = 0;
         this._scanlines = 0;
         this._frames++;
-        if (this._frames % 2) {
+        if (this._frames % 2 === 0) {
           this._evenFrame = true;
         } else {
           this._evenFrame = false;
@@ -729,7 +739,7 @@ export class Ppu {
       if (this._scanlines > 261) {
         this._scanlines = 0;
         this._frames++;
-        if (this._frames % 2) {
+        if (this._frames % 2 === 0) {
           this._evenFrame = true;
         } else {
           this._evenFrame = false;

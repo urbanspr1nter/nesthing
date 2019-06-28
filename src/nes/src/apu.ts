@@ -3,10 +3,10 @@ import { InterruptRequestType } from "./cpu.interface";
 import { FilterChain } from "./apu/filterchain";
 import { EventEmitter } from "events";
 import { CpuFrequencyHz, ApuFrameCounterRate } from "./constants";
-import { PulseWave } from "./apu.pulsewave";
-import { TriangleWave } from "./apu.trianglewave";
-import { NoiseWave } from "./apu.noisewave";
-import { DmcSample } from "./apu.dmcsample";
+import { PulseWave } from "./apu/apu.pulsewave";
+import { TriangleWave } from "./apu/apu.trianglewave";
+import { NoiseWave } from "./apu/apu.noisewave";
+import { DmcSample } from "./apu/apu.dmcsample";
 import { UiSoundHandler } from "./ui/ui.soundhandler";
 
 const pulseTable = [];

@@ -1,4 +1,4 @@
-import { ApuNoiseTable, ApuLengthTable } from "./constants";
+import { ApuNoiseTable, ApuLengthTable } from "../constants";
 
 export class NoiseWave {
   private _noise: Noise;
