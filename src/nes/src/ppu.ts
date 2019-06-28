@@ -10,16 +10,6 @@ import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
 
-for (let i = 0; i < PpuPalette.length; i++) {
-  const color = PpuPalette[i];
-
-  PpuPalette[i] =
-    0xff000000 |
-    ((color & 0x0000ff) << 16) |
-    (color & 0x00ff00) |
-    (color >>> 16);
-}
-
 /**
  * Constants
  */
@@ -121,9 +111,7 @@ export class Ppu {
 
   constructor(ppuMemory: PpuMemory, uiFrameBuffer: UiFrameBuffer) {
     this._uiFrameBuffer = uiFrameBuffer;
-
     this._ppuMemory = ppuMemory;
-
     this._scanlines = 0;
     this._cycles = 0;
 

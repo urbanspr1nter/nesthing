@@ -1,4 +1,4 @@
-export const PpuPalette = [
+const palette = [
   0x666666, 0x002a88, 0x1412a7, 0x3b00a4, 0x5c007e, 0x6e0040, 0x6c0600, 0x561d00,
   0x333500, 0x0b4800, 0x005200, 0x004f08, 0x00404d, 0x000000, 0x000000, 0x000000,
   0xadadad, 0x155fd9, 0x4240ff, 0x7527fe, 0xa01acc, 0xb71e7b, 0xb53120, 0x994e00,
@@ -8,3 +8,19 @@ export const PpuPalette = [
   0xfffeff, 0xc0dfff, 0xd3d2ff, 0xe8c8ff, 0xfbc2ff, 0xfec4ea, 0xfeccc5, 0xf7d8a5,
   0xe4e594, 0xcfef96, 0xbdf4ab, 0xb3f3cc, 0xb5ebf2, 0xb8b8b8, 0x000000, 0x000000
 ];
+
+/* 
+  Micro-optimization to alter the palette to friendly to the typed array within the
+  2D canvas context.
+*/
+for (let i = 0; i < palette.length; i++) {
+  const color = palette[i];
+
+  palette[i] =
+    0xff000000 |
+    ((color & 0x0000ff) << 16) |
+    (color & 0x00ff00) |
+    (color >>> 16);
+}
+
+export const PpuPalette = palette;
