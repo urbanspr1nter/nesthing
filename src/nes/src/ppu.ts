@@ -114,6 +114,7 @@ export class Ppu {
     this._ppuMemory = ppuMemory;
     this._scanlines = 0;
     this._cycles = 0;
+    this._frames = 0;
 
     // Initialize background bytes.
     this._ntByte = 0;
@@ -140,6 +141,10 @@ export class Ppu {
 
   get frameDrawn(): boolean {
     return this._frameDrawn;
+  }
+
+  get frames(): number {
+    return this._frames;
   }
 
   set frameDrawn(value: boolean) {
@@ -709,7 +714,11 @@ export class Ppu {
       if (!this._evenFrame && this._scanlines === 261 && this._cycles === 339) {
         this._cycles = 0;
         this._scanlines = 0;
+
         this._frames++;
+        // Draw the frame
+        this._uiFrameBuffer.draw();
+
         if (this._frames % 2 === 0) {
           this._evenFrame = true;
         } else {
@@ -726,7 +735,11 @@ export class Ppu {
 
       if (this._scanlines > 261) {
         this._scanlines = 0;
+
         this._frames++;
+        // Draw the frame
+        this._uiFrameBuffer.draw();
+
         if (this._frames % 2 === 0) {
           this._evenFrame = true;
         } else {
@@ -806,7 +819,6 @@ export class Ppu {
 
     if (this._scanlines === 241 && this._cycles === 1) {
       this._frameDrawn = true;
-      this._uiFrameBuffer.draw();
       this._setVblank();
     }
     if (isPrerenderLine && this._cycles === 1) {

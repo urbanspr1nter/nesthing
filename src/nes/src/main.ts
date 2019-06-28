@@ -87,20 +87,35 @@ document.getElementById("btn-play").addEventListener("click", () => {
   gameConsole.setupDOM();
 
   setTimeout(function () {
-    triggerRun();
+    requestAnimationFrame(triggerRun);
   }, 1000);
 });
 
-function triggerRun() {
-  requestAnimationFrame(triggerRun);
+var msPerFrame = 1000 / 60;
+var frameTime = 0;
+var lastFrameTime = 0;
 
-  if(gameConsole.nes.readyToRender) {
-    gameConsole.nes.readyToRender = false;
+function triggerRun(timestamp) {
+  if(lastFrameTime === 0) {
+    lastFrameTime = timestamp;
   }
 
-  while(!gameConsole.nes.readyToRender) {
-    gameConsole.nes.run();
+  frameTime += (timestamp - lastFrameTime);
+  lastFrameTime = timestamp;
+
+  while(frameTime >= msPerFrame) {
+    INNER: while(true) {
+      var lastNumFrameDrawn = gameConsole.nes.ppuFrames;
+      gameConsole.nes.run();
+      if(gameConsole.nes.ppuFrames > lastNumFrameDrawn) {
+        break INNER;
+      }
+    }
+    frameTime -= msPerFrame;
+    break;
   }
+
+  requestAnimationFrame((t) => triggerRun(t));
 }
 
 

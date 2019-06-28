@@ -114,6 +114,10 @@ export class Nes {
     return this._ppuMemory.bits();
   }
 
+  get ppuFrames(): number {
+    return this._ppu.frames;
+  }
+
   public scanlines(): number {
     return this._ppu.getScanlines();
   }
