@@ -33,7 +33,7 @@ export class Memory {
     return this._memory;
   }
 
-  public set = (address: number, value: number): void => {
+  public set(address: number, value: number) {
     value = value & 0xff;
 
     if (address < 0x2000) {
@@ -73,7 +73,7 @@ export class Memory {
     }
   };
 
-  public get = (address: number): number => {
+  public get(address: number) {
     if (address < 0x2000) {
       return this._memory[address % 0x800] & 0xff;
     } else if (address >= 0x2000 && address <= 0x3fff) {

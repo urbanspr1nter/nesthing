@@ -24,6 +24,7 @@ export const PlayerTwoKeyMap = {
 
 export class UiKeyHandler {
   private _controller: Controller;
+  
   private _keyPressedPlayer1: { [id: number]: boolean } = {
     ...this._getDefaultKeySettings()
   };

@@ -54,9 +54,9 @@ export class Controller {
     player: ControllerPlayer
   ) => {
     if (player === ControllerPlayer.One) {
-      this._buttonMapPlayer1 = map;
+      this._buttonMapPlayer1 = {...map};
     } else {
-      this._buttonMapPlayer2 = map;
+      this._buttonMapPlayer2 = {...map};
     }
   };
 
