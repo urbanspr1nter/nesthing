@@ -9,10 +9,15 @@ import { UiSoundHandler } from "./ui/ui.soundhandler";
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
 import { UiKeyHandler } from "./ui/ui.keyhandler";
 
+export interface ControllerSet {
+  one: Controller;
+  two: Controller;
+}
+
 export interface NesOptions {
   keyHandler: UiKeyHandler;
   frameRenderer: UiFrameBuffer;
-  controller: Controller;
+  controller: ControllerSet;
   rom: Roms;
 }
 
@@ -35,7 +40,9 @@ export class Nes {
   private _ppu: Ppu;
   private _cpu: Cpu;
   private _uiSoundHandler: UiSoundHandler;
-  private _controller: Controller;
+
+  private _controllerOne: Controller;
+  private _controllerTwo: Controller;
 
   private _cpuTimeInFrame: number;
   private _apuTimeInFrame: number;
@@ -53,12 +60,13 @@ export class Nes {
 
     this._ppuMemory = new PpuMemory();
     this._ppu = new Ppu(this._ppuMemory, options.frameRenderer);
-    this._controller = options.controller;
+    this._controllerOne = options.controller.one;
+    this._controllerTwo = options.controller.two;
 
     this._uiSoundHandler = new UiSoundHandler(0.8);
 
     this._apu = new Apu(this._uiSoundHandler, 44100);
-    this._memory = new Memory(this._ppu, this._apu, this._controller);
+    this._memory = new Memory(this._ppu, this._apu, this._controllerOne, this._controllerTwo);
     this._cpu = new Cpu(this._memory);
 
     this._apu.setCpu(this._cpu);
@@ -83,7 +91,11 @@ export class Nes {
   }
 
   get controller1(): Controller {
-    return this._controller;
+    return this._controllerOne;
+  }
+
+  get controller2(): Controller {
+    return this._controllerTwo;
   }
 
   get readyToRender() {

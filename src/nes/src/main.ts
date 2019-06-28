@@ -1,28 +1,27 @@
-import { EventEmitter } from "events";
-
 import { Nes, Roms, NesOptions } from "./nes";
-
 import { UiFrameBuffer } from "./ui/ui.framebuffer";
 import { UiKeyHandler } from "./ui/ui.keyhandler";
 import { Controller } from "./controller";
-
 
 class NesConsole {
   private _nes: Nes;
   private _options: NesOptions;
 
   constructor(rom: Roms) {
-    const controller = new Controller();
+    const playerOneController = new Controller();
+    const playerTwoController = new Controller();
+
     this._options = {
-      keyHandler: new UiKeyHandler(controller),
+      keyHandler: new UiKeyHandler(playerOneController, playerTwoController),
       frameRenderer: new UiFrameBuffer(),
-      controller: controller,
+      controller: {
+        one: playerOneController,
+        two: playerTwoController
+      },
       rom
     };
 
     this._nes = new Nes(this._options);
-
-
   }
 
   get nes() {
@@ -88,38 +87,20 @@ document.getElementById("btn-play").addEventListener("click", () => {
   gameConsole.setupDOM();
 
   setTimeout(function () {
-    triggerRun(performance.now(), gameConsole.uiFrameBuffer);
+    triggerRun();
   }, 1000);
 });
 
-var msPerFrame = 1000 / 60;
-var frameTime = 0;
-var lastFrameTime = 0;
-function triggerRun(timestamp: number, uiFrameBuffer: UiFrameBuffer) {
-  if(lastFrameTime === 0) {
-    lastFrameTime = timestamp;
-  }
+function triggerRun() {
+  requestAnimationFrame(triggerRun);
 
   if(gameConsole.nes.readyToRender) {
     gameConsole.nes.readyToRender = false;
   }
 
-  frameTime += (timestamp - lastFrameTime);
-  lastFrameTime = timestamp;
-
-  while(frameTime >= msPerFrame) {
-    while(true){
-      gameConsole.nes.run();
-
-      if(gameConsole.nes.readyToRender) {
-        break;
-      }
-    }
-    frameTime -= msPerFrame;
-    break;
+  while(!gameConsole.nes.readyToRender) {
+    gameConsole.nes.run();
   }
-
-  requestAnimationFrame((t) => triggerRun(t, uiFrameBuffer));
 }
 
 

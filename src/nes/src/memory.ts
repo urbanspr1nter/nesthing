@@ -20,13 +20,15 @@ export class Memory {
 
   private _apu: Apu;
   private _ppu: Ppu;
-  private _controller: Controller;
+  private _controllerOne: Controller;
+  private _controllerTwo: Controller;
 
-  constructor(ppu: Ppu, apu: Apu, controller: Controller) {
+  constructor(ppu: Ppu, apu: Apu, controllerOne: Controller, controllerTwo: Controller) {
     this._memory = [];
     this._ppu = ppu;
     this._apu = apu;
-    this._controller = controller;
+    this._controllerOne = controllerOne;
+    this._controllerTwo = controllerTwo;
   }
 
   public bits(): number[] {
@@ -62,8 +64,8 @@ export class Memory {
       // Write 1 $4016 to signal the controller to poll its input
       // Write 0 to $4016 to finish the poll
       // 4016/4017 becomes ready for polling
-      this._controller.write(value, ControllerPlayer.One);
-      this._controller.write(value, ControllerPlayer.Two);
+      this._controllerOne.write(value);
+      this._controllerTwo.write(value);
     } else if (address >= 0x4000 && address <= 0x400f) {
       this._apu.write$addr(address, value);
     } else if (address === 0x4015 || address === 0x4017) {
@@ -91,10 +93,10 @@ export class Memory {
       return this._apu.read$addr(address);
     } else if (address === 0x4016) {
       // Read controller 1
-      return this._controller.read(ControllerPlayer.One);
+      return this._controllerOne.read();
     } else if (address === 0x4017) {
       // read controller 2
-      return this._controller.read(ControllerPlayer.Two);
+      return this._controllerTwo.read();
     }
     return this._memory[address & 0xffff] & 0xff;
   };

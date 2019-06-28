@@ -1,4 +1,5 @@
 import { Controller, Buttons, ControllerPlayer } from "../controller";
+import { ControllerSet } from "../nes";
 
 export const PlayerOneKeyMap = {
   Start: "Enter",
@@ -23,8 +24,9 @@ export const PlayerTwoKeyMap = {
 };
 
 export class UiKeyHandler {
-  private _controller: Controller;
-  
+  private _controllerOne: Controller;
+  private _controllerTwo: Controller;
+
   private _keyPressedPlayer1: { [id: number]: boolean } = {
     ...this._getDefaultKeySettings()
   };
@@ -32,37 +34,61 @@ export class UiKeyHandler {
     ...this._getDefaultKeySettings()
   };
 
-  constructor(controller: Controller) {
-    this._controller = controller;
+  constructor(controllerOne: Controller, controllerTwo: Controller) {
+    this._controllerOne = controllerOne;
+    this._controllerTwo = controllerTwo;
   }
 
   public handlePlayerOneKeyDown(key: string) {
     if (key === PlayerOneKeyMap.Start) {
       this._keyPressedPlayer1[Buttons.Start] = true;
-    }
-    if (key === PlayerOneKeyMap.Select) {
-      this._keyPressedPlayer1[Buttons.Select] = true;
-    }
-    if (key === PlayerOneKeyMap.A) {
-      this._keyPressedPlayer1[Buttons.A] = true;
-    }
-    if (key === PlayerOneKeyMap.B) {
-      this._keyPressedPlayer1[Buttons.B] = true;
-    }
-    if (key === PlayerOneKeyMap.Up) {
-      this._keyPressedPlayer1[Buttons.Up] = true;
-    }
-    if (key === PlayerOneKeyMap.Down) {
-      this._keyPressedPlayer1[Buttons.Down] = true;
-    }
-    if (key === PlayerOneKeyMap.Left) {
-      this._keyPressedPlayer1[Buttons.Left] = true;
-    }
-    if (key === PlayerOneKeyMap.Right) {
-      this._keyPressedPlayer1[Buttons.Right] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.Start] = false;
     }
 
-    this._controller.setButtons(this._keyPressedPlayer1, ControllerPlayer.One);
+    if (key === PlayerOneKeyMap.Select) {
+      this._keyPressedPlayer1[Buttons.Select] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.Select] = false;
+    }
+
+    if (key === PlayerOneKeyMap.A) {
+      this._keyPressedPlayer1[Buttons.A] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.A] = false;
+    }
+
+    if (key === PlayerOneKeyMap.B) {
+      this._keyPressedPlayer1[Buttons.B] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.B] = false;
+    }
+
+    if (key === PlayerOneKeyMap.Up) {
+      this._keyPressedPlayer1[Buttons.Up] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.Up] = false;
+    }
+
+    if (key === PlayerOneKeyMap.Down) {
+      this._keyPressedPlayer1[Buttons.Down] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.Down] = false;
+    }
+
+    if (key === PlayerOneKeyMap.Left) {
+      this._keyPressedPlayer1[Buttons.Left] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.Left] = false;
+    }
+
+    if (key === PlayerOneKeyMap.Right) {
+      this._keyPressedPlayer1[Buttons.Right] = true;
+    } else {
+      this._keyPressedPlayer1[Buttons.Right] = false;
+    }
+
+    this._controllerOne.setButtons(this._keyPressedPlayer1);
   }
 
   public handlePlayerOneKeyUp(key: string) {
@@ -91,7 +117,7 @@ export class UiKeyHandler {
       this._keyPressedPlayer1[Buttons.Right] = false;
     }
 
-    this._controller.setButtons(this._keyPressedPlayer1, ControllerPlayer.One);
+    this._controllerOne.setButtons(this._keyPressedPlayer1);
   }
 
   public handlePlayerTwoKeyDown(key: string) {
@@ -120,7 +146,7 @@ export class UiKeyHandler {
       this._keyPressedPlayer2[Buttons.Right] = true;
     }
 
-    this._controller.setButtons(this._keyPressedPlayer2, ControllerPlayer.Two);
+    this._controllerTwo.setButtons(this._keyPressedPlayer2);
   }
 
   public handlePlayerTwoKeyUp(key: string) {
@@ -149,7 +175,7 @@ export class UiKeyHandler {
       this._keyPressedPlayer2[Buttons.Right] = false;
     }
 
-    this._controller.setButtons(this._keyPressedPlayer2, ControllerPlayer.Two);
+    this._controllerTwo.setButtons(this._keyPressedPlayer2);
   }
 
   private _getDefaultKeySettings(): { [id: number]: boolean } {
