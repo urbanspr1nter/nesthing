@@ -1,3 +1,18 @@
+export interface CpuRegisters {
+  X: number;
+  Y: number;
+  A: number;
+  P: number;
+  PC: number;
+  SP: number;
+}
+
+export interface CycleContext {
+  PC: number;
+  Address: number;
+  Mode: AddressingModes;
+}
+
 export enum StatusBitPositions {
   Carry = 0,
   Zero = 1,

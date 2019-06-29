@@ -67,7 +67,7 @@ export class DmcSample {
 
   public stepReader() {
     if (this._dmc.CurrentLength > 0 && this._dmc.BitCount === 0) {
-      this._dmc.Cpu.setStallCycles(this._dmc.Cpu.stallCycles() + 4);
+      this._dmc.Cpu.stallCycles = this._dmc.Cpu.stallCycles + 4;
       this._dmc.ShiftRegister = this._dmc.Cpu.memRead(this._dmc.CurrentAddress);
       this._dmc.BitCount = 8;
       this._dmc.CurrentAddress++;

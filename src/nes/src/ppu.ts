@@ -332,11 +332,11 @@ export class Ppu {
 
     // stall CPU for 514 cycles if odd, 513 is even.
     let stallCycles = 513;
-    if (this._cpu.totalCycles() % 2 === 1) {
+    if (this._cpu.currentCycles % 2 === 1) {
       stallCycles++;
     }
 
-    this._cpu.setStallCycles(stallCycles);
+    this._cpu.stallCycles = stallCycles;
   }
 
   public incrementVramAddress() {

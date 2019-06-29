@@ -6,6 +6,10 @@ import { Controller } from "./controller";
 class NesConsole {
   private _nes: Nes;
   private _options: NesOptions;
+  private _lastFrameTime: number;
+  private _frameTime: number;
+  private _msPerFrame: number;
+  private _ppuFrames: number;
 
   constructor(rom: Roms) {
     const playerOneController = new Controller();
@@ -22,6 +26,10 @@ class NesConsole {
     };
 
     this._nes = new Nes(this._options);
+    this._frameTime = 0;
+    this._lastFrameTime = 0;
+    this._ppuFrames = 0;
+    this._msPerFrame = 1000 / 60;
   }
 
   get nes() {
@@ -63,9 +71,32 @@ class NesConsole {
       this._options.keyHandler.handlePlayerTwoKeyUp(e.key);
     });
   }
+
+  public run(timestamp: number) {
+    if(this._lastFrameTime === 0) {
+      this._lastFrameTime = timestamp;
+    }
+  
+    this._frameTime += (timestamp - this._lastFrameTime);
+    this._lastFrameTime = timestamp;
+  
+    while(this._frameTime >= this._msPerFrame) {
+      INNER: while(true) {
+        this._ppuFrames = this._nes.ppuFrames;
+        this._nes.run();
+        if(this._nes.ppuFrames > this._ppuFrames) {
+          break INNER;
+        }
+      }
+      this._frameTime -= this._msPerFrame;
+      break;
+    }
+  
+    requestAnimationFrame((t) => this.run(t));
+  }
 }
 
-let gameConsole: NesConsole;
+var gameConsole: NesConsole;
 document.getElementById("btn-play").addEventListener("click", () => {
   const selectElement = (document.getElementById("select-game") as HTMLSelectElement);
   const selectedGame = Number(selectElement.options[selectElement.selectedIndex].value);
@@ -87,35 +118,6 @@ document.getElementById("btn-play").addEventListener("click", () => {
   gameConsole.setupDOM();
 
   setTimeout(function () {
-    requestAnimationFrame(triggerRun);
+    requestAnimationFrame(gameConsole.run);
   }, 1000);
 });
-
-var msPerFrame = 1000 / 60;
-var frameTime = 0;
-var lastFrameTime = 0;
-
-function triggerRun(timestamp) {
-  if(lastFrameTime === 0) {
-    lastFrameTime = timestamp;
-  }
-
-  frameTime += (timestamp - lastFrameTime);
-  lastFrameTime = timestamp;
-
-  while(frameTime >= msPerFrame) {
-    INNER: while(true) {
-      var lastNumFrameDrawn = gameConsole.nes.ppuFrames;
-      gameConsole.nes.run();
-      if(gameConsole.nes.ppuFrames > lastNumFrameDrawn) {
-        break INNER;
-      }
-    }
-    frameTime -= msPerFrame;
-    break;
-  }
-
-  requestAnimationFrame((t) => triggerRun(t));
-}
-
-

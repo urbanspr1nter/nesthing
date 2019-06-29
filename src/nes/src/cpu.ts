@@ -9,31 +9,16 @@ import {
   AddressingModes,
   InstructionSizes,
   OpAddressingMode,
-  PageCycles
+  PageCycles,
+  CpuRegisters,
+  CycleContext
 } from "./cpu.interface";
-
-interface CpuRegisters {
-  X: number;
-  Y: number;
-  A: number;
-  P: number;
-  PC: number;
-  SP: number;
-}
-
-export interface CycleContext {
-  PC: number;
-  Address: number;
-  Mode: AddressingModes;
-}
 
 export class Cpu {
   private _registers: CpuRegisters;
   private _memory: Memory;
   private _currentCycles: number;
   private _stallCycles: number;
-
-  // Helpers
   private _interrupt: InterruptRequestType;
   private _context: CycleContext;
 
@@ -54,18 +39,18 @@ export class Cpu {
     this._setCurrentContext(0, AddressingModes.Immediate);
   }
 
-  public setStallCycles(cycles: number) {
+  set stallCycles(cycles: number) {
     this._stallCycles = cycles;
   }
-  public stallCycles(): number {
+
+  get stallCycles() {
     return this._stallCycles;
   }
-  public totalCycles(): number {
+
+  get currentCycles() {
     return this._currentCycles;
   }
-  public getCurrentCycles(): number {
-    return this._currentCycles;
-  }
+  
   public clearCycles() {
     this._currentCycles = 0;
   }
