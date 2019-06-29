@@ -1,5 +1,4 @@
-import { Controller, Buttons, ControllerPlayer } from "../controller";
-import { ControllerSet } from "../nes";
+import { Controller, Buttons } from "../controller";
 
 export const PlayerOneKeyMap = {
   Start: "Enter",

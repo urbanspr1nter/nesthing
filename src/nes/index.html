@@ -2,12 +2,29 @@
 <html>
   <head>
     <title>
-      NESThing
+      NesThing
     </title>
     <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      h1 {
+        font-weight: 200;
+      }
+
       canvas {
         -webkit-transform: translateZ(0);
         transform: translateZ(0);
+        margin-left: 128px;
+        margin-top: 40px;
+      }
+
+      .nes-console {
+        padding: 16px;
+        background: url("./src/web/overlay.png");
+        width: 540px;
+        height: 340px;
       }
 
       td {
@@ -90,20 +107,17 @@
       </div>
     </div>
 
-    <hr />
-    <canvas id="main" width="256" height="240"></canvas>
-    <div id="controls">
-      <button type="button" id="btn-scale-1">1x View</button>
-      <button type="button" id="btn-scale-2">2x View</button>
-      <button type="button" id="btn-scale-3">3x View</button>
-      <button type="button" id="btn-scale-4">4x View</button>
+    <div class="nes-console">
+        <canvas id="main" width="256" height="240"></canvas>
     </div>
-    <select id="select-game">
-      <option value="0">Mario Bros.</option>
-      <option value="1">Donkey Kong</option> 
-      <option value="2">Space Invaders</option> 
-    </select>
-    <button type="button" id="btn-play">Play</button>
+    <div class="controls">
+      <select id="select-game">
+        <option value="0">Mario Bros.</option>
+        <option value="1">Donkey Kong</option> 
+        <option value="2">Space Invaders</option> 
+      </select>
+      <button type="button" id="btn-play">Play</button>
+    </div>
     <h3 id="fps"></h3>
     <h3 id="cpuTime"></h3>
     <h3 id="apuTime"></h3>

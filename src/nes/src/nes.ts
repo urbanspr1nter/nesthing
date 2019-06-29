@@ -7,7 +7,7 @@ import { Controller } from "./controller";
 import { Apu } from "./apu";
 import { UiSoundHandler } from "./ui/ui.soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
-import { UiKeyHandler } from "./ui/ui.keyhandler";
+import { UiKeyHandler } from "./ui/keyhandler";
 
 export interface ControllerSet {
   one: Controller;

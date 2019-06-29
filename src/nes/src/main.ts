@@ -1,6 +1,6 @@
 import { Nes, Roms, NesOptions } from "./nes";
 import { UiFrameBuffer } from "./ui/framebuffer";
-import { UiKeyHandler } from "./ui/ui.keyhandler";
+import { UiKeyHandler } from "./ui/keyhandler";
 import { Controller } from "./controller";
 
 class NesConsole {
@@ -45,19 +45,6 @@ class NesConsole {
   }
 
   public setupDOM() {
-    document.getElementById("btn-scale-1").addEventListener("click", () => {
-      this._options.frameRenderer.scale(1);
-    });
-    document.getElementById("btn-scale-2").addEventListener("click", () => {
-      this._options.frameRenderer.scale(2);
-    });
-    document.getElementById("btn-scale-3").addEventListener("click", () => {
-      this._options.frameRenderer.scale(3);
-    });
-    document.getElementById("btn-scale-4").addEventListener("click", () => {
-      this._options.frameRenderer.scale(4);
-    });
-
     document.addEventListener("keydown", (e: KeyboardEvent) => {
       this._options.keyHandler.handlePlayerOneKeyDown(e.key);
     });
