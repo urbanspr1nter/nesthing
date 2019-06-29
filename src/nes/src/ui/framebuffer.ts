@@ -2,16 +2,22 @@
  * framebuffer.ts
  * 
  * Roger Ngo, 2019
- * 
- * Handles rendering of the pixels onto an HTML5 canvas using 
- * typed-arrays.
  */
+
 import {
   DEFAULT_FRAME_BUFFER_COLOR,
   SCREEN_HEIGHT,
   SCREEN_WIDTH
 } from "./constants";
 
+/**
+ * The UiFrameBuffer class handles the rendering of pixels onto an HTML5 
+ * canvas using typed arrays.
+ * 
+ * Note that this uses 32 bit colors with the format: ABGR. Canvas element 
+ * colors are ARGB. Therefore, it is assumed that the color input is from the 
+ * preprocessed values found within the PpuPalette.
+ */
 export class UiFrameBuffer {
   private _canvas: HTMLCanvasElement;
   private _context: CanvasRenderingContext2D;
@@ -30,10 +36,22 @@ export class UiFrameBuffer {
     this.draw();
   }
 
+  /**
+   * Assigns the color at the appropriate pixel at the frame buffer 
+   * location. Does not render out to the screen.
+   * 
+   * @param dot The "x coordinate" of the screen
+   * @param scanline The "y coordinate" of the screen
+   * @param color The 32 bit color to use within the PPU palette
+   */
   public drawPixel(dot: number, scanline: number, color: number) {
     this._image32Buffer[scanline * SCREEN_WIDTH + dot] = color;
   }
 
+  /**
+   * Renders all contents within the frame buffer onto the screen, 
+   * or in this case, the HTML5 canvas.
+   */
   public draw() {
     this._imageData.data.set(this._image8Buffer);
     this._context.putImageData(this._imageData, 0, 0);
