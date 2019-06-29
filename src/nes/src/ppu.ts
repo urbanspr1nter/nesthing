@@ -8,7 +8,7 @@ import { PpuPalette } from "./colors";
 import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
-import { UiFrameBuffer } from "./ui/ui.framebuffer";
+import { UiFrameBuffer } from "./ui/framebuffer";
 
 /**
  * Constants

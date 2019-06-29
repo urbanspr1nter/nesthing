@@ -1,5 +1,5 @@
 import { Nes, Roms, NesOptions } from "./nes";
-import { UiFrameBuffer } from "./ui/ui.framebuffer";
+import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/ui.keyhandler";
 import { Controller } from "./controller";
 
@@ -118,6 +118,6 @@ document.getElementById("btn-play").addEventListener("click", () => {
   gameConsole.setupDOM();
 
   setTimeout(function () {
-    requestAnimationFrame(gameConsole.run);
+    requestAnimationFrame((t) => gameConsole.run(t));
   }, 1000);
 });

@@ -6,7 +6,7 @@ import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
 import { Apu } from "./apu";
 import { UiSoundHandler } from "./ui/ui.soundhandler";
-import { UiFrameBuffer } from "./ui/ui.framebuffer";
+import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/ui.keyhandler";
 
 export interface ControllerSet {
