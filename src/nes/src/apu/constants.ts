@@ -1,0 +1,2 @@
+export const AUDIO_BUFFER_LENGTH = 4096;
+export const AUDIO_SAMPLE_RATE = 44100;

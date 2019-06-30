@@ -5,7 +5,7 @@ import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
 import { Apu } from "./apu";
-import { UiSoundHandler } from "./ui/ui.soundhandler";
+import { UiSoundHandler } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
 
@@ -13,7 +13,6 @@ export interface ControllerSet {
   one: Controller;
   two: Controller;
 }
-
 export interface NesOptions {
   keyHandler: UiKeyHandler;
   frameRenderer: UiFrameBuffer;

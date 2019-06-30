@@ -46,31 +46,24 @@ export class UiKeyHandler {
     if (key === PlayerOneKeyMap.Start) {
       this._keyPressedPlayer1[Buttons.Start] = true;
     }
-
     if (key === PlayerOneKeyMap.Select) {
       this._keyPressedPlayer1[Buttons.Select] = true;
     }
-
     if (key === PlayerOneKeyMap.A) {
       this._keyPressedPlayer1[Buttons.A] = true;
     }
-
     if (key === PlayerOneKeyMap.B) {
       this._keyPressedPlayer1[Buttons.B] = true;
     }
-
     if (key === PlayerOneKeyMap.Up) {
       this._keyPressedPlayer1[Buttons.Up] = true;
     }
-
     if (key === PlayerOneKeyMap.Down) {
       this._keyPressedPlayer1[Buttons.Down] = true;
     }
-
     if (key === PlayerOneKeyMap.Left) {
       this._keyPressedPlayer1[Buttons.Left] = true;
     }
-
     if (key === PlayerOneKeyMap.Right) {
       this._keyPressedPlayer1[Buttons.Right] = true;
     }

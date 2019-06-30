@@ -7,7 +7,7 @@ import { PulseWave } from "./apu/apu.pulsewave";
 import { TriangleWave } from "./apu/apu.trianglewave";
 import { NoiseWave } from "./apu/apu.noisewave";
 import { DmcSample } from "./apu/apu.dmcsample";
-import { UiSoundHandler } from "./ui/ui.soundhandler";
+import { UiSoundHandler } from "./ui/soundhandler";
 
 const pulseTable = [];
 const tndTable = [];

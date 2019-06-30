@@ -715,9 +715,7 @@ export class Ppu {
         this._cycles = 0;
         this._scanlines = 0;
 
-        this._frames++;
-        // Draw the frame
-        this._uiFrameBuffer.draw();
+        this._stepFrame();
 
         if (this._frames % 2 === 0) {
           this._evenFrame = true;
@@ -736,9 +734,7 @@ export class Ppu {
       if (this._scanlines > 261) {
         this._scanlines = 0;
 
-        this._frames++;
-        // Draw the frame
-        this._uiFrameBuffer.draw();
+        this._stepFrame();
 
         if (this._frames % 2 === 0) {
           this._evenFrame = true;
@@ -747,6 +743,14 @@ export class Ppu {
         }
       }
     }
+  }
+
+  private _stepFrame() {
+
+    this._frames++;
+    // Draw the frame
+    this._uiFrameBuffer.draw();
+
   }
 
   private _shiftBackgroundTile4(): void {
