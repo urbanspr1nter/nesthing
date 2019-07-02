@@ -3,6 +3,9 @@ import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
 import { Controller } from "./controller";
 
+const ONE_SECOND_MS = 1000;
+const FPS = 60;
+
 export class NesConsole {
   private _nes: Nes;
   private _options: NesOptions;
@@ -29,7 +32,7 @@ export class NesConsole {
     this._frameTime = 0;
     this._lastFrameTime = 0;
     this._ppuFrames = 0;
-    this._msPerFrame = 1000 / 60;
+    this._msPerFrame = ONE_SECOND_MS / FPS;
   }
 
   get nes() {

@@ -68,11 +68,11 @@ The approach I have described here is called *catch-up*. A good resource is to r
 
 One temptation for an approach to emulate the CPU and PPU executing with each other is to write a multi-threaded emulator where the CPU and PPU are executed in 2 different threads at once, and access each other through calls. This is very complicated, and generally not a recommend approach at all. 
 
-## Execution
+## Synchronizing Execution
 
-The CPU runs at a clock rate of 1.79 MHz, and since the PPU runs 3x the number of cycles the CPU runs for every instruction, the hardware PPU can be calculated to have a clock of about 5.37 MHz. All these clock speeds are derived by a main clock with the CPU and PPU clock values being some divided value of it.
+The CPU runs at a clock rate of 1.79 MHz. Since the PPU runs 3x the number of cycles the CPU runs for every instruction, the hardware PPU can be calculated to have a clock rate of about 5.37 MHz. All these clock speeds are derived by a main clock with the CPU and PPU clock values being some quotient value of it.
 
-In the case of the NES, the main clock is `21.4772 MHz` with the CPU clock being `21.4772/12` and PPU being `21.4772/4`.
+In the case of the NES, the main clock is `21.4772 MHz` with the CPU clock being `21.4772/12` (divider is 12) and PPU being `21.4772/4` (divider is 4).
 
 In our implementation, we will execute 3 PPU cycles for every CPU cycle. For every instruction, where the number of cycles it had taken the emulated CPU core to execute, we can define it by `cpuCycles`. The PPU cycles then can be found by multiplying this number by 3 -- which can be represented as: `ppuCycles = 3 * cpuCycles`.
 
@@ -90,9 +90,17 @@ while (true) {
 }
 ```
 
-It's now time to dive into how the CPU and PPU can communicate with each other.
+Now, it is great that we can emulate both the CPU and PPU "at the same time", but now we need to dive into the discussion on what we can do to have these emulated components communicate with each other.
 
-First, we need to think about how their data is passed back and forth.
+Now, I think this is the perfect moment to discuss the internal registers which the PPU exposes to the CPU.
+
+## Memory-Mapped I/O
+
+As discussed previously, the CPU, PPU and discussed later, APU, all share the same data bus. The CPU makes a request to some address in memory for I/O, and the controller is reads the address to see where the data byte hould be pulled from: RAM, hardware register, etc. All data bytes flow through the same bus.
+
+Because of this, the CPU and PPU aren't directly connected to each other, per se, but rather connected to the common data bus where the data is manipulated by memory address reads and writes.
+
+[Block Diagram Here]
 
 ## Interfacing Between the CPU and PPU
 
@@ -103,9 +111,7 @@ Internally, the PPU has several hardware registers:
 `x` the fine x scroll register;
 `w` the second write toggle
 
-The CPU cannot interact with these registers to communicate with the PPU directly. An example of this is writing to PPU memory. This requires manipulation of the `v` register to set the proper VRAM address needed to place the data into the data bus to the PPU  memory.
-
-Instead of direct manipulation of the PPU hardware register, the CPU interacts with the PPU through memory-mapped I/O (MMIO). The PPU registers are exposed at the CPU addresses `$2000` to `$2007` in its address space. This gives a total of 8 bytes, or 8 mapped registers for the CPU to communicate with the PPU.
+Since the CPU cannot interact with these registers within the PPU directly, they are exposed through memory-mapped I/O. CPU addresses `$2000` to `$2007` are wired to interface with the PPU registers. 
 
 To review, the memory layout of the NES is:
 
@@ -121,10 +127,32 @@ To review, the memory layout of the NES is:
 |4018-401F|APU and I/O Functionality that is normally disabled|8 B|
 |4020-FFFF|Mapped to Cartridge PRG ROM, PRG RAM, etc.|49120 B|
 
-As a quick summary, memory-mapped I/O is the method at which the NES uses to enable the interfacing between CPU and PPU. Through the access of specific addresses within the CPU address space, the CPU can read and write data to the PPU by accessing these registers.
+An example of this is writing to PPU memory. This requires manipulation of the `v` register to set the proper VRAM address needed to place the data into the data bus to the PPU  memory. This gives a total of 8 bytes, or 8 mapped registers for the CPU to communicate with the PPU.
 
-We can think of these memory-mapped I/O addresses as a "door" to the PPU hardware registers. It is ten important to keep in mind that CPU reads and writes to the addresses `$2000 - $2007` in its address space are simply forwarded to the PPU hardware registers and are reflected immediately within the PPU hardware registers. 
+The misconception is that reading/writing data to the memory-mapped I/O addresses serves as some sort of asynchronous request that occurs from the CPU to the appropriate hardware device, where for example, the mental model of execution may result in something like this:
 
+```
+1. Game writes a byte to $2006: $20
+2. CPU receives the request, sees $2006, and forwards to PPU.
+3. Game writes a byte to $2006: $BF
+4. CPU receives the request, sees $2006, and forwards to PPU.
+```
+
+This is not entirely true. How memory-mapped IO registers should be more appropriate thought of is that the PPU should be intercepting the bytes flowing through the data bus whenever the associated addresses are touched, and should be handled immediately:
+
+```
+1. Game writes a byte to $2006: $20
+2. PPU monitoring the address bus sees $2006. 
+    -> PPU knows that the data byte $20 is for it.
+    -> Handle the byte as the high byte of a VRAM address.
+3. Game writes a byte to $2006: $BF
+    -> PPU knows that the data byte $BF is for it.
+    -> Handle the byte as the low byte of a VRAM address.
+
+(VRAM address is now $20BF)
+```
+
+It is then important to keep in mind that CPU reads and writes to the addresses `$2000 - $2007` in its address space are simply forwarded to the PPU hardware registers and are reflected immediately within the PPU hardware registers. 
 
 ## Colors and Palette
 
