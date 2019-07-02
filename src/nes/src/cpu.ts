@@ -39,6 +39,10 @@ export class Cpu {
     this._setCurrentContext(0, AddressingModes.Immediate);
   }
 
+  get memory() {
+    return this._memory;
+  }
+
   set stallCycles(cycles: number) {
     this._stallCycles = cycles;
   }

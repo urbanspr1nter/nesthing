@@ -86,7 +86,6 @@ export class Ppu {
   private _regPPUSTATUS_spriteHit: boolean;
   private _regPPUSTATUS_vblankStarted: boolean;
 
-  private _cpuMemory: Memory;
   private _cpu: Cpu;
 
   // Declare $2003/OAMADDR bits
@@ -109,9 +108,9 @@ export class Ppu {
 
   private _frameDrawn: boolean;
 
-  constructor(ppuMemory: PpuMemory, uiFrameBuffer: UiFrameBuffer) {
+  constructor( uiFrameBuffer: UiFrameBuffer) {
     this._uiFrameBuffer = uiFrameBuffer;
-    this._ppuMemory = ppuMemory;
+    this._ppuMemory = new PpuMemory();
     this._scanlines = 0;
     this._cycles = 0;
     this._frames = 0;
@@ -139,6 +138,10 @@ export class Ppu {
     this._initializeSprites();
   }
 
+  get memory() {
+    return this._ppuMemory;
+  }
+
   get frameDrawn(): boolean {
     return this._frameDrawn;
   }
@@ -154,10 +157,6 @@ export class Ppu {
   public step(): void {
     this._tick();
     this._processTick();
-  }
-
-  public setCpuMemory(memory: Memory) {
-    this._cpuMemory = memory;
   }
 
   public setCpu(cpu: Cpu) {
@@ -325,7 +324,7 @@ export class Ppu {
   public write$4014(dataByte: number) {
     let cpuAddress = (dataByte << 8) & 0xffff;
     for (let i = 0; i <= 0xff; i++) {
-      this._oam[this._regOAMADDR_address] = this._cpuMemory.get(cpuAddress);
+      this._oam[this._regOAMADDR_address] = this._cpu.memory.get(cpuAddress);
       this._regOAMADDR_address++;
       cpuAddress++;
     }
