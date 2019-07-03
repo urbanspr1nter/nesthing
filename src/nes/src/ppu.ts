@@ -106,8 +106,6 @@ export class Ppu {
   private _nmiPrevious: boolean;
   private _nmiDelay: number;
 
-  private _frameDrawn: boolean;
-
   constructor( uiFrameBuffer: UiFrameBuffer) {
     this._uiFrameBuffer = uiFrameBuffer;
     this._ppuMemory = new PpuMemory();
@@ -132,8 +130,6 @@ export class Ppu {
       DataLow32: 0
     };
 
-    this._frameDrawn = false;
-
     this._initializeOam();
     this._initializeSprites();
   }
@@ -142,16 +138,8 @@ export class Ppu {
     return this._ppuMemory;
   }
 
-  get frameDrawn(): boolean {
-    return this._frameDrawn;
-  }
-
   get frames(): number {
     return this._frames;
-  }
-
-  set frameDrawn(value: boolean) {
-    this._frameDrawn = value;
   }
 
   public step(): void {
@@ -821,7 +809,6 @@ export class Ppu {
     }
 
     if (this._scanlines === 241 && this._cycles === 1) {
-      this._frameDrawn = true;
       this._setVblank();
     }
     if (isPrerenderLine && this._cycles === 1) {

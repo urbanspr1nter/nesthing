@@ -100,7 +100,7 @@ As discussed previously, the CPU, PPU and discussed later, APU, all share the sa
 
 Because of this, the CPU and PPU aren't directly connected to each other, per se, but rather connected to the common data bus where the data is manipulated by memory address reads and writes.
 
-[Block Diagram Here]
+![NES block diagram](./assets/nes-block-diagram.png)
 
 ## Interfacing Between the CPU and PPU
 
@@ -153,6 +153,40 @@ This is not entirely true. How memory-mapped IO registers should be more appropr
 ```
 
 It is then important to keep in mind that CPU reads and writes to the addresses `$2000 - $2007` in its address space are simply forwarded to the PPU hardware registers and are reflected immediately within the PPU hardware registers. 
+
+Suppose then we want to implement register writes to the VRAM address for the PPU. Then, we can simulate this interfacing between the CPU and PPU through a `Memory` controller object. 
+
+```
+class Memory {
+    read(address) {
+        var cleanAddress = address & 0xffff;
+
+        ... read the data here.
+
+
+        return result;
+    }
+
+    write(address, value) {
+        var cleanAddress = address & 0xffff;
+        var cleanValue = value & 0xff;
+
+        if(cleanAddress < 0x800) {
+            // write to RAM
+        } else if(cleanAddress ... ) {
+            ....
+        } else if(cleanAddress === 0x2006) {
+            this.ppu.write$2006(cleanValue);
+        } else {
+            ....
+        }
+    }
+}
+```
+
+Within the `write` method, we can directly forward all writes to memory address `$2006` to the internal PPU object which has the method to write VRAM addresses.
+
+This approach is an easy way to simulate easy interfacing for register reads, and writes to the PPU.
 
 ## Colors and Palette
 
@@ -270,3 +304,4 @@ Therefore, it is sufficient to say that a scanline, made up with 256 dots per sc
 3. NesDev PPU Palettes. NesDev Wiki. (https://wiki.nesdev.com/w/index.php/PPU_palettes)
 4. Memory-mapped I/O. Wikipedia. [Source](https://en.wikipedia.org/wiki/Memory-mapped_I/O)
 5. NesDev CPU Memory Map. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/CPU_memory_map)
+6. Nintendo Entertainment System Documentation. Patrick Diskin. [Source](http://www.nesdev.com/NESDoc.pdf)

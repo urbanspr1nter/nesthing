@@ -75,15 +75,7 @@ export class Nes {
   get controller2(): Controller {
     return this._controllerTwo;
   }
-
-  get readyToRender() {
-    return this._ppu.frameDrawn;
-  }
-
-  set readyToRender(value: boolean) {
-    this._ppu.frameDrawn = value;
-  }
-
+  
   public cpuMemory(): number[] {
     return this._memory.bits();
   }
