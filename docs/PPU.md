@@ -111,7 +111,7 @@ Internally, the PPU has several hardware registers:
 `x` the fine x scroll register;
 `w` the second write toggle
 
-Since the CPU cannot interact with these registers within the PPU directly, they are exposed through memory-mapped I/O. CPU addresses `$2000` to `$2007` are wired to interface with the PPU registers. 
+Since the CPU cannot interact with these registers within the PPU directly, they are exposed through memory-mapped I/O. CPU addresses `$2000` to `$2007` are wired to interface with the PPU registers. Additionally, the address `$4014` is also used by the PPU to perform DMA transfer to memory.
 
 To review, the memory layout of the NES is:
 
@@ -152,7 +152,7 @@ This is not entirely true. How memory-mapped IO registers should be more appropr
 (VRAM address is now $20BF)
 ```
 
-It is then important to keep in mind that CPU reads and writes to the addresses `$2000 - $2007` in its address space are simply forwarded to the PPU hardware registers and are reflected immediately within the PPU hardware registers. 
+It is then important to keep in mind that CPU reads and writes to the addresses `$2000 - $2007`, and `$4014` in its address space are simply forwarded to the PPU hardware registers and are reflected immediately within the PPU hardware registers. 
 
 Suppose then we want to implement register writes to the VRAM address for the PPU. Then, we can simulate this interfacing between the CPU and PPU through a `Memory` controller object. 
 
