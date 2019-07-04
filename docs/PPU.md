@@ -200,19 +200,19 @@ It is then fair to claim and assume that each value such as `$2C` read from memo
 
 Since we are dealing with writing an emulator, let's start referring to "dots" as "pixels" to be rendered. Ultimately the end goal of implementing the PPU is to output an image rendered on screen on what the real PPU would output onto the television.
 
-Just because there are 64 colors to choose from to represent an image does not mean they can all be used at once. An even bigger restriction, which lead to creative art during the later titles released on the NES was that the number of active colors on screen could only be 16.
+Just because there are 64 colors to choose from to represent an image does not mean they can all be used at once. As an even bigger restriction, the number of active colors on screen could only be 16. This limitation may have lead to creative art during the later titles released on the NES as the limited color palette was being maximized.
 
-This means that each pixel to be rendered is represented by **4 bits** (0 - 15).
+If the number of simultaneous colors on screen can only be 16, this means that we only need 4 bits to represent a pixel. The possible values which can be represented by 4 bits is then a value anywhere from: 0-15. 
 
-The structure of these 4 bits allow us to determine which color to output onto the screen:
+Each bit of the 4-bit pixel color respresents something. The 2 most significant bits represent the **attribute** bits, which help dictate what 4-color palette to use. The 2 lease significant bits represent the combination of high and low tile bits from the group of 16 bytes which have been referenced by the nametable byte.
 
 ```
 AAHL
 ```
 
-`AA` are the 2 bits which represents the specific palette index of which palette the colors will be coming from.
-
-`HL` represents the 2 bits which given the palette, the offset from the specific palette address to add to the base palette address which will then contain the byte of the color
+> `AA` are the 2 bits which represents the specific palette index of which palette the colors will be coming from.
+> 
+> `HL` represents the 2 bits which given the palette, the offset from the specific palette address to add to the base palette address which will then contain the byte of the color
 
 The memory layout of the background palettes is as follows:
 
@@ -249,25 +249,52 @@ Looking at memory, we find that `$3F02` gives us the color `$38` which going bac
 
 ![Color value 38](assets/ppu_color_38.png)
 
-Now we will go into detail on how we even compose the following 4 bit string: `AAHL`. For that, we must understand how *background tile rendering* works.
+Now, let's take a look at how we can even obtain the values of the bits to build our 4-bit `AAHL` string.
 
 ## Background Tile Rendering
 
-Since we know that a single color is a string of 4 bits, `AAHL`, you may expect that we need 3 different pieces of information. In fact, we need 4!
+Since we know that a single color is a string of 4 bits, `AAHL`, you may expect that we need 3 different pieces of information: attribute bits, high bits and low bits of the background tile. In fact, we need 4!
 
-The next few sections introduce some terminology which will hopefully clarify a lot of the ambiguity when it comes to getting your first frame rendered!
+The next few sections introduce some terminology which will hopefully clarify a lot of the ambiguity when it comes to getting your first frame rendered with background tiles.
 
 ## Nametable
 
-The nametable is essentially a representation of 32x30 tiles, where each tile is composed of 8x8 pixels. Each nametable byte at a specific address is a reference for a background pattern.
+As briefly mentioned earlier, each background tile is made up of a high byte, and a low byte for pixel content. A tile is `8x8` pixels, and each within this 8x8 grid, is represented by a high tile byte, and a low tile byte -- giving a total of 16 bytes to represent a background tile.
 
-Background patterns are referenced at either `$0000`, or `$1000` -- depending on what is set in `PpuReg$2000`.
+This string of 16 bytes can be found in the location of the CHR-ROM in memory. However, the NES does not draw these 16 bytes directly to represent a background tile. That would be completely wasteful.
 
-The nametables start at addresses `$2000`, `$2400`, `$2800`, and `$2C00`. Each nametable is then 960 bytes each, with some space allocated for attribute memory (64 bytes). Therefore, each nametable is compared of 1024 bytes. 
+Instead, the NES keeps a single copy of these background tiles, and ultimately references them within a nametable. A `nametable` is a chunk in memory intended to represent the current frame of background tiles which the NES is currently rendering.
 
-Since the PPU's VRAM is only 2 KB, there can only be 2 active nametables at a time. We will discuss on how these nametables are referenced later, but for now, the important concept is to understand that the each address within the address space of a nametable, points to an offset at which where to start retrieving the real background pattern bytes. 
+Each byte in the nametable is intended to represent a background tile. Since the NES resolution is `256x240`, we can compute the tile resolution of the nametable like so:
 
-Each background tile is actually composed of 16 bytes which are computed along with the attribute byte to form an 8x8 tile image. The nametable is just used as an index to indicate where to begin fetching these bytes.
+```
+ResolutionWidth = 256
+TileWidth = 8
+
+TilesPerRow = 256 / 8
+= 32
+
+ResolutionHeight = 240
+TileHeight = 8
+
+TilesPerColumn = 240 / 8
+= 30
+```
+
+The nametable is essentially a representation of 32x30 tiles, where each tile is composed of 8x8 pixels. Each nametable byte then references a sepcific address to the 16 byte chunk of the background tile.
+
+The base nametable address, or the starting address where all the background tiles are stored in memory is controlled through the PPU register `$2000`. Background patterns are referenced starting at `$0000`, or `$1000`, depending on what bit is set within `$2000`.
+
+The NES not only has 1 nametable, but 4 nametables with only 2 being active at a time to facilitate scrolling. This means that a total of 2 KB is reserved for nametables. Each nametable is 960 bytes each whith some space allocated for attribute memory for each background tile (which is an additional 64 bytes). Therefore, each nametable is composed of 1024 bytes, or 1 KB.
+
+ The nametables start at addresses `$2000`, `$2400`, `$2800`, and `$2C00`. We will only discuss in the context of a single nametable for this document. Let's assume `$2000`, and the memory map of a nametable as follows:
+
+ |Address|Purpose|Size|
+ |-------|-------|----|
+ |`$2000 - $23BF`|Background tile data|960 B|
+ |`$23C0 - $23FF`|Attribute bytes|64 B|
+
+To reiterate once more, nametable bytes are used as an index into the real set of background tile data found elsewhere in PPU memory starting at `$0000`, or `$1000`. We will now move onto discussing how that works.
 
 ## Background Pattern Tiles
 
