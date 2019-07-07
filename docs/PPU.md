@@ -298,6 +298,8 @@ To reiterate once more, nametable bytes are used as an index into the real set o
 
 ## Background Pattern Tiles
 
+Where background tiles are stored is called the pattern table.
+
 As mentioned before, to calculate where the background tiles to fetch, we can take the `nametableAddress` along with the `backgroundTileBaseAddress` and compute the location on where to begin fetching the pattern tiles:
 
 ```
@@ -310,10 +312,28 @@ We will discuss `fineY` soon but notice the `+8` when computing the `highBgTile`
 
 ## Attribute Byte
 
+A palette can only be 4 colors. There are multiple palettes associated with a particular background tile. In order for the NES to choose which palette to use, the attribute byte is utilized to select the palette at where to begin choosing colors. 
+
+The attribute bytes for the particular nametable can be found within the last 64 bytes of the 1024 byte nametable. 
+
+## Nametable Byte
+
+The nametable consists of entries which *point* to set of bytes which compose the current 8x8 pixel. The nametable byte respresents this 8x8 pixel in the current tile. 
+
+Therefore it is better to imagine the nametable as an index to the real pattern data found elsewhere within the background pattern address starting at `$0000`, or `$1000`. 
+
+## Tile Low and High Bytes
+
+Since a tile is represented as an 8x8 set of pixels, this gives 8 rows of 8 pixels. Each background tile is a set of 16 bytes, with 8 representing the low order bits of the 4-bit color, while the last set of 8 bytes represent the high order bits of the 4-bit color of that pixel.
+
+Therefore, each row is composed of 2 bytes to form the 8 pixel row. 
+
+Here is an example.
+
+[number example here]
+
 ## UNSORTED INFORMATION (WIP)
 
-1. Nametable Byte
-2. Attribute Byte
 3. Tile Low
 4. Tile High
 
