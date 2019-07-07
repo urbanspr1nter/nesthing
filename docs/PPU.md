@@ -332,6 +332,81 @@ Here is an example.
 
 [number example here]
 
+nametable address: $2209
+nametable byte at $2209 = $01
+
+nametable base address = $1000
+
+so the pattern table address is:
+
+patternTableaddress = $1000 + ($10 * $01) + 0 = $1010
+
+at this address, the 16 byte grouping:
+
+```
+18 38 18 18 18 18 7E 00
+00 00 00 00 00 00 00 00
+```
+
+Translating this all to a string of 8 bits:
+
+```
+00011000
+00111000
+00011000
+00011000
+00011000
+00011000
+01111110
+00000000
+
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+```
+
+Now, merging these bits together:
+
+```
+00 00 00 01 01 00 00 00
+00 00 01 01 01 00 00 00
+00 00 00 01 01 00 00 00
+00 00 00 01 01 00 00 00
+00 00 00 01 01 00 00 00
+00 00 00 01 01 00 00 00
+00 01 01 01 01 01 01 00
+00 00 00 00 00 00 00 00
+```
+
+Which outputs the values:
+
+```
+00011000
+00111000
+00011000
+00011000
+00011000
+00011000
+01111110
+00000000
+```
+
+You can start to see the "1" being formed. Each individual value at a specific bit location in the low+high merged value corresponds to the color index at a specific palette.
+
+Therefore that is why it is important to know the attribute byte which corresponds to this background tile in order to pick the paltte, and then the specific color offset from this palette (colors 0, 1, 2, or 3) based on this merged result.
+
+In this case, we know that the pixels forming the `1` uses the second color (1) of its palette to form the character, while the first color (0) of its palette is used as the background color.
+
+Let's put all that together.
+
+To calculate the attribute 
+
+
 ## UNSORTED INFORMATION (WIP)
 
 3. Tile Low
