@@ -457,6 +457,7 @@ The arrangement of the 2 attribute bits for each tile within the attribute byte 
 | 1     | 2, 3  |
 | 2     | 4, 5  |
 | 3     | 6, 7  |
+
 Suppose that `v` represents the current VRAM address, and that the `tile address` is the address of the current name table byte, we can then find the appropriate address in memory, the attribute byte to which this name table byte belongs to with the following conversion:
 
 ```
@@ -549,11 +550,11 @@ Looking at group 1, we have the addresses 3F04, 3F05, 3F06, and 3F07.
 
 What colors do these correspond to? Remember the color palette? 
 
-![Color Palette](/Users/rogerngo/Dropbox/CodeRepo/nesthing/docs/assets/ppu_color_palette.png)
+![Color Palette](./assets/ppu_color_palette.png)
 
 The values in the palette are: 0F, 27, 27, and 27. Which translates to the following palette:
 
-![Bg Tile 1 Palette](/Users/rogerngo/Dropbox/CodeRepo/nesthing/docs/assets/bg-tile-1-palette.png)
+![Bg Tile 1 Palette](./assets/bg-tile-1-palette.png)
 
 
 
