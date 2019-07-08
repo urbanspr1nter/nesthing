@@ -289,10 +289,10 @@ The NES not only has 1 nametable, but 4 nametables with only 2 being active at a
 
  The nametables start at addresses `$2000`, `$2400`, `$2800`, and `$2C00`. We will only discuss in the context of a single nametable for this document. Let's assume `$2000`, and the memory map of a nametable as follows:
 
- |Address|Purpose|Size|
- |-------|-------|----|
- |`$2000 - $23BF`|Background tile data|960 B|
- |`$23C0 - $23FF`|Attribute bytes|64 B|
+|Address|Purpose|Size|
+|-------|-------|----|
+|`$2000 - $23BF`|Background tile data|960 B|
+|`$23C0 - $23FF`|Attribute bytes|64 B|
 
 To reiterate once more, nametable bytes are used as an index into the real set of background tile data found elsewhere in PPU memory starting at `$0000`, or `$1000`. We will now move onto discussing how that works.
 
@@ -328,27 +328,58 @@ Since a tile is represented as an 8x8 set of pixels, this gives 8 rows of 8 pixe
 
 Therefore, each row is composed of 2 bytes to form the 8 pixel row. 
 
-Here is an example.
+## Example
 
-[number example here]
+Now, let's put together all the terminology we have learned so far, and see how the NES PPU renders out a background tile. The Donkey Kong title screen is a good example to start with for explaining this.
 
-nametable address: $2209
-nametable byte at $2209 = $01
+![DK Title Screen](./assets/dk-title.png)
 
-nametable base address = $1000
+Let's take a look at how the "1" background tile is rendered by the PPU. The pattern looks like this:
 
-so the pattern table address is:
+![DK 1 Pattern](./assets/dk-1-pattern.png)
 
-patternTableaddress = $1000 + ($10 * $01) + 0 = $1010
+When the title screen loads, the entire contents of the name table looks like:
 
-at this address, the 16 byte grouping:
+```
+24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 62 62 62 24 24 62 62 62 24 62 24 24 62 24 62 24 24 62 24 62 62 62 24 62 24 62 24 24 24 24 24 24 62 62 24 62 24 62 24 62 24 62 62 24 62 24 62 62 62 24 24 62 24 24 24 62 24 62 24 24 24 24 24 24 62 62 24 62 24 62 24 62 24 62 62 62 62 24 62 62 24 24 24 62 62 62 24 62 62 62 24 24 24 24 24 24 62 62 24 62 24 62 24 62 24 62 24 62 62 24 62 24 62 24 24 62 24 24 24 24 62 24 24 24 24 24 24 24 62 62 62 24 24 62 62 62 24 62 24 24 62 24 62 24 24 62 24 62 62 62 24 24 62 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 62 24 24 62 24 62 62 62 24 62 24 24 62 24 62 62 62 62 24 24 24 24 24 24 24 24 24 24 24 24 24 24 62 62 62 24 24 62 24 62 24 62 62 24 62 24 62 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 62 62 24 24 24 62 24 62 24 62 62 62 62 24 62 24 62 62 24 24 24 24 24 24 24 24 24 24 24 24 24 24 62 24 62 24 24 62 24 62 24 62 24 62 62 24 62 24 24 62 24 24 24 24 24 24 24 24 24 24 24 24 24 24 62 24 24 62 24 62 62 62 24 62 24 24 62 24 62 62 62 62 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 01 24 19 15 0A 22 0E 1B 24 10 0A 16 0E 24 0A 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 01 24 19 15 0A 22 0E 1B 24 10 0A 16 0E 24 0B 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 02 24 19 15 0A 22 0E 1B 24 10 0A 16 0E 24 0A 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 02 24 19 15 0A 22 0E 1B 24 10 0A 16 0E 24 0B 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 D3 01 09 08 01 24 17 12 17 1D 0E 17 0D 18 24 0C 18 65 15 1D 0D 64 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 16 0A 0D 0E 24 12 17 24 13 0A 19 0A 17 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24
+```
+
+This entire table is 32x30 entries long, with the starting address at `$2000`, and the very last element at `$23BF`. You can make some quick deductions here. The first deduction is that `$24` correponds to some blank tile that represents the black background. You may also notice that if you stand far away, you can see the general pattern of the title screen. Here, you can then assume that `$62` is probably the pattern that composes the `DONKEY KONG` title on the title screen.
+
+We are interested in finding out what pattern makes up `1`. The location we are looking at in the name table is then at address `$2209`. Let's express it like this:
+
+```
+Nt[0x2209] = 0x1
+```
+
+Now, that we have the name table byte, we need to find the group of 16 bytes within memory which composes the entire pattern. In order to do so, we must first find `baseNtAddress`. This is found through the use of inspecting the PPU register `$2000` to see which base name table address we should use. 
+
+```
+cpuMemory[0x2000] = 0b11110000
+```
+
+To refresh, the fifth least significant bit (the fifth bit from the right) represents the background pattern base address. If 0, then the base address starts at `$0`. If 1, then `$1000`. Here in this case, this bit is switched to 1, so then the base name table address begins at `$1000`.
+
+```
+BaseNtAddress = 0x1000
+```
+
+To calculate the background pattern address, we can now apply the following expression:
+
+```
+patternAddress = baseNtAddress + (0x10 * ntByte) + fineY
+               = 0x1000 + (0x10 * 0x1) + 0
+               = 0x1010
+```
+
+We now conclude that the pixels which make up the 8x8 pattern tile begins at address `$1010`. Inspecting the RAM, we can see that this 16 byte grouping is: 
 
 ```
 18 38 18 18 18 18 7E 00
 00 00 00 00 00 00 00 00
 ```
 
-Translating this all to a string of 8 bits:
+If we work this out by hand, and convert each value to binary, we can actaully start to see the 1 be formed:
 
 ```
 00011000
@@ -369,6 +400,8 @@ Translating this all to a string of 8 bits:
 00000000
 00000000
 ```
+
+Now, we must merge the tile low and tile high bytes together to have each pixel be within the value ranges of 0-3 as they are the color offsets for a specific palette chosen by the attribute byte. 
 
 Now, merging these bits together:
 
@@ -396,27 +429,13 @@ Which outputs the values:
 00000000
 ```
 
-You can start to see the "1" being formed. Each individual value at a specific bit location in the low+high merged value corresponds to the color index at a specific palette.
+Here, we can clearly see the "1" that has been formed. Each individual value at a specific bit location in the low and high merged value corresponds to the color index at a specific palette.
 
 Therefore that is why it is important to know the attribute byte which corresponds to this background tile in order to pick the paltte, and then the specific color offset from this palette (colors 0, 1, 2, or 3) based on this merged result.
 
 In this case, we know that the pixels forming the `1` uses the second color (1) of its palette to form the character, while the first color (0) of its palette is used as the background color.
 
-Let's put all that together.
-
-To calculate the attribute 
-
-
-## UNSORTED INFORMATION (WIP)
-
-3. Tile Low
-4. Tile High
-
-
-
-The NES PPU also renders out 240 visible scanlines. In every scanline, there are 341 cycles performed. 256 of those cycles are allocated towards rendering out a dot to the screen.
-
-Therefore, it is sufficient to say that a scanline, made up with 256 dots per scanline.
+So we know the index of the color for the specific color palette to use, how do we find the color palette to select the color to begin with? This is where calculating the attribute byte for this specific tile at the location will allow us to determine just that!
 
 ---
 ## References
