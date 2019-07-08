@@ -526,3 +526,4 @@ We found that the "1" pattern falls within group 1 of the attribute byte. Theref
 5. NesDev CPU Memory Map. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/CPU_memory_map)
 6. Nintendo Entertainment System Documentation. Patrick Diskin. [Source](http://www.nesdev.com/NESDoc.pdf)
 7. PPU Scrolling. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/PPU_scrolling) 
+8. PPU Palette. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/PPU_palettes) 
