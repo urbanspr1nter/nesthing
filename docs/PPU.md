@@ -512,7 +512,48 @@ v = 0x2209 & 0x0FFF
 
 We found that the "1" pattern falls within group 1 of the attribute byte. Therefore, within the byte `$55`, the value of the attribute bits is `$01`. 
 
+Palettes in PPU memory are stored beginning at `$3F00`.This is repeated at addresses `$3F04`, `$3F08`, and `$3F0C`. This is the universal color, but for background palettes, the following addresses corresponds to the group:
 
+| Address         | Group   |
+| --------------- | ------- |
+| `$3F01 - $3F03` | Group 0 |
+| `$3F05 - $3F07` | Group 1 |
+| `$3F09 - $3F0B` | Group 2 |
+| `$3F0D - $3F0F` | Group 3 |
+
+With all this, we know now that beginning at 3F00 to 3F0F, there are 16 bytes allocated for background colors. Let's take a look at the contents in memory:
+
+```
+3F00: 0F 
+3F01: 2C 
+3F02: 38 
+3F03: 12 
+
+3F04: 0F 
+3F05: 27 
+3F06: 27 
+3F07: 27 
+
+3F08: 0F 
+3F09: 30 
+3F0A: 30 
+3F0B: 30 
+
+3F0C: 0F 
+3F0D: 00 
+3F0E: 00 
+3F0F: 00
+```
+
+Looking at group 1, we have the addresses 3F04, 3F05, 3F06, and 3F07.
+
+What colors do these correspond to? Remember the color palette? 
+
+![Color Palette](/Users/rogerngo/Dropbox/CodeRepo/nesthing/docs/assets/ppu_color_palette.png)
+
+The values in the palette are: 0F, 27, 27, and 27. Which translates to the following palette:
+
+![Bg Tile 1 Palette](/Users/rogerngo/Dropbox/CodeRepo/nesthing/docs/assets/bg-tile-1-palette.png)
 
 
 
