@@ -437,6 +437,85 @@ In this case, we know that the pixels forming the `1` uses the second color (1) 
 
 So we know the index of the color for the specific color palette to use, how do we find the color palette to select the color to begin with? This is where calculating the attribute byte for this specific tile at the location will allow us to determine just that!
 
+If a name table is 1024 bytes long, you may have done some math to find out that 32x30 tiles is actually 960 bytes. So then, where are the remaining 64 bytes of the name table? What are they used for? 
+
+The last 64 bytes of a name table is allocated to the *attribute table*. In the context of the first name table of the NES, the attribute table starts at address `$23C0`. Each byte of the attribute table corresponds to 4 groups of tiles. That means, 2 bits a group of tiles. 
+
+The arrangement of the 2 attribute bits for each tile within the attribute byte is deliberate. Each attribute group is composed of 8, 8x8 tiles:
+
+```
+|-----|-----|
+| 0-1 | 2-3 |
+|-----|-----|
+| 4-5 | 6-7 |
+|-----|-----|
+```
+
+| Group | Tiles |
+| ----- | ----- |
+| 0     | 0, 1  |
+| 1     | 2, 3  |
+| 2     | 4, 5  |
+| 3     | 6, 7  |
+Suppose that `v` represents the current VRAM address, and that the `tile address` is the address of the current name table byte, we can then find the appropriate address in memory, the attribute byte to which this name table byte belongs to with the following conversion:
+
+```
+tile address      = 0x2000 | (v & 0x0FFF)
+attribute address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07)
+```
+
+Given our previous example of the "1" background tile, the address was `$2209`. We can then find the background table address by performing the calculations:
+
+```
+v = 0x2209
+attribute address = 0x23C0 | (0x2209 & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07)
+```
+
+Performing this caclulation manually through binary:
+
+```
+v = 0010 0010 0000 1001
+attribute address = 0010 0011 1100 0000 
+	| (0010 0010 0000 1001 & 0000 1100 0000 0000) 
+	| ((0010 0010 0000 1001) >> 4) & 0000 0000 0011 1000) 
+	| ((0010 0010 0000 1001) >> 2) & 0000 0000 0000 0111)
+	
+= 0010 0011 1100 0000
+ | 0000 0000 0000 0000
+ | 0000 0010 0010 0000 & 0000 0000 0011 1000
+ | 0000 1000 1000 0010 & 0000 0000 0000 0111
+ 
+= 0010 0011 1100 0000 | 0000 0000 0000 0000 | 0000 0000 0010 0000 | 0000 0000 0000 0010
+
+= 0010 0011 1110 0010
+
+= 0x23E2
+```
+
+We find that the corresponding attribute byte address is at `$23E2`, which in memory has the byte value of `$55`. Converting this to binary then gives:
+
+```
+Value: 0101 0101
+Group: 3322 1100
+```
+
+Which palette is this? We are definitely not done yet. We now must figure out, where our "1" background tile falls within its own attribute group. This tile can be 0, 1, 2, or 3 within its attribute group. 
+
+```
+v = 0x2209 & 0x0FFF 
+  = 0010 0010 0000 1001 & 0000 1111 1111 1111 
+  = 0000 0010 0000 1001
+  = 0x0209
+  = 0x0209 % 0x8 
+  = 0x1
+```
+
+We found that the "1" pattern falls within group 1 of the attribute byte. Therefore, within the byte `$55`, the value of the attribute bits is `$01`. 
+
+
+
+
+
 ---
 ## References
 
@@ -446,3 +525,4 @@ So we know the index of the color for the specific color palette to use, how do 
 4. Memory-mapped I/O. Wikipedia. [Source](https://en.wikipedia.org/wiki/Memory-mapped_I/O)
 5. NesDev CPU Memory Map. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/CPU_memory_map)
 6. Nintendo Entertainment System Documentation. Patrick Diskin. [Source](http://www.nesdev.com/NESDoc.pdf)
+7. PPU Scrolling. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/PPU_scrolling) 
