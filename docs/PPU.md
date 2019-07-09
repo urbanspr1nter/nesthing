@@ -341,12 +341,9 @@ Let's take a look at how the "1" background tile is rendered by the PPU. The pat
 When the title screen loads, the entire contents of the name table looks like:
 
 ```
+24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24
+24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24
 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 
-
-24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 
-
-24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 
-
 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 24 
 24 24 24 62 62 62 24 24 62 62 62 24 62 24 24 62 24 62 24 24 62 24 62 62 62 24 62 24 62 24 24 24 
 24 24 24 62 62 24 62 24 62 24 62 24 62 62 24 62 24 62 62 62 24 24 62 24 24 24 62 24 62 24 24 24 
@@ -619,7 +616,54 @@ For the 256 cycles in a single scanline which are visible, there are in turn, 24
 
 In this section, I will discuss how the PPU processes a background tile with some ideas on how we can create an emulated PPU which executes a single cycle at a time. This will be useful for adapting execution of some number of cycles dependent on the CPU.
 
-If you read 
+If you read the PPU rendering "Line-by-Line Timing" documentation on NesDev, the description of all the specific points at which the PPU renders can be quite intimidating. I'll try to make it simpler here by re-stating the important points in verbiage more tailored towards the programmer.
+
+### The VRAM Address
+
+On the topic of the VRAM address, you may have read that writing `$2006` is a way to manipulate the VRAM address. Internally, the PPU has a dedicated register which holds the current VRAM address. Writing to `$2006` is a way to modify that value. However, there is a second register dedicated to behaving like the temporary VRAM address which gets written to first if the write to `$2006` isn't the second write. All, in all, there are 3 components to making sure that the VRAM address gets written to properly:
+
+1. The VRAM register, *v*.
+2. The temporary VRAM register, *t*.
+3. The second write toggle, *w*.
+
+Writes to `$2006` into the v register are handled in big-endian fashion. That is the high byte is written first to the t register, and the passed into the subsequent write will be the lower 8 bits of the VRAM address.
+
+So, writing to *v* while accounting for 2 writes to a complete address can be expressed in this type of pseudo code:
+
+```
+if (this._w) { 
+	// this is the second write
+	this._t = (this._t << 8) | data;
+	this._v = this._t;
+	this._w = false;
+} else {
+  this._t = (this._t << 8) | data;
+  this._w = true;
+}
+```
+
+Notice how w is toggled to true when the first write has occurred, and back to false after the second write. 
+
+The v register within the PPU is just like any register in the CPU. It persists until it is modified again by some routine. This means that when a data byte is written `$2007` by the CPU, the PPU will go on ahead and set the data byte in its internal memory at the memory address found in the *v* register.
+
+Depending on the 3rd least significant bit found in `$2000`, the PPUCTRL register, the VRAM address is incremented by a complete byte for horizontal rendering, 1 (0), or 32 bytes (1) for vertical rendering. A routine which handles writing data found at the location specified by the v register is quite easy:
+
+```
+write$2007(value: number) {
+	this._ppuMemory.set(this._v, value);
+	this._incrementVramAddress();
+}
+
+_incrementVramAddress() {
+	if(this._regPPUCTRL_vramAddressIncrement === 1) {
+		this._v += 32;
+	} else {
+		this._v++;
+	}
+}
+```
+
+
 
 ---
 ## References
@@ -632,3 +676,4 @@ If you read
 6. Nintendo Entertainment System Documentation. Patrick Diskin. [Source](http://www.nesdev.com/NESDoc.pdf)
 7. PPU Scrolling. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/PPU_scrolling) 
 8. PPU Palette. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/PPU_palettes) 
+9. PPU Rendering. NesDev Wiki. [Source](https://wiki.nesdev.com/w/index.php/PPU_rendering) 
