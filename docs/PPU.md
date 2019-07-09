@@ -355,7 +355,7 @@ Nt[0x2209] = 0x1
 Now, that we have the name table byte, we need to find the group of 16 bytes within memory which composes the entire pattern. In order to do so, we must first find `baseNtAddress`. This is found through the use of inspecting the PPU register `$2000` to see which base name table address we should use. 
 
 ```
-cpuMemory[0x2000] = 0b11110000
+cpuMemory[0x2000] = 0b10010000
 ```
 
 To refresh, the fifth least significant bit (the fifth bit from the right) represents the background pattern base address. If 0, then the base address starts at `$0`. If 1, then `$1000`. Here in this case, this bit is switched to 1, so then the base name table address begins at `$1000`.
@@ -555,6 +555,37 @@ What colors do these correspond to? Remember the color palette?
 The values in the palette are: 0F, 27, 27, and 27. Which translates to the following palette:
 
 ![Bg Tile 1 Palette](./assets/bg-tile-1-palette.png)
+
+Knowing the attribute bits are $01, we need to now figure out which color within the palette each pixel within the 8x8 background tile pattern belongs to. Bringing back the merged high and low bytes of the tile pattern:
+
+```
+00011000
+00111000
+00011000
+00011000
+00011000
+00011000
+01111110
+00000000
+```
+
+Each color here is either the 4 bit color 0100, or 0101. 0100 corresponds to the black color, while 0101 corresponds to the goldenrod color. After a while you can see how the 1 pattern is finally formed.
+
+By creating a 512x512 image with each pixel being represented as a 64x64 grid, we can manually reconstruct the image with the 4 bit color by filling in these regions with that very color. 
+
+We can see this indeed gives us the background tile in which we are interested in.
+
+![Reconstruction](./assets/bg-tile-pixel-by-pixel-recon.png)
+
+![Reconstructed image](./assets/bg-tile-pixel-by-pixel.png)
+
+## Background Rendering Loop
+
+The PPU will execute 341 cycles for each scanline. However, only 256 of those cycles will be outputting color dots to the screen. We can think of a dot as a single pixel which gets rendered onto some display.
+
+For the 256 cycles in a single scanline which are visible, there are in turn, 240 visible scanlines. This makes the displayable resolution of the NES to be 256x240. 
+
+In this section, I will discuss how the PPU processes a background tile with some ideas on how we can create an emulated PPU which executes a single cycle at a time. This will be useful for adapting execution of some number of cycles dependent on the CPU.
 
 
 
