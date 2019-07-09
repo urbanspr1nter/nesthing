@@ -663,7 +663,17 @@ _incrementVramAddress() {
 }
 ```
 
+### Tile and Attribute Shift Registers
 
+The PPU internally holds 4 other shift registers to store the current background tile context. 2 of these registers are 16 bit each which deal with storing background tile data. The other 2 registers are 8 bit, which deal with storing the attribute data for the current data found in the tile shift registers.
+
+This may not make sense now, but will later when I explain how the PPU renders an entire background tile cycle-for-cycle, later but...
+
+The PPU stores data for 2 background tiles at a time. The tile shift registers contain the data bits found in memory through the name table byte indirection. The lower 8 bits contains the current pixels to be rendered, while the upper 8 bits is loaded with the next bitmap data bits to be rendered.
+
+At the same time, the attribute shift registers are loaded with the palette attribute data for the lower 8 bits of the 16 bit tile shift register. 
+
+Now, let's pause for a moment for a concept I am about to explain which for me, was really hard to understand.
 
 ---
 ## References
