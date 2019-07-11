@@ -1,3 +1,8 @@
+/**
+ * soundhandler.ts
+ * 
+ * Roger Ngo, 2019
+ */
 import { AUDIO_BUFFER_LENGTH, AUDIO_SAMPLE_RATE } from "../apu/constants";
 
 export class UiSoundHandler {
@@ -25,6 +30,12 @@ export class UiSoundHandler {
     this._bufferDataQueue = [];
   }
 
+  /**
+   * Adds the value to the data queue so that it can be outputted to the audio 
+   * device once the buffer queue is full. 
+   * 
+   * @param value floating point value representing the sample
+   */
   public receiveSample(value: number) {
     if (this._bufferDataQueue.length >= AUDIO_BUFFER_LENGTH) {
       const bufferData = this._buffer.getChannelData(0);

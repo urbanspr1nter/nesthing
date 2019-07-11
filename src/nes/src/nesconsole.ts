@@ -5,6 +5,8 @@ import { Controller } from "./controller";
 
 const ONE_SECOND_MS = 1000;
 const FPS = 60;
+const KEY_UP_EVENT = "keyup";
+const KEY_DOWN_EVENT = "keydown";
 
 export class NesConsole {
   private _nes: Nes;
@@ -14,13 +16,13 @@ export class NesConsole {
   private _msPerFrame: number;
   private _ppuFrames: number;
 
-  constructor(rom: Roms) {
+  constructor(rom: Roms, canvasId: string) {
     const playerOneController = new Controller();
     const playerTwoController = new Controller();
 
     this._options = {
       keyHandler: new UiKeyHandler(playerOneController, playerTwoController),
-      frameRenderer: new UiFrameBuffer(),
+      frameRenderer: new UiFrameBuffer(canvasId),
       controller: {
         one: playerOneController,
         two: playerTwoController
@@ -40,17 +42,17 @@ export class NesConsole {
   }
 
   public setupDOM() {
-    document.addEventListener("keydown", (e: KeyboardEvent) => {
+    document.addEventListener(KEY_UP_EVENT, (e: KeyboardEvent) => {
       this._options.keyHandler.handlePlayerOneKeyDown(e.key);
     });
-    document.addEventListener("keyup", (e: KeyboardEvent) => {
+    document.addEventListener(KEY_DOWN_EVENT, (e: KeyboardEvent) => {
       this._options.keyHandler.handlePlayerOneKeyUp(e.key);
     });
-    document.addEventListener("keydown", (e: KeyboardEvent) => {
-      this._options.keyHandler.handlePlayerTwoKeyDown(e.key);
-    });
-    document.addEventListener("keyup", (e: KeyboardEvent) => {
+    document.addEventListener(KEY_UP_EVENT, (e: KeyboardEvent) => {
       this._options.keyHandler.handlePlayerTwoKeyUp(e.key);
+    });
+    document.addEventListener(KEY_DOWN_EVENT, (e: KeyboardEvent) => {
+      this._options.keyHandler.handlePlayerTwoKeyDown(e.key);
     });
   }
 

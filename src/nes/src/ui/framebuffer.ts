@@ -26,8 +26,8 @@ export class UiFrameBuffer {
   private _image8Buffer: Uint8ClampedArray;
   private _image32Buffer: Uint32Array;
 
-  constructor() {
-    this._canvas = document.getElementById("main") as HTMLCanvasElement;
+  constructor(canvasId: string) {
+    this._canvas = document.getElementById(canvasId) as HTMLCanvasElement;
     this._context = this._canvas.getContext("2d", { alpha: false });
     this._context.imageSmoothingEnabled = false;
 

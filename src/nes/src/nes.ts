@@ -1,7 +1,6 @@
 import { Memory } from "./memory";
 import { Ppu } from "./ppu";
 import { Cpu } from "./cpu";
-import { PpuMemory } from "./ppumemory";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
 import { Apu } from "./apu";
