@@ -28,13 +28,13 @@ export class UiSoundHandler {
   public receiveSample(value: number) {
     if (this._bufferDataQueue.length >= AUDIO_BUFFER_LENGTH) {
       const bufferData = this._buffer.getChannelData(0);
-      bufferData.set(this._bufferDataQueue);
+      bufferData.set(this._bufferDataQueue.slice(0, AUDIO_BUFFER_LENGTH));
 
       this._bufferSource = this._audioContext.createBufferSource();
       this._bufferSource.buffer = this._buffer;
       this._bufferSource.connect(this._gainNode);
 
-      this._bufferDataQueue = [];
+      this._bufferDataQueue = this._bufferDataQueue.slice(AUDIO_BUFFER_LENGTH);
 
       this._bufferSource.start();
     }
