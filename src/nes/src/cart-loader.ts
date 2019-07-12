@@ -1,5 +1,6 @@
 import { Memory } from "./memory";
 import { PpuMemory } from "./ppumemory";
+import { Cartridge } from "./cartridge";
 
 // iNES file format
 // (0-3) 4E 45 53 1A
@@ -26,12 +27,12 @@ import { PpuMemory } from "./ppumemory";
 // (10-15) - Unused
 
 export interface iNesHeader {
+  FormatHeader: number[];
   PrgRomUnits: number;
   ChrRomUnits: number;
-  Mirroring: number;
-  BatteryBacked: boolean;
-  HasTrainer: boolean;
-  IgnoreMirroring: boolean;
+  Control1: number;
+  Control2: number;
+  PrgRamSizeUnits: number; // 8 KB units
 }
 
 export class CartLoader {
@@ -40,12 +41,12 @@ export class CartLoader {
 
   constructor(romContents: number[]) {
     this._headerInfo = {
+      FormatHeader: [0, 0, 0, 0],
       PrgRomUnits: 0,
       ChrRomUnits: 0,
-      Mirroring: 0,
-      BatteryBacked: false,
-      HasTrainer: false,
-      IgnoreMirroring: false
+      Control1: 0,
+      Control2: 0,
+      PrgRamSizeUnits: 0
     };
 
     this._romBytes = [];
@@ -56,41 +57,43 @@ export class CartLoader {
     this._getHeader();
   }
 
-  public loadCartridgeData(cpuMemory: Memory, ppuMemory: PpuMemory) {
-    let romData;
-    // NES in header, so it is a .nes format.
-    romData = this._romBytes.slice(16);
+  public makeCartridge(): Cartridge {
+    let romData = this._romBytes.slice(16);
+    let filePointer = 0;
 
-    for (let i = 0; i < this._headerInfo.PrgRomUnits; i++) {
-      let startAddressPrgBank = 0xFFFF - (0x3fff * (i + 1));
-      let romStartAddress = 0 + (0x4000 * i);
-      for (let address = romStartAddress; address < (romStartAddress + 0x4000); address++) {
-        cpuMemory.set(startAddressPrgBank, romData[address]);
-        startAddressPrgBank++;
-      }
+    var mapper1 = this._headerInfo.Control1 >>> 4;
+    var mapper2 = this._headerInfo.Control2 >>> 4;
+    var mapper = (mapper1 | mapper2) << 4;
+
+    var mirror1 = this._headerInfo.Control1 & 1;
+    var mirror2 = (this._headerInfo.Control1 >>> 3) & 1;
+    var mirror = (mirror1 | mirror2) << 1;
+
+    var battery = (this._headerInfo.Control1 >>> 1) & 1;
+
+    var prg = [];
+    var prgRomSize = this._headerInfo.PrgRomUnits * 16384;
+    for(let i = 0; i < prgRomSize; i++) {
+      prg.push(romData[filePointer]);
+      filePointer++;
     }
 
-    for (let i = 0; i < this._headerInfo.ChrRomUnits; i++) {
-      let startAddressChrBank = 0x0;
-      let romStartAddress = (0x4000 * this._headerInfo.PrgRomUnits) + (0x2000 * i);
-      for (let address = romStartAddress; address < romStartAddress + 0x2000; address++) {
-        ppuMemory.set(startAddressChrBank, romData[address]);
-        startAddressChrBank++;
-      }
+    var chr = [];
+    var chrRomSize = this._headerInfo.ChrRomUnits * 8192;
+    for(let i = 0; i < chrRomSize; i++) {
+      chr.push(romData[filePointer]);
+      filePointer++;
     }
+
+    return new Cartridge(prg, chr, mapper, mirror, battery);
   }
 
   private _getHeader() {
+    this._headerInfo.FormatHeader = this._romBytes.slice(0, 4);
     this._headerInfo.PrgRomUnits = this._romBytes[4];
     this._headerInfo.ChrRomUnits = this._romBytes[5];
-    this._headerInfo.Mirroring = (this._romBytes[6] & 0x0) === 0x0 ? 0 : 1;
-    this._headerInfo.BatteryBacked =
-      (this._romBytes[6] & 0x02) === 0x0 ? false : true;
-    this._headerInfo.HasTrainer =
-      (this._romBytes[6] & 0x04) === 0x0 ? false : true;
-    this._headerInfo.IgnoreMirroring =
-      (this._romBytes[6] & 0x08) === 0x0 ? false : true;
-
-    console.log(JSON.stringify(this._headerInfo));
+    this._headerInfo.Control1 = this._romBytes[6];
+    this._headerInfo.Control2 = this._romBytes[7];
+    this._headerInfo.PrgRamSizeUnits = this._romBytes[8];
   }
 }

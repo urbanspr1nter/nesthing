@@ -1,6 +1,7 @@
 import { Ppu } from "./ppu";
 import { Controller, ControllerPlayer } from "./controller";
 import { Apu } from "./apu";
+import { IMapper } from "./mapper";
 
 /**
  * CPU MEMORY MAP
@@ -18,6 +19,7 @@ import { Apu } from "./apu";
 export class Memory {
   private _memory: number[];
 
+  private _mapper: IMapper;
   private _apu: Apu;
   private _ppu: Ppu;
   private _controllerOne: Controller;
@@ -29,6 +31,10 @@ export class Memory {
     this._apu = apu;
     this._controllerOne = controllerOne;
     this._controllerTwo = controllerTwo;
+  }
+
+  set mapper(value: IMapper) {
+    this._mapper = value;
   }
 
   public bits(): number[] {
@@ -67,6 +73,8 @@ export class Memory {
       this._apu.write$addr(address, value);
     } else if (address === 0x4015 || address === 0x4017) {
       this._apu.write$addr(address, value);
+    } else if(address >= 0x6000) {
+      this._mapper.write(address, value);
     } else {
       this._memory[address & 0xffff] = value;
     }
@@ -96,6 +104,8 @@ export class Memory {
     } else if (address === 0x4017) {
       // read controller 2
       return this._controllerTwo.read();
+    } else if(address >= 0x6000) {
+      return this._mapper.read(address);
     }
     return this._memory[address & 0xffff] & 0xff;
   };

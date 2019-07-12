@@ -1,10 +1,14 @@
+import { IMapper } from "./mapper";
+
 const MaxMemoryAddress = 0x3fff;
 
 export class PpuMemory {
+  private _mapper: IMapper;
   private _memory: number[];
 
-  constructor() {
+  constructor(mapper: IMapper) {
     this._memory = [];
+    this._mapper = mapper;
   }
 
   public bits(): number[] {
@@ -13,11 +17,18 @@ export class PpuMemory {
 
   public set(address: number, value: number) {
     const decodedAddress = address % 0x4000;
-    this._memory[decodedAddress] = value & 0xff;
+    if(decodedAddress < 0x2000) {
+      this._mapper.write(decodedAddress, value);
+    } else {
+      this._memory[decodedAddress] = value & 0xff;
+    }
   };
 
   public get(address: number) {
     const decodedAddress = address % 0x4000;
+    if(decodedAddress < 0x2000) {
+      return this._mapper.read(decodedAddress);
+    }
     return this._memory[decodedAddress] & 0xff;
   };
 }

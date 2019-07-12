@@ -7,6 +7,8 @@ import { Apu } from "./apu";
 import { UiSoundHandler } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
+import { Mapper2, IMapper } from "./mapper";
+import { Cartridge } from "./cartridge";
 
 export interface ControllerSet {
   one: Controller;
@@ -36,6 +38,8 @@ export class Nes {
   private _apu: Apu;
   private _ppu: Ppu;
   private _cpu: Cpu;
+  private _mapper: IMapper;
+  private _cartridge: Cartridge;
   private _uiSoundHandler: UiSoundHandler;
 
   private _controllerOne: Controller;
@@ -50,20 +54,27 @@ export class Nes {
       this._rom = RomFiles.SpaceInvaders;
     }
 
+    const romContents = this._rom.raw as number[];
+    const cartLoader = new CartLoader(romContents);
+    this._cartridge = cartLoader.makeCartridge();
+    this._mapper = new Mapper2(this._cartridge);
+    
+
     this._controllerOne = options.controller.one;
     this._controllerTwo = options.controller.two;
 
     this._uiSoundHandler = new UiSoundHandler(0.8);
 
     this._apu = new Apu(this._uiSoundHandler, 44100);
-    this._ppu = new Ppu(options.frameRenderer);
-
+    this._ppu = new Ppu(options.frameRenderer, this._mapper);
     this._memory = new Memory(this._ppu, this._apu, this._controllerOne, this._controllerTwo);
+    this._memory.mapper = this._mapper;
 
     this._cpu = new Cpu(this._memory);
     this._apu.setCpu(this._cpu);
     this._ppu.setCpu(this._cpu);
     
+
     this._initialize();
   }
 
@@ -92,9 +103,7 @@ export class Nes {
   }
 
   public loadRom() {
-    const romContents = this._rom.raw as number[];
-    const cartLoader = new CartLoader(romContents);
-    cartLoader.loadCartridgeData(this._memory, this._ppu.memory);
+
   }
 
   public run(): number {
@@ -107,6 +116,7 @@ export class Nes {
     var totalPpuSteps = totalCpuSteps * 3;
     for (let i = 0; i < totalPpuSteps; i++) {
       this._ppu.step();
+      this._mapper.step();
     }
 
     return totalCpuSteps;

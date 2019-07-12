@@ -9,6 +9,7 @@ import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { UiFrameBuffer } from "./ui/framebuffer";
+import { IMapper } from "./mapper";
 
 /**
  * Constants
@@ -106,9 +107,9 @@ export class Ppu {
   private _nmiPrevious: boolean;
   private _nmiDelay: number;
 
-  constructor( uiFrameBuffer: UiFrameBuffer) {
+  constructor( uiFrameBuffer: UiFrameBuffer, mapper: IMapper) {
     this._uiFrameBuffer = uiFrameBuffer;
-    this._ppuMemory = new PpuMemory();
+    this._ppuMemory = new PpuMemory(mapper);
     this._scanlines = 0;
     this._cycles = 0;
     this._frames = 0;
