@@ -8,14 +8,14 @@ import * as fs from "fs";
  */
 
 const bytes: number[] = [];
-const romContents = fs.readFileSync("./roms/original/F1Race.nes");
+const romContents = fs.readFileSync("./roms/original/Tetris.nes");
 romContents.forEach(value => {
   bytes.push(value);
 });
 
 const result = {
-  name: "f1race.nes",
+  name: "tetris.nes",
   raw: bytes
 };
 
-fs.writeFileSync("./f1race.json", JSON.stringify(result));
+fs.writeFileSync("./tetris.json", JSON.stringify(result));

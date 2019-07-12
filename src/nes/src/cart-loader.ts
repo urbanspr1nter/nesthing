@@ -63,11 +63,11 @@ export class CartLoader {
 
     var mapper1 = this._headerInfo.Control1 >>> 4;
     var mapper2 = this._headerInfo.Control2 >>> 4;
-    var mapper = (mapper1 | mapper2) << 4;
+    var mapper = (mapper1 | (mapper2 << 4));
 
     var mirror1 = this._headerInfo.Control1 & 1;
     var mirror2 = (this._headerInfo.Control1 >>> 3) & 1;
-    var mirror = (mirror1 | mirror2) << 1;
+    var mirror = (mirror1 | (mirror2 << 1));
 
     var battery = (this._headerInfo.Control1 >>> 1) & 1;
 

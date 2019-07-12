@@ -13,7 +13,7 @@ export interface IMapper {
     step(): void;
 }
 
-export class Mapper2 implements IMapper {
+export class NromMapper implements IMapper {
     private _cartridge: Cartridge;
     private _prgBanks: number;
     private _prgBank1: number;
@@ -64,7 +64,7 @@ export class Mapper2 implements IMapper {
     }
 }
 
-export class Mapper1 implements IMapper {
+export class Mmc1Mapper implements IMapper {
     private _cartridge: Cartridge;
     private _shiftRegister: number;
     private _control: number;
@@ -92,6 +92,11 @@ export class Mapper1 implements IMapper {
             this._prgOffsets[i] = 0;
         }
         this._prgOffsets[1] = this._prgBankOffset(-1);
+
+        this._chrOffsets = [];
+        for(let i = 0; i < 2; i++) {
+            this._chrOffsets[i] = 0;
+        }
     }
 
     public read(address: number): number {

@@ -22,6 +22,9 @@ document.getElementById("btn-play").addEventListener("click", () => {
     case 3: 
       game = Roms.F1Race;
       break;
+    case 4:
+      game = Roms.Tetris;
+      break;
   }
 
   gameConsole = new NesConsole(game, canvasId);

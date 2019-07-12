@@ -7,7 +7,7 @@ import { Apu } from "./apu";
 import { UiSoundHandler } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
-import { Mapper2, IMapper } from "./mapper";
+import { IMapper, NromMapper, Mmc1Mapper } from "./mapper";
 import { Cartridge } from "./cartridge";
 
 export interface ControllerSet {
@@ -25,15 +25,21 @@ export enum Roms {
   MarioBros,
   DonkeyKong,
   SpaceInvaders,
-  F1Race
+  F1Race,
+  Tetris
 }
 export const RomFiles = {
   MarioBros: require("./roms/mario.json"),
   DonkeyKong: require("./roms/donkey.json"),
   SpaceInvaders: require("./roms/space.json"),
-  F1Race: require("./roms/f1race.json")
+  F1Race: require("./roms/f1race.json"),
+  Tetris: require("./roms/tetris.json")
 };
 
+export enum Mapper {
+  NROM = 0,
+  MMC1 = 1
+}
 export class Nes {
   private _rom: any;
   private _memory: Memory;
@@ -56,14 +62,20 @@ export class Nes {
       this._rom = RomFiles.SpaceInvaders;
     } else if(options.rom === Roms.F1Race) {
       this._rom = RomFiles.F1Race;
+    } else if(options.rom === Roms.Tetris) {
+      this._rom = RomFiles.Tetris;
     }
 
     const romContents = this._rom.raw as number[];
     const cartLoader = new CartLoader(romContents);
     this._cartridge = cartLoader.makeCartridge();
-    this._mapper = new Mapper2(this._cartridge);
-    
 
+    if(this._cartridge.mapper === Mapper.NROM) {
+      this._mapper = new NromMapper(this._cartridge);
+    } else if(this._cartridge.mapper === Mapper.MMC1) {
+      this._mapper = new Mmc1Mapper(this._cartridge);
+    }
+    
     this._controllerOne = options.controller.one;
     this._controllerTwo = options.controller.two;
 
@@ -71,8 +83,7 @@ export class Nes {
 
     this._apu = new Apu(this._uiSoundHandler, 44100);
     this._ppu = new Ppu(options.frameRenderer, this._mapper);
-    this._memory = new Memory(this._ppu, this._apu, this._controllerOne, this._controllerTwo);
-    this._memory.mapper = this._mapper;
+    this._memory = new Memory(this._ppu, this._apu, this._mapper, this._controllerOne, this._controllerTwo);
 
     this._cpu = new Cpu(this._memory);
     this._apu.setCpu(this._cpu);

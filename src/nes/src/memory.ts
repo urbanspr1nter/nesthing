@@ -25,16 +25,13 @@ export class Memory {
   private _controllerOne: Controller;
   private _controllerTwo: Controller;
 
-  constructor(ppu: Ppu, apu: Apu, controllerOne: Controller, controllerTwo: Controller) {
+  constructor(ppu: Ppu, apu: Apu, mapper: IMapper, controllerOne: Controller, controllerTwo: Controller) {
     this._memory = [];
+    this._mapper = mapper;
     this._ppu = ppu;
     this._apu = apu;
     this._controllerOne = controllerOne;
     this._controllerTwo = controllerTwo;
-  }
-
-  set mapper(value: IMapper) {
-    this._mapper = value;
   }
 
   public bits(): number[] {
