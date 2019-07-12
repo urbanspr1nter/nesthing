@@ -26,14 +26,18 @@ export enum Roms {
   DonkeyKong,
   SpaceInvaders,
   F1Race,
-  Tetris
+  Tetris,
+  SuperMarioBros,
+  LegendOfZelda
 }
 export const RomFiles = {
   MarioBros: require("./roms/mario.json"),
   DonkeyKong: require("./roms/donkey.json"),
   SpaceInvaders: require("./roms/space.json"),
   F1Race: require("./roms/f1race.json"),
-  Tetris: require("./roms/tetris.json")
+  Tetris: require("./roms/tetris.json"),
+  SuperMarioBros: require("./roms/smb.json"),
+  LegendOfZelda: require("./roms/loz.json")
 };
 
 export enum Mapper {
@@ -64,6 +68,10 @@ export class Nes {
       this._rom = RomFiles.F1Race;
     } else if(options.rom === Roms.Tetris) {
       this._rom = RomFiles.Tetris;
+    } else if(options.rom === Roms.SuperMarioBros) {
+      this._rom = RomFiles.SuperMarioBros;
+    } else if(options.rom === Roms.LegendOfZelda) {
+      this._rom = RomFiles.LegendOfZelda;
     }
 
     const romContents = this._rom.raw as number[];

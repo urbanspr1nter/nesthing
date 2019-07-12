@@ -25,6 +25,12 @@ document.getElementById("btn-play").addEventListener("click", () => {
     case 4:
       game = Roms.Tetris;
       break;
+    case 5:
+      game = Roms.SuperMarioBros;
+      break;
+    case 6:
+      game = Roms.LegendOfZelda;
+      break;
   }
 
   gameConsole = new NesConsole(game, canvasId);
