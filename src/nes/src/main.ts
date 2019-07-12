@@ -19,6 +19,9 @@ document.getElementById("btn-play").addEventListener("click", () => {
     case 2:
       game = Roms.SpaceInvaders;
       break;
+    case 3: 
+      game = Roms.F1Race;
+      break;
   }
 
   gameConsole = new NesConsole(game, canvasId);

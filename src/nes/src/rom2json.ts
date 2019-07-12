@@ -8,14 +8,14 @@ import * as fs from "fs";
  */
 
 const bytes: number[] = [];
-const romContents = fs.readFileSync("./roms/original/SpaceInvaders.nes");
+const romContents = fs.readFileSync("./roms/original/F1Race.nes");
 romContents.forEach(value => {
   bytes.push(value);
 });
 
 const result = {
-  name: "dk.nes",
+  name: "f1race.nes",
   raw: bytes
 };
 
-fs.writeFileSync("./space.json", JSON.stringify(result));
+fs.writeFileSync("./f1race.json", JSON.stringify(result));

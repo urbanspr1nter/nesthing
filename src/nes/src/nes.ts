@@ -24,12 +24,14 @@ export interface NesOptions {
 export enum Roms {
   MarioBros,
   DonkeyKong,
-  SpaceInvaders
+  SpaceInvaders,
+  F1Race
 }
 export const RomFiles = {
   MarioBros: require("./roms/mario.json"),
   DonkeyKong: require("./roms/donkey.json"),
-  SpaceInvaders: require("./roms/space.json")
+  SpaceInvaders: require("./roms/space.json"),
+  F1Race: require("./roms/f1race.json")
 };
 
 export class Nes {
@@ -52,6 +54,8 @@ export class Nes {
       this._rom = RomFiles.DonkeyKong;
     } else if (options.rom === Roms.SpaceInvaders) {
       this._rom = RomFiles.SpaceInvaders;
+    } else if(options.rom === Roms.F1Race) {
+      this._rom = RomFiles.F1Race;
     }
 
     const romContents = this._rom.raw as number[];
