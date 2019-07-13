@@ -46,21 +46,7 @@ export class Memory {
     } else if (address >= 0x2000 && address <= 0x3fff) {
       // PPU registers
       const decodedAddress = 0x2000 + (address % 8);
-      if (decodedAddress === 0x2000) {
-        this._ppu.write$2000(value);
-      } else if (decodedAddress === 0x2001) {
-        this._ppu.write$2001(value);
-      } else if (decodedAddress === 0x2003) {
-        this._ppu.write$2003(value);
-      } else if (decodedAddress === 0x2004) {
-        this._ppu.write$2004(value);
-      } else if (decodedAddress === 0x2005) {
-        this._ppu.write$2005(value);
-      } else if (decodedAddress === 0x2006) {
-        this._ppu.write$2006(value);
-      } else if (decodedAddress === 0x2007) {
-        this._ppu.write$2007(value);
-      }
+      this._ppu.write(decodedAddress, value);
     } else if (address === 0x4014) {
       return this._ppu.write$4014(value);
     } else if (address === 0x4016) {
@@ -84,15 +70,7 @@ export class Memory {
       return this._memory[address % 0x800] & 0xff;
     } else if (address >= 0x2000 && address <= 0x3fff) {
       const decodedAddress = 0x2000 + (address % 8);
-      if (decodedAddress === 0x2002) {
-        return this._ppu.read$2002() & 0xff;
-      } else if (decodedAddress === 0x2004) {
-        return this._ppu.read$2004() & 0xff;
-      } else if (decodedAddress === 0x2007) {
-        return this._ppu.read$2007() & 0xff;
-      } else {
-        return 0;
-      }
+      return this._ppu.read(decodedAddress);
     } else if (address === 0x4015) {
       return this._apu.read$addr(address);
     } else if (address === 0x4016) {

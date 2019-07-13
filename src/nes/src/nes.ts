@@ -95,7 +95,7 @@ export class Nes {
 
     this._cpu = new Cpu(this._memory);
     this._apu.setCpu(this._cpu);
-    this._ppu.setCpu(this._cpu);
+    this._ppu.cpu = this._cpu;
     
 
     this._initialize();
@@ -118,11 +118,11 @@ export class Nes {
   }
 
   public scanlines(): number {
-    return this._ppu.getScanlines();
+    return this._ppu.scanlines;
   }
 
   public ppuCycles(): number {
-    return this._ppu.getCycles();
+    return this._ppu.cycles;
   }
 
   public loadRom() {

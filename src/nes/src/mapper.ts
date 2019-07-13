@@ -21,7 +21,7 @@ export class NromMapper implements IMapper {
 
     constructor(cartridge: Cartridge) {
         this._cartridge = cartridge;
-        this._prgBanks = this._cartridge.prg.length / 0x4000;
+        this._prgBanks = Math.trunc(this._cartridge.prg.length / 0x4000);
         this._prgBank1 = 0;
         this._prgBank2 = this._prgBanks - 1;
     }
@@ -202,7 +202,7 @@ export class Mmc1Mapper implements IMapper {
             index -= 0x100;
         }
 
-        index = index % (this._cartridge.prg.length / 0x4000);
+        index = index % Math.trunc(this._cartridge.prg.length / 0x4000);
         
         var offset = index * 0x4000;
         if(offset < 0) {
@@ -217,7 +217,7 @@ export class Mmc1Mapper implements IMapper {
             index -= 0x100;
         }
 
-        index =index % (this._cartridge.chr.length / 0x1000);
+        index = index % Math.trunc(this._cartridge.chr.length / 0x1000);
 
         var offset = index * 0x1000;
         if(offset < 0) {
@@ -229,22 +229,22 @@ export class Mmc1Mapper implements IMapper {
 
     private _updateOffsets() {
         if(this._prgMode === 0 || this._prgMode === 1) {
-            this._prgOffsets[0] = this._prgBankOffset(Math.trunc(this._prgBank & 0xFE));
-            this._prgOffsets[1] = this._prgBankOffset(Math.trunc(this._prgBank | 0x01));
+            this._prgOffsets[0] = this._prgBankOffset(this._prgBank & 0xFE);
+            this._prgOffsets[1] = this._prgBankOffset(this._prgBank | 0x01);
         } else if(this._prgMode === 2) {
             this._prgOffsets[0] = 0;
-            this._prgOffsets[1] = this._prgBankOffset(Math.trunc(this._prgBank));
+            this._prgOffsets[1] = this._prgBankOffset(this._prgBank);
         } else if(this._prgMode === 3) {
-            this._prgOffsets[0] = this._prgBankOffset(Math.trunc(this._prgBank));
+            this._prgOffsets[0] = this._prgBankOffset(this._prgBank);
             this._prgOffsets[1] = this._prgBankOffset(-1);
         }
 
         if(this._chrMode === 0) {
-            this._chrOffsets[0] = this._chrBankOffset(Math.trunc(this._chrBank0 & 0xFE));
-            this._chrOffsets[1] = this._chrBankOffset(Math.trunc(this._chrBank0 | 0x01));
+            this._chrOffsets[0] = this._chrBankOffset(this._chrBank0 & 0xFE);
+            this._chrOffsets[1] = this._chrBankOffset(this._chrBank0 | 0x01);
         } else if(this._chrMode === 1) {
-            this._chrOffsets[0] = this._chrBankOffset(Math.trunc(this._chrBank0));
-            this._chrOffsets[1] = this._chrBankOffset(Math.trunc(this._chrBank1));
+            this._chrOffsets[0] = this._chrBankOffset(this._chrBank0);
+            this._chrOffsets[1] = this._chrBankOffset(this._chrBank1);
         }
     }
 }

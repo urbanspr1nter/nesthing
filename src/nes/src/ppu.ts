@@ -5,7 +5,6 @@
  */
 import { PpuMemory } from "./ppumemory";
 import { PpuPalette } from "./colors";
-import { Memory } from "./memory";
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { UiFrameBuffer } from "./ui/framebuffer";
@@ -43,6 +42,7 @@ interface BackgroundData {
 }
 
 export class Ppu {
+  private _register: number;
   private _uiFrameBuffer: UiFrameBuffer;
   private _ppuMemory: PpuMemory;
   private _ppuDataReadBuffer: number;
@@ -85,7 +85,8 @@ export class Ppu {
   // Declare $2002/PPUSTATUS bits
   private _regPPUSTATUS_spriteOverflow: boolean;
   private _regPPUSTATUS_spriteHit: boolean;
-  private _regPPUSTATUS_vblankStarted: boolean;
+  // private _regPPUSTATUS_vblankStarted: boolean;
+  private _nmiOccurred: boolean;
 
   private _cpu: Cpu;
 
@@ -107,12 +108,19 @@ export class Ppu {
   private _nmiPrevious: boolean;
   private _nmiDelay: number;
 
-  constructor( uiFrameBuffer: UiFrameBuffer, mapper: IMapper) {
+  constructor(uiFrameBuffer: UiFrameBuffer, mapper: IMapper) {
     this._uiFrameBuffer = uiFrameBuffer;
     this._ppuMemory = new PpuMemory(mapper);
-    this._scanlines = 0;
-    this._cycles = 0;
+
+    this._register = 0;
+    this._scanlines = 240;
+    this._cycles = 340;
     this._frames = 0;
+    this.write$2000(0);
+    this.write$2001(0);
+    this.write$2003(0);
+
+    this._nmiOccurred = false;
 
     // Initialize background bytes.
     this._ntByte = 0;
@@ -135,12 +143,20 @@ export class Ppu {
     this._initializeSprites();
   }
 
-  get memory() {
-    return this._ppuMemory;
-  }
-
   get frames(): number {
     return this._frames;
+  }
+
+  get cycles(): number {
+    return this._cycles;
+  }
+
+  get scanlines(): number {
+    return this._scanlines;
+  }
+
+  set cpu(cpu: Cpu) {
+    this._cpu = cpu;
   }
 
   public step(): void {
@@ -148,37 +164,42 @@ export class Ppu {
     this._processTick();
   }
 
-  public setCpu(cpu: Cpu) {
-    this._cpu = cpu;
+  public write(register: number, value: number) {
+    this._register = value;
+    if (register === 0x2000) {
+      this.write$2000(value);
+    } else if (register === 0x2001) {
+      this.write$2001(value);
+    } else if (register === 0x2003) {
+      this.write$2003(value);
+    } else if (register === 0x2004) {
+      this.write$2004(value);
+    } else if (register === 0x2005) {
+      this.write$2005(value);
+    } else if (register === 0x2006) {
+      this.write$2006(value);
+    } else if (register === 0x2007) {
+      this.write$2007(value);
+    } else if (register === 0x4014) {
+      this.write$4014(value);
+    }
   }
 
-  public vramAddress() {
-    return this._v;
-  }
+  public read(register: number) {
+    if (register === 0x2002) {
+      return this.read$2002();
+    } else if (register === 0x2004) {
+      return this.read$2004();
+    } else if (register === 0x2007) {
+      return this.read$2007();
+    }
 
-  public tVramAddress() {
-    return this._t;
-  }
-
-  public fineX() {
-    return this._x;
-  }
-
-  public vramAddressWriteToggle() {
-    return this._w;
-  }
-
-  public getCycles(): number {
-    return this._cycles;
-  }
-
-  public getScanlines() {
-    return this._scanlines;
+    return 0;
   }
 
   public write$2000(dataByte: number) {
-    this._regPPUCTRL_nt0 = dataByte & 0x01;
-    this._regPPUCTRL_nt1 = dataByte & 0x02;
+    this._regPPUCTRL_nt0 = (dataByte & 0x01) > 0 ? 1 : 0;
+    this._regPPUCTRL_nt1 = (dataByte & 0x02) > 0 ? 1 : 0;
     this._regPPUCTRL_vramIncrement = (dataByte & 0x04) === 0x0 ? 1 : 32;
     this._regPPUCTRL_spritePatternTableBaseAddress =
       (dataByte & 0x08) === 0x0 ? 0 : 0x1000;
@@ -231,23 +252,23 @@ export class Ppu {
   }
 
   public read$2002() {
+    var result = this._register & 0x1f;
+
     const bit_5 = this._regPPUSTATUS_spriteOverflow ? 1 : 0;
     const bit_6 = this._regPPUSTATUS_spriteHit ? 1 : 0;
-    const bit_7 = this._regPPUSTATUS_vblankStarted ? 1 : 0;
 
-    this._regPPUSTATUS_vblankStarted = false;
+    result |= bit_5 << 5;
+    result |= bit_6 << 6;
+
+    if (this._nmiOccurred) {
+      result |= 1 << 7;
+    }
+    this._nmiOccurred = false;
+
     this._nmiChange();
     this._w = false;
 
-    return (bit_7 << 7) | (bit_6 << 6) | (bit_5 << 5);
-  }
-
-  public write$2002(dataByte: number) {
-    this._regPPUSTATUS_spriteOverflow =
-      (dataByte & 0x20) === 0x20 ? true : false;
-    this._regPPUSTATUS_spriteHit = (dataByte & 0x40) === 0x40 ? true : false;
-    this._regPPUSTATUS_vblankStarted =
-      (dataByte & 0x80) === 0x80 ? true : false;
+    return result;
   }
 
   public write$2003(dataByte: number) {
@@ -332,19 +353,17 @@ export class Ppu {
   }
 
   private _setVblank() {
-    this._regPPUSTATUS_vblankStarted = true;
+    this._nmiOccurred = true;
     this._nmiChange();
   }
 
   private _clearVblank() {
-    this._regPPUSTATUS_vblankStarted = false;
+    this._nmiOccurred = false;
     this._nmiChange();
   }
 
   private _nmiChange() {
-    const nmi =
-      this._regPPUCTRL_generateNmiAtVblankStart &&
-      this._regPPUSTATUS_vblankStarted;
+    const nmi = this._regPPUCTRL_generateNmiAtVblankStart && this._nmiOccurred;
     if (nmi && !this._nmiPrevious) {
       this._nmiDelay = 15;
     }
@@ -492,7 +511,7 @@ export class Ppu {
 
     let paletteOffset = color & 3;
     let colorByte = this._ppuMemory.get(
-      basePaletteAddress + (paletteOffset - 1)
+      basePaletteAddress + paletteOffset
     );
 
     this._uiFrameBuffer.drawPixel(x, y, PpuPalette[colorByte]);
@@ -665,51 +684,44 @@ export class Ppu {
     attributeBits: number,
     isBackgroundPixel: boolean
   ) {
-    const offset = isBackgroundPixel ? 0 : 0x10;
+    const spriteOffset = isBackgroundPixel ? 0 : 0x10;
 
     let basePaletteAddress = 0x3f00;
     switch (attributeBits) {
       case 0:
-        basePaletteAddress = 0x3f01;
+        basePaletteAddress = 0x3f00;
         break;
       case 4:
-        basePaletteAddress = 0x3f05;
+        basePaletteAddress = 0x3f04;
         break;
       case 8:
-        basePaletteAddress = 0x3f09;
+        basePaletteAddress = 0x3f08;
         break;
       case 12:
-        basePaletteAddress = 0x3f0d;
+        basePaletteAddress = 0x3f0c;
         break;
     }
 
-    return basePaletteAddress + offset;
+    return basePaletteAddress + spriteOffset;
   }
 
   private _tick(): void {
     if (this._nmiDelay > 0) {
       this._nmiDelay--;
       if (
-        this._nmiDelay &&
+        this._nmiDelay === 0 &&
         this._regPPUCTRL_generateNmiAtVblankStart &&
-        this._regPPUSTATUS_vblankStarted
+        this._nmiOccurred
       ) {
         this._cpu.requestInterrupt(InterruptRequestType.NMI);
       }
     }
 
     if (this._regPPUMASK_showBackground || this._regPPUMASK_showSprites) {
-      if (!this._evenFrame && this._scanlines === 261 && this._cycles === 339) {
+      if (this._evenFrame && this._scanlines === 261 && this._cycles === 339) {
         this._cycles = 0;
         this._scanlines = 0;
-
         this._stepFrame();
-
-        if (this._frames % 2 === 0) {
-          this._evenFrame = true;
-        } else {
-          this._evenFrame = false;
-        }
         return;
       }
     }
@@ -721,24 +733,18 @@ export class Ppu {
 
       if (this._scanlines > 261) {
         this._scanlines = 0;
-
         this._stepFrame();
-
-        if (this._frames % 2 === 0) {
-          this._evenFrame = true;
-        } else {
-          this._evenFrame = false;
-        }
       }
     }
   }
 
   private _stepFrame() {
-
     this._frames++;
+
+    this._evenFrame != this._evenFrame;
+
     // Draw the frame
     this._uiFrameBuffer.draw();
-
   }
 
   private _shiftBackgroundTile4(): void {
