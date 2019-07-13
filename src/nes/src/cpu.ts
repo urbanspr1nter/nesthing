@@ -54,10 +54,6 @@ export class Cpu {
   get currentCycles() {
     return this._currentCycles;
   }
-  
-  public clearCycles() {
-    this._currentCycles = 0;
-  }
 
   public powerUp(): void {
     this.P = 0x24;
@@ -265,7 +261,7 @@ export class Cpu {
     }
   }
 
-  public _handleNmi() {
+  private _handleNmi() {
     const currPcLow = this.PC & 0xff;
     const currPcHigh = (this.PC >>> 8) & 0xff;
     this._stackPush(currPcHigh);
@@ -281,7 +277,7 @@ export class Cpu {
     this._interrupt = InterruptRequestType.None;
   }
 
-  public irq() {
+  private _irq() {
     const currPcLow = this.PC & 0xff;
     const currPcHigh = (this.PC >>> 8) & 0xff;
     this._stackPush(currPcHigh);
@@ -837,11 +833,9 @@ export class Cpu {
       this._interrupt === InterruptRequestType.IRQ &&
       !this.getStatusBitFlag(StatusBitPositions.InterruptDisable)
     ) {
-      this.irq();
+      this._irq();
     }
     
-    this._interrupt = InterruptRequestType.None;
-
     const op = this._memory.get(this.PC);
 
     let addressInfo = this._getAddressFromMode(OpAddressingMode[op]);

@@ -25,7 +25,13 @@ export class Memory {
   private _controllerOne: Controller;
   private _controllerTwo: Controller;
 
-  constructor(ppu: Ppu, apu: Apu, mapper: IMapper, controllerOne: Controller, controllerTwo: Controller) {
+  constructor(
+    ppu: Ppu,
+    apu: Apu,
+    mapper: IMapper,
+    controllerOne: Controller,
+    controllerTwo: Controller
+  ) {
     this._memory = [];
     this._mapper = mapper;
     this._ppu = ppu;
@@ -47,8 +53,10 @@ export class Memory {
       // PPU registers
       const decodedAddress = 0x2000 + (address % 8);
       this._ppu.write(decodedAddress, value);
+    } else if (address < 0x4014) {
+      this._apu.write$addr(address, value);
     } else if (address === 0x4014) {
-      return this._ppu.write$4014(value);
+      this._ppu.write$4014(value);
     } else if (address === 0x4016) {
       this._controllerOne.write(value);
       this._controllerTwo.write(value);
@@ -56,12 +64,12 @@ export class Memory {
       this._apu.write$addr(address, value);
     } else if (address === 0x4015 || address === 0x4017) {
       this._apu.write$addr(address, value);
-    } else if(address >= 0x6000) {
+    } else if (address >= 0x6000) {
       this._mapper.write(address, value);
     } else {
       this._memory[address & 0xffff] = value;
     }
-  };
+  }
 
   public get(address: number) {
     address &= 0xffff;
@@ -79,9 +87,9 @@ export class Memory {
     } else if (address === 0x4017) {
       // read controller 2
       return this._controllerTwo.read();
-    } else if(address >= 0x6000) {
+    } else if (address >= 0x6000) {
       return this._mapper.read(address);
     }
     return this._memory[address & 0xffff] & 0xff;
-  };
+  }
 }

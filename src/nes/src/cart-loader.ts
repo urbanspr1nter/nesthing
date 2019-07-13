@@ -85,6 +85,12 @@ export class CartLoader {
       filePointer++;
     }
 
+    if(this._headerInfo.ChrRomUnits === 0) {
+      for(let i = 0; i < 8192; i++) {
+        chr.push(0);
+      }
+    }
+
     return new Cartridge(prg, chr, mapper, mirror, battery);
   }
 

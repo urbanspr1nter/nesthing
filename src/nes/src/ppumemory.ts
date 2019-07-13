@@ -1,7 +1,5 @@
 import { IMapper } from "./mapper";
 
-const MaxMemoryAddress = 0x3fff;
-
 export class PpuMemory {
   private _mapper: IMapper;
   private _memory: number[];
