@@ -209,46 +209,26 @@ export class Ppu {
     this._regPPUCTRL_masterSlaveSelect =
       (dataByte & 0x40) === 0x0 ? false : true;
     this._regPPUCTRL_generateNmiAtVblankStart =
-      (dataByte & 0x80) === 0x0 ? false : true;
+      ((dataByte >> 7) & 1) === 1 ? true : false;
 
     this._nmiChange();
 
-    this._t = (this._t & 0xf3ff) | ((dataByte & 0x03 & 0xffff) << 10);
-  }
-
-  public read$2000() {
-    const bit_0 = this._regPPUCTRL_nt0;
-    const bit_1 = this._regPPUCTRL_nt1;
-    const bit_2 = this._regPPUCTRL_vramIncrement === 1 ? 0 : 1;
-    const bit_3 = this._regPPUCTRL_spritePatternTableBaseAddress === 0 ? 0 : 1;
-    const bit_4 =
-      this._regPPUCTRL_backgroundPatternTableBaseAddress === 0 ? 0 : 1;
-    const bit_5 = this._regPPUCTRL_spriteSizeLarge ? 1 : 0;
-    const bit_6 = this._regPPUCTRL_masterSlaveSelect ? 1 : 0;
-    const bit_7 = this._regPPUCTRL_generateNmiAtVblankStart ? 1 : 0;
-    return (
-      (bit_7 << 7) |
-      (bit_6 << 6) |
-      (bit_5 << 5) |
-      (bit_4 << 4) |
-      (bit_3 << 3) |
-      (bit_2 << 2) |
-      (bit_1 << 1) |
-      bit_0
-    );
+    this._t = (this._t & 0xf3ff) | (((dataByte & 0x03) << 10) & 0xffff);
   }
 
   public write$2001(dataByte: number) {
-    this._regPPUMASK_greyscale = (dataByte & 0x01) === 0x01 ? true : false;
+    this._regPPUMASK_greyscale = (dataByte & 1) === 1 ? true : false;
     this._regPPUMASK_showBgInLeftMost8pxOfScreen =
-      (dataByte & 0x02) === 0x02 ? true : false;
+      ((dataByte >> 1) & 1) === 1 ? true : false;
     this._regPPUMASK_showSpritesLeftMost8pxOfScreen =
-      (dataByte & 0x04) === 0x04 ? true : false;
-    this._regPPUMASK_showBackground = (dataByte & 0x08) === 0x08 ? true : false;
-    this._regPPUMASK_showSprites = (dataByte & 0x10) === 0x10 ? true : false;
-    this._regPPUMASK_emphasizeRed = (dataByte & 0x20) === 0x20 ? true : false;
-    this._regPPUMASK_emphasizeGreen = (dataByte & 0x40) === 0x40 ? true : false;
-    this._regPPUMASK_emphasizeBlue = (dataByte & 0x80) === 0x80 ? true : false;
+      ((dataByte >> 2) & 1) === 1 ? true : false;
+    this._regPPUMASK_showBackground =
+      ((dataByte >> 3) & 1) === 1 ? true : false;
+    this._regPPUMASK_showSprites = ((dataByte >> 4) & 1) === 1 ? true : false;
+    this._regPPUMASK_emphasizeRed = ((dataByte >> 5) & 1) === 1 ? true : false;
+    this._regPPUMASK_emphasizeGreen =
+      ((dataByte >> 6) & 1) === 1 ? true : false;
+    this._regPPUMASK_emphasizeBlue = ((dataByte >> 7) & 1) === 1 ? true : false;
   }
 
   public read$2002() {
@@ -321,9 +301,7 @@ export class Ppu {
       this._ppuDataReadBuffer = value;
       value = bufferedData;
     } else {
-      this._ppuDataReadBuffer = this._ppuMemory.get(
-        ((this._v & 0xffff) - 0x1000) & 0xffff
-      );
+      this._ppuDataReadBuffer = this._ppuMemory.get(this._v - 0x1000);
     }
 
     this.incrementVramAddress();
@@ -340,12 +318,10 @@ export class Ppu {
     }
 
     // stall CPU for 514 cycles if odd, 513 is even.
-    let stallCycles = 513;
+    this._cpu.stallCycles += 513;
     if (this._cpu.currentCycles % 2 === 1) {
-      stallCycles++;
+      this._cpu.stallCycles++;
     }
-
-    this._cpu.stallCycles = stallCycles;
   }
 
   public incrementVramAddress() {
@@ -353,6 +329,7 @@ export class Ppu {
   }
 
   private _setVblank() {
+    this._uiFrameBuffer.draw();
     this._nmiOccurred = true;
     this._nmiChange();
   }
@@ -510,9 +487,7 @@ export class Ppu {
     );
 
     let paletteOffset = color & 3;
-    let colorByte = this._ppuMemory.get(
-      basePaletteAddress + paletteOffset
-    );
+    let colorByte = this._ppuMemory.get(basePaletteAddress + paletteOffset);
 
     this._uiFrameBuffer.drawPixel(x, y, PpuPalette[colorByte]);
   }
@@ -740,18 +715,17 @@ export class Ppu {
 
   private _stepFrame() {
     this._frames++;
-
     this._evenFrame != this._evenFrame;
-
-    // Draw the frame
-    this._uiFrameBuffer.draw();
   }
 
   private _shiftBackgroundTile4(): void {
     this._bgTile.DataHigh32 <<= 4;
     this._bgTile.DataHigh32 =
-      this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf);
+      (this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf));
     this._bgTile.DataLow32 <<= 4;
+
+    this._bgTile.DataHigh32 &= 0xffffffff;
+    this._bgTile.DataLow32 &= 0xffffffff;
   }
 
   private _processTick(): void {
