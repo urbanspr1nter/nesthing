@@ -31,6 +31,12 @@ document.getElementById("btn-play").addEventListener("click", () => {
     case 6:
       game = Roms.LegendOfZelda;
       break;
+    case 7:
+      game = Roms.MegaMan;
+      break;
+    case 8:
+      game = Roms.FinalFantasy;
+      break;
   }
 
   gameConsole = new NesConsole(game, canvasId);

@@ -42,12 +42,8 @@ export class NesConsole {
   }
 
   public setupDOM() {
-    document.addEventListener(KEY_UP_EVENT, (e: KeyboardEvent) => {
-      this._options.keyHandler.handlePlayerOneKeyDown(e.key);
-    });
-    document.addEventListener(KEY_DOWN_EVENT, (e: KeyboardEvent) => {
-      this._options.keyHandler.handlePlayerOneKeyUp(e.key);
-    });
+    document.addEventListener(KEY_UP_EVENT, this._options.keyHandler.handlePlayerOneKeyDown.bind(this._options.keyHandler));
+    document.addEventListener(KEY_DOWN_EVENT, this._options.keyHandler.handlePlayerOneKeyDown.bind(this._options.keyHandler));
     document.addEventListener(KEY_UP_EVENT, (e: KeyboardEvent) => {
       this._options.keyHandler.handlePlayerTwoKeyUp(e.key);
     });

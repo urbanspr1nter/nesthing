@@ -18,22 +18,22 @@ export class Controller {
   private _buttonMapPlayer: { [id: number]: boolean };
 
   private _strobePlayer: number;
-  private _indexPlayer: number;
+  private _buttonIndex: number;
 
   constructor() {
     this._buttonMapPlayer = {
-      0: false,
-      1: false,
-      2: false,
-      3: false,
-      4: false,
-      5: false,
-      6: false,
-      7: false
+      [Buttons.A]: false,
+      [Buttons.B]: false,
+      [Buttons.Select]: false,
+      [Buttons.Start]: false,
+      [Buttons.Up]: false,
+      [Buttons.Down]: false,
+      [Buttons.Left]: false,
+      [Buttons.Right]: false
     };
 
     this._strobePlayer = 0;
-    this._indexPlayer = 0;
+    this._buttonIndex = 0;
   }
 
   public setButtons(map: { [id: number]: boolean }) {
@@ -43,20 +43,20 @@ export class Controller {
   public write(value: number) {
     this._strobePlayer = value;
     if ((this._strobePlayer & 1) === 1) {
-      this._indexPlayer = 0;
+      this._buttonIndex = 0;
     }
   }
 
   public read() {
     let value = 0;
 
-    if (this._indexPlayer < 8 && this._buttonMapPlayer[this._indexPlayer]) {
+    if (this._buttonIndex < 8 && this._buttonMapPlayer[this._buttonIndex]) {
       value = 1;
     }
-    this._indexPlayer++;
+    this._buttonIndex++;
 
     if ((this._strobePlayer & 1) === 1) {
-      this._indexPlayer = 0;
+      this._buttonIndex = 0;
     }
 
     return value & 0xff;

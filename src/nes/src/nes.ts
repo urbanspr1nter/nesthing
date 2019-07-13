@@ -28,7 +28,9 @@ export enum Roms {
   F1Race,
   Tetris,
   SuperMarioBros,
-  LegendOfZelda
+  LegendOfZelda,
+  MegaMan,
+  FinalFantasy
 }
 export const RomFiles = {
   MarioBros: require("./roms/mario.json"),
@@ -37,7 +39,9 @@ export const RomFiles = {
   F1Race: require("./roms/f1race.json"),
   Tetris: require("./roms/tetris.json"),
   SuperMarioBros: require("./roms/smb.json"),
-  LegendOfZelda: require("./roms/loz.json")
+  LegendOfZelda: require("./roms/loz.json"),
+  MegaMan: require("./roms/mm.json"),
+  FinalFantasy: require("./roms/ff.json")
 };
 
 export enum Mapper {
@@ -72,6 +76,10 @@ export class Nes {
       this._rom = RomFiles.SuperMarioBros;
     } else if(options.rom === Roms.LegendOfZelda) {
       this._rom = RomFiles.LegendOfZelda;
+    } else if(options.rom === Roms.MegaMan) {
+      this._rom = RomFiles.MegaMan;
+    } else if(options.rom === Roms.FinalFantasy) {
+      this._rom = RomFiles.FinalFantasy;
     }
 
     const romContents = this._rom.raw as number[];
@@ -125,10 +133,6 @@ export class Nes {
     return this._ppu.cycles;
   }
 
-  public loadRom() {
-
-  }
-
   public run(): number {
     var totalCpuSteps = this._cpu.step();
 
@@ -146,7 +150,6 @@ export class Nes {
   }
 
   private _initialize() {
-    this.loadRom();
     this._cpu.powerUp();
   }
 }

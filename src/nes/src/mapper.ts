@@ -21,21 +21,19 @@ export class NromMapper implements IMapper {
 
     constructor(cartridge: Cartridge) {
         this._cartridge = cartridge;
-        this._prgBanks = Math.trunc(this._cartridge.prg.length / 0x4000);
+        this._prgBanks = (this._cartridge.prg.length / 0x4000) | 0;
         this._prgBank1 = 0;
         this._prgBank2 = this._prgBanks - 1;
     }
 
     public read(address: number) {
-        address &= 0xffff;
-
         if(address < 0x2000) {
             return this._cartridge.chr[address];
         } else if(address >= 0xC000) {
-            var index = this._prgBank2 * 0x4000 + (address - 0xC000);
+            var index = (this._prgBank2 * 0x4000) + (address - 0xC000);
             return this._cartridge.prg[index];
         } else if(address >= 0x8000) {
-            var index = this._prgBank1 * 0x4000 + (address - 0x8000);
+            var index = (this._prgBank1 * 0x4000) + (address - 0x8000);
             return this._cartridge.prg[index];
         } else if(address >= 0x6000) {
             var index = address - 0x6000;
@@ -46,9 +44,6 @@ export class NromMapper implements IMapper {
     }
 
     public write(address: number, value: number) {
-        address &= 0xffff;
-        value &= 0xff;
-
         if(address < 0x2000) {
             this._cartridge.chr[address] = value;
         } else if(address >= 0x8000) {

@@ -42,7 +42,8 @@ export class UiKeyHandler {
     };
   }
 
-  public handlePlayerOneKeyDown(key: string) {
+  public handlePlayerOneKeyDown(event) {
+    var key = event.key;
     if (key === PlayerOneKeyMap.Start) {
       this._keyPressedPlayer1[Buttons.Start] = true;
     }
@@ -71,7 +72,8 @@ export class UiKeyHandler {
     this._controllerOne.setButtons(this._keyPressedPlayer1);
   }
 
-  public handlePlayerOneKeyUp(key: string) {
+  public handlePlayerOneKeyUp(event) {
+    var key = event.key;
     if (key === PlayerOneKeyMap.Start) {
       this._keyPressedPlayer1[Buttons.Start] = false;
     }
