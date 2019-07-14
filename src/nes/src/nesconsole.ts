@@ -1,7 +1,8 @@
-import { Nes, Roms, NesOptions } from "./nes";
+import { Nes, NesOptions } from "./nes";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
 import { Controller } from "./controller";
+import { Roms } from "./ui/constants";
 
 const ONE_SECOND_MS = 1000;
 const FPS = 60;

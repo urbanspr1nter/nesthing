@@ -1,26 +1,5 @@
 import { Controller, Buttons } from "../controller";
-
-export const PlayerOneKeyMap = {
-  Start: "Enter",
-  Select: "Shift",
-  A: "j",
-  B: "k",
-  Up: "w",
-  Down: "s",
-  Left: "a",
-  Right: "d"
-};
-
-export const PlayerTwoKeyMap = {
-  Start: "/",
-  Select: ".",
-  A: "m",
-  B: ",",
-  Up: "ArrowUp",
-  Down: "ArrowDown",
-  Left: "ArrowLeft",
-  Right: "ArrowRight"
-};
+import { PlayerOneKeyMap, PlayerTwoKeyMap } from "./constants";
 
 export class UiKeyHandler {
   private _controllerOne: Controller;

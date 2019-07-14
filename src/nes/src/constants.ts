@@ -24,5 +24,3 @@ export const ApuNoiseTable = [
 export const ApuDmcTable = [
     214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27
 ];
-
-/** NES */
