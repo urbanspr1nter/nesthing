@@ -1,7 +1,6 @@
 import { Cpu } from "./cpu";
 import { InterruptRequestType } from "./cpu.interface";
 import { FilterChain } from "./apu/filterchain";
-import { EventEmitter } from "events";
 import { CpuFrequencyHz, ApuFrameCounterRate } from "./constants";
 import { PulseWave } from "./apu/apu.pulsewave";
 import { TriangleWave } from "./apu/apu.trianglewave";
@@ -28,8 +27,6 @@ export class Apu {
   private _noise: NoiseWave;
   private _dmc: DmcSample;
   private _uiSoundHandler: UiSoundHandler;
-
-  public readyToRender: boolean = false;
 
   constructor(uiSoundHandler: UiSoundHandler, audioSampleRate: number) {
     for (let i = 0; i < 31; i++) {
