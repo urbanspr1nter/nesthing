@@ -1,5 +1,5 @@
 import { Memory } from "./memory";
-import { PpuMemory } from "./ppumemory";
+import { PpuMemory } from "./ppu/ppumemory";
 import { Cartridge } from "./cartridge";
 
 // iNES file format

@@ -5,10 +5,10 @@
  */
 import { PpuMemory } from "./ppumemory";
 import { PpuPalette } from "./colors";
-import { Cpu } from "./cpu";
-import { InterruptRequestType } from "./cpu.interface";
-import { UiFrameBuffer } from "./ui/framebuffer";
-import { IMapper } from "./mapper";
+import { Cpu } from "../cpu";
+import { InterruptRequestType } from "../cpu.interface";
+import { UiFrameBuffer } from "../ui/framebuffer";
+import { IMapper } from "../mapper";
 
 /**
  * Constants

@@ -1,4 +1,4 @@
-import { IMapper } from "./mapper";
+import { IMapper } from "../mapper";
 
 export class PpuMemory {
   private _mapper: IMapper;

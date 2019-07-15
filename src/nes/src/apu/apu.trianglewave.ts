@@ -1,4 +1,4 @@
-import { ApuTriangleTable, ApuLengthTable } from "../constants";
+import { ApuTriangleTable, ApuLengthTable } from "./constants";
 
 export class TriangleWave {
   private _triangle: Triangle;

@@ -1,6 +1,6 @@
-import { Ppu } from "./ppu";
+import { Ppu } from "./ppu/ppu";
 import { Controller, ControllerPlayer } from "./controller";
-import { Apu } from "./apu";
+import { Apu } from "./apu/apu";
 import { IMapper } from "./mapper";
 
 /**

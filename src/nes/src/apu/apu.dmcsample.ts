@@ -1,5 +1,5 @@
 import { Cpu } from "../cpu";
-import { ApuDmcTable } from "../constants";
+import { ApuDmcTable } from "./constants";
 
 export class DmcSample {
   private _dmc: Dmc;

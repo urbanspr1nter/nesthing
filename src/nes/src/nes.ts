@@ -1,9 +1,9 @@
 import { Memory } from "./memory";
-import { Ppu } from "./ppu";
+import { Ppu } from "./ppu/ppu";
 import { Cpu } from "./cpu";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
-import { Apu } from "./apu";
+import { Apu } from "./apu/apu";
 import { UiSoundHandler } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";

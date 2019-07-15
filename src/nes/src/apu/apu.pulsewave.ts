@@ -1,4 +1,4 @@
-import { ApuLengthTable, ApuDutyTable } from "../constants";
+import { ApuLengthTable, ApuDutyTable } from "./constants";
 
 export class PulseWave {
   private _p: Pulse;
