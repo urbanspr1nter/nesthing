@@ -61,6 +61,22 @@
       #fps {
         font-weight: bold;
       }
+
+      #overlay {
+        height: 500px;
+        width: 100vw;
+        position: absolute;
+        opacity: 0.55;
+        background-color: white;
+      }
+
+      #overlay div {
+        margin: 32px;
+      }
+
+      .hidden {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -117,6 +133,14 @@
       </div>
     </div>
 
+    <div id="overlay">
+      <div>
+        <strong>Loading...</strong>
+      </div>
+      <div>
+        <img src="src/web/spinner.gif" />
+      </div>
+    </div>
     <div class="nes-console">
       <canvas id="main" width="256" height="240"></canvas>
     </div>
@@ -139,10 +163,11 @@
     <div class="indicators">
       <div id="fps">0 fps</div>
     </div>
-    
+
     <div class="information">
       <div>
-        GitHub repository: <a href="https://github.com/urbanspr1nter/nesthing">NESthing</a>
+        GitHub repository:
+        <a href="https://github.com/urbanspr1nter/nesthing">NESthing</a>
       </div>
     </div>
     <script src="./dist/bundle.js" type="text/javascript"></script>

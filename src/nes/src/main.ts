@@ -25,3 +25,5 @@ document.getElementById("btn-play").addEventListener("click", () => {
     setImmediate(() => gameConsole.run(performance.now()));
   }, 1000);
 });
+
+document.getElementById("overlay").className = "hidden";
