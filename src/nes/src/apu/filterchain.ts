@@ -1,3 +1,5 @@
+const PI = Math.PI;
+
 interface FirstOrderFilter {
   B0: number;
   B1: number;
@@ -40,7 +42,7 @@ export class FilterChain {
     sampleRate: number,
     cutoffFrequency: number
   ): Filter {
-    const c = sampleRate / Math.PI / cutoffFrequency;
+    const c = sampleRate / PI / cutoffFrequency;
     const a0i = 1 / (1 + c);
 
     const fof = {
@@ -58,7 +60,7 @@ export class FilterChain {
     sampleRate: number,
     cutoffFrequency: number
   ): Filter {
-    const c = sampleRate / Math.PI / cutoffFrequency;
+    const c = sampleRate / PI / cutoffFrequency;
     const a0i = 1 / (1 + c);
 
     const fof = {

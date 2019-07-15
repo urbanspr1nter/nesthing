@@ -3,12 +3,17 @@ import RomManager from "./ui/rommanager";
 
 var canvasId = "main";
 var gameConsole: NesConsole;
+var timeoutHandle = undefined;
 
 document.getElementById("btn-play").addEventListener("click", () => {
-  const selectElement = document.getElementById(
+  if(timeoutHandle) {
+    clearTimeout(timeoutHandle);
+  }
+
+  var selectElement = document.getElementById(
     "select-game"
   ) as HTMLSelectElement;
-  const selectedGame = Number(
+  var selectedGame = Number(
     selectElement.options[selectElement.selectedIndex].value
   );
 
@@ -16,7 +21,7 @@ document.getElementById("btn-play").addEventListener("click", () => {
   gameConsole = new NesConsole(game, canvasId);
   gameConsole.setupDOM();
 
-  setTimeout(function() {
-    requestAnimationFrame(t => gameConsole.run(t));
+  timeoutHandle = setTimeout(function() {
+    setImmediate(() => gameConsole.run(performance.now()));
   }, 1000);
 });

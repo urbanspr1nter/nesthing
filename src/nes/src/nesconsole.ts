@@ -77,6 +77,6 @@ export class NesConsole {
       break;
     }
 
-    requestAnimationFrame(t => this.run(t));
+    setImmediate(() => this.run(performance.now()));
   }
 }

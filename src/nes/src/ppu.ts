@@ -723,9 +723,6 @@ export class Ppu {
     this._bgTile.DataHigh32 =
       (this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf));
     this._bgTile.DataLow32 <<= 4;
-
-    this._bgTile.DataHigh32 &= 0xffffffff;
-    this._bgTile.DataLow32 &= 0xffffffff;
   }
 
   private _processTick(): void {
