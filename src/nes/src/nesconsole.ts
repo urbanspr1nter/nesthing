@@ -16,6 +16,7 @@ export class NesConsole {
   private _frameTime: number;
   private _msPerFrame: number;
   private _ppuFrames: number;
+  private _lastFps: number;
 
   constructor(rom: Roms, canvasId: string) {
     const playerOneController = new Controller();
@@ -36,6 +37,8 @@ export class NesConsole {
     this._lastFrameTime = 0;
     this._ppuFrames = 0;
     this._msPerFrame = ONE_SECOND_MS / FPS;
+
+    this._lastFps = 0;
   }
 
   get nes() {
@@ -70,6 +73,11 @@ export class NesConsole {
         this._ppuFrames = this._nes.ppuFrames;
         this._nes.run();
         if (this._nes.ppuFrames > this._ppuFrames) {
+          const currFps = Math.trunc(ONE_SECOND_MS / this._frameTime);
+          if(currFps !== this._lastFps) {
+            document.getElementById("fps").innerHTML = `${currFps} fps`;
+            this._lastFps = currFps;
+          }
           break INNER;
         }
       }
