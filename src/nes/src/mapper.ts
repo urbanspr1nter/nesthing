@@ -1,16 +1,11 @@
 import { Cartridge } from "./cartridge";
-
-export enum CartridgeMirroring {
-    MirrorSingle0,
-    MirrorSingle1,
-    MirrorVertical,
-    MirrorHorizontal
-}
+import { MirrorMode } from "./constants";
 
 export interface IMapper {
     read(address: number): number;
     write(address: number, value: number): void;
     step(): void;
+    cartridge: Cartridge;
 }
 
 export class NromMapper implements IMapper {
@@ -24,6 +19,10 @@ export class NromMapper implements IMapper {
         this._prgBanks = (this._cartridge.prg.length / 0x4000) | 0;
         this._prgBank1 = 0;
         this._prgBank2 = this._prgBanks - 1;
+    }
+
+    get cartridge() {
+        return this._cartridge;
     }
 
     public read(address: number) {
@@ -92,6 +91,10 @@ export class Mmc1Mapper implements IMapper {
         for(let i = 0; i < 2; i++) {
             this._chrOffsets[i] = 0;
         }
+    }
+
+    get cartridge() {
+        return this._cartridge;
     }
 
     public read(address: number): number {
@@ -165,13 +168,13 @@ export class Mmc1Mapper implements IMapper {
         var mirror = value & 3;
 
         if(mirror === 0) {
-            this._cartridge.mirror = CartridgeMirroring.MirrorSingle0;
+            this._cartridge.mirror = MirrorMode.MirrorSingle0;
         } else if(mirror === 1) {
-            this._cartridge.mirror = CartridgeMirroring.MirrorSingle1;
+            this._cartridge.mirror = MirrorMode.MirrorSingle1;
         } else if(mirror === 2) {
-            this._cartridge.mirror = CartridgeMirroring.MirrorVertical;
+            this._cartridge.mirror = MirrorMode.MirrorVertical;
         } else if(mirror === 3) {
-            this._cartridge.mirror = CartridgeMirroring.MirrorHorizontal;
+            this._cartridge.mirror = MirrorMode.MirrorHorizontal;
         }
 
         this._updateOffsets();

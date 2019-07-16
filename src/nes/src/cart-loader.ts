@@ -59,7 +59,7 @@ export class CartLoader {
 
   public makeCartridge(): Cartridge {
     let romData = this._romBytes.slice(16);
-    let filePointer = 0;
+    var filePointer = 0;
 
     var mapper1 = this._headerInfo.Control1 >>> 4;
     var mapper2 = this._headerInfo.Control2 >>> 4;
@@ -70,6 +70,12 @@ export class CartLoader {
     var mirror = (mirror1 | (mirror2 << 1));
 
     var battery = (this._headerInfo.Control1 >>> 1) & 1;
+
+    if((this._headerInfo.Control1 & 4) === 4) {
+      for(let  i = 0; i < 512; i++) {
+        filePointer++;
+      }
+    }
 
     var prg = [];
     var prgRomSize = this._headerInfo.PrgRomUnits * 16384;
