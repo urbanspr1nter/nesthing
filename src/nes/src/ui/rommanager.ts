@@ -23,6 +23,10 @@ export default class RomManager {
         return Roms.FinalFantasy;
       case 9:
         return Roms.SilkWorm;
+      case 10:
+        return Roms.MegaMan2;
+      case 11:
+        return Roms.TeenageMutantHeroTurtles;
     }
     return Roms.MarioBros;
   }
@@ -49,6 +53,10 @@ export default class RomManager {
         return RomFiles.FinalFantasy;
       case Roms.SilkWorm:
         return RomFiles.SilkWorm;
+      case Roms.MegaMan2:
+        return RomFiles.MegaMan2;
+      case Roms.TeenageMutantHeroTurtles:
+        return RomFiles.TeenageMutantHeroTurtles;
     }
   }
 }

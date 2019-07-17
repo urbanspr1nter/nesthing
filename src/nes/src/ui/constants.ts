@@ -37,7 +37,9 @@ export enum Roms {
   LegendOfZelda,
   MegaMan,
   FinalFantasy,
-  SilkWorm
+  SilkWorm,
+  MegaMan2,
+  TeenageMutantHeroTurtles
 }
 export const RomFiles = {
   MarioBros: require("../roms/mario.json"),
@@ -49,5 +51,7 @@ export const RomFiles = {
   LegendOfZelda: require("../roms/loz.json"),
   MegaMan: require("../roms/mm.json"),
   FinalFantasy: require("../roms/ff.json"),
-  SilkWorm: require("../roms/silkworm.json")
+  SilkWorm: require("../roms/silkworm.json"),
+  MegaMan2: require("../roms/mm2.json"),
+  TeenageMutantHeroTurtles: require("../roms/tmnt.json")
 };

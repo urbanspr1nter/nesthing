@@ -487,7 +487,7 @@ export class Ppu {
     );
 
     let paletteOffset = color & 3;
-    var effectiveColorAddress = this._adjustPaletteAddress(basePaletteAddress + paletteOffset);
+    var effectiveColorAddress = basePaletteAddress + paletteOffset;
 
     let colorByte = this._ppuMemory.get(effectiveColorAddress);
 
@@ -682,20 +682,6 @@ export class Ppu {
     return basePaletteAddress + spriteOffset;
   }
 
-  private _adjustPaletteAddress(address: number) {
-    if(address === 0x3f00) {
-      return 0x3f10;
-    } else if(address === 0x3f04) {
-      return 0x3f14;
-    } else if(address === 0x3f08) {
-      return 0x3f18;
-    } else if(address === 0x3f0c) {
-      return 0x3f1c;
-    }
-
-    return address;
-  }
-
   private _tick(): void {
     if (this._nmiDelay > 0) {
       this._nmiDelay--;
@@ -737,7 +723,7 @@ export class Ppu {
   private _shiftBackgroundTile4(): void {
     this._bgTile.DataHigh32 <<= 4;
     this._bgTile.DataHigh32 =
-      (this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf));
+      this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf);
     this._bgTile.DataLow32 <<= 4;
   }
 

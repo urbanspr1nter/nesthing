@@ -25,7 +25,8 @@ export interface NesOptions {
 
 export enum Mapper {
   NROM = 0,
-  MMC1 = 1
+  MMC1 = 1,
+  UNROM = 2
 }
 export class Nes {
   private _rom: any;
@@ -51,6 +52,8 @@ export class Nes {
       this._mapper = new NromMapper(this._cartridge);
     } else if (this._cartridge.mapper === Mapper.MMC1) {
       this._mapper = new Mmc1Mapper(this._cartridge);
+    } else if (this._cartridge.mapper === Mapper.UNROM) {
+      this._mapper = new NromMapper(this._cartridge);
     }
 
     this._controllerOne = options.controller.one;

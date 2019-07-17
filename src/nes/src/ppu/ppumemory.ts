@@ -18,7 +18,7 @@ export class PpuMemory {
     this._mapper = mapper;
 
     this._nameTableData = [];
-    for(let i = 0; i < 2048; i++) {
+    for (let i = 0; i < 2048; i++) {
       this._nameTableData[i] = 0;
     }
   }
@@ -29,35 +29,53 @@ export class PpuMemory {
 
   public set(address: number, value: number) {
     const decodedAddress = address % 0x4000;
-    if(decodedAddress < 0x2000) {
+    if (decodedAddress < 0x2000) {
       this._mapper.write(decodedAddress, value);
-    } else if(decodedAddress < 0x3f00) {
+    } else if (decodedAddress < 0x3f00) {
       const mode = this._mapper.cartridge.mirror;
       const mirroredAddress = this._getMirrorAddress(mode, decodedAddress);
       this._nameTableData[mirroredAddress % 2048] = value;
+    } else if (decodedAddress === 0x3f10) {
+      this._memory[0x3f00] = value;
+    } else if (decodedAddress === 0x3f14) {
+      this._memory[0x3f04] = value;
+    } else if (decodedAddress === 0x3f18) {
+      this._memory[0x3f08] = value;
+    } else if (decodedAddress === 0x3f1c) {
+      this._memory[0x3f0c] = value;
     } else {
       this._memory[decodedAddress] = value & 0xff;
     }
-  };
+  }
 
   public get(address: number) {
     const decodedAddress = address % 0x4000;
-    if(decodedAddress < 0x2000) {
+    if (decodedAddress < 0x2000) {
       return this._mapper.read(decodedAddress);
-    } else if(decodedAddress < 0x3f00) {
+    } else if (decodedAddress === 0x3f10) {
+      return this._memory[0x3f00];
+    } else if (decodedAddress === 0x3f14) {
+      return this._memory[0x3f04];
+    } else if (decodedAddress === 0x3f18) {
+      return this._memory[0x3f08];
+    } else if (decodedAddress === 0x3f1c) {
+      return this._memory[0x3f0c];
+    } else if (decodedAddress < 0x3f00) {
       const mode = this._mapper.cartridge.mirror;
       const mirroredAddress = this._getMirrorAddress(mode, decodedAddress);
 
       return this._nameTableData[mirroredAddress % 2048];
     }
     return this._memory[decodedAddress] & 0xff;
-  };
+  }
 
   private _getMirrorAddress(mode: MirrorMode, address: number) {
     const addressAdjusted = (address - 0x2000) % 0x1000;
     const tableNumber = Math.trunc(addressAdjusted / 0x0400);
     const offset = addressAdjusted % 0x0400;
 
-    return (0x2000 + MirrorLookup[mode][tableNumber] * 0x0400 + offset) & 0xffff;
+    return (
+      (0x2000 + MirrorLookup[mode][tableNumber] * 0x0400 + offset) & 0xffff
+    );
   }
 }
