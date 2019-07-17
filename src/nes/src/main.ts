@@ -22,6 +22,9 @@ document.getElementById("btn-play").addEventListener("click", () => {
   gameConsole.setupDOM();
 
   timeoutHandle = setTimeout(function() {
+    document.getElementById("select-game").classList.add("hidden");
+    document.getElementById("btn-play").classList.add("hidden");
+
     setImmediate(() => gameConsole.run(performance.now()));
   }, 1000);
 });
