@@ -1,5 +1,5 @@
 import { Ppu } from "./ppu/ppu";
-import { Controller, ControllerPlayer } from "./controller";
+import { Controller } from "./controller";
 import { Apu } from "./apu/apu";
 import { IMapper } from "./mapper";
 
@@ -14,7 +14,7 @@ import { IMapper } from "./mapper";
  * $2008 - $3FFF ($1FF8) - Mirror of PPU Registers
  * $4000 - $4017 ($0018) - APU / IO Registers
  * $4018 - $401F ($0008) - APU / IO Functionality Disabled
- * $4020 - $FFFF ($BFE0) - Cartridge space: PRG RAOM, PRG RAM, mapper registers
+ * $4020 - $FFFF ($BFE0) - Cartridge space: PRG ROM, PRG RAM, mapper registers
  */
 export class Memory {
   private _memory: number[];
@@ -45,51 +45,52 @@ export class Memory {
   }
 
   public set(address: number, value: number) {
-    value = value & 0xff;
+    var cleanAddress = address & 0xffff;
+    var cleanValue = value & 0xff;
 
-    if (address < 0x2000) {
-      this._memory[address % 0x0800] = value;
-    } else if (address >= 0x2000 && address <= 0x3fff) {
+    if (cleanAddress < 0x2000) {
+      this._memory[cleanAddress % 0x0800] = cleanValue;
+    } else if (cleanAddress >= 0x2000 && cleanAddress <= 0x3fff) {
       // PPU registers
-      const decodedAddress = 0x2000 + (address % 8);
-      this._ppu.write(decodedAddress, value);
-    } else if (address < 0x4014) {
-      this._apu.write$addr(address, value);
-    } else if (address === 0x4014) {
-      this._ppu.write$4014(value);
-    } else if (address === 0x4016) {
-      this._controllerOne.write(value);
-      this._controllerTwo.write(value);
-    } else if (address >= 0x4000 && address <= 0x400f) {
-      this._apu.write$addr(address, value);
-    } else if (address === 0x4015 || address === 0x4017) {
-      this._apu.write$addr(address, value);
-    } else if (address >= 0x6000) {
-      this._mapper.write(address, value);
+      const decodedAddress = 0x2000 + (cleanAddress % 8);
+      this._ppu.write(decodedAddress, cleanValue);
+    } else if (cleanAddress < 0x4014) {
+      this._apu.write$addr(cleanAddress, cleanValue);
+    } else if (cleanAddress === 0x4014) {
+      this._ppu.write$4014(cleanValue);
+    } else if (cleanAddress === 0x4016) {
+      this._controllerOne.write(cleanValue);
+      this._controllerTwo.write(cleanValue);
+    } else if (cleanAddress >= 0x4000 && cleanAddress <= 0x400f) {
+      this._apu.write$addr(cleanAddress, cleanValue);
+    } else if (cleanAddress === 0x4015 || cleanAddress === 0x4017) {
+      this._apu.write$addr(cleanAddress, cleanValue);
+    } else if (cleanAddress >= 0x6000) {
+      this._mapper.write(cleanAddress, cleanValue);
     } else {
-      this._memory[address & 0xffff] = value;
+      this._memory[cleanAddress] = cleanValue;
     }
   }
 
   public get(address: number) {
-    address &= 0xffff;
+    var cleanAddress = address & 0xffff;
 
-    if (address < 0x2000) {
-      return this._memory[address % 0x800] & 0xff;
-    } else if (address >= 0x2000 && address <= 0x3fff) {
-      const decodedAddress = 0x2000 + (address % 8);
+    if (cleanAddress < 0x2000) {
+      return this._memory[cleanAddress % 0x800] & 0xff;
+    } else if (cleanAddress >= 0x2000 && cleanAddress <= 0x3fff) {
+      const decodedAddress = 0x2000 + (cleanAddress % 8);
       return this._ppu.read(decodedAddress);
-    } else if (address === 0x4015) {
-      return this._apu.read$addr(address);
-    } else if (address === 0x4016) {
+    } else if (cleanAddress === 0x4015) {
+      return this._apu.read$addr(cleanAddress);
+    } else if (cleanAddress === 0x4016) {
       // Read controller 1
       return this._controllerOne.read();
-    } else if (address === 0x4017) {
+    } else if (cleanAddress === 0x4017) {
       // read controller 2
       return this._controllerTwo.read();
-    } else if (address >= 0x6000) {
-      return this._mapper.read(address);
+    } else if (cleanAddress >= 0x6000) {
+      return this._mapper.read(cleanAddress);
     }
-    return this._memory[address & 0xffff] & 0xff;
+    return this._memory[cleanAddress];
   }
 }

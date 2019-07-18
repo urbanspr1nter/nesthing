@@ -196,13 +196,14 @@ export class Mmc1Mapper implements IMapper {
     }
 
     private _prgBankOffset(index: number) {
-        if(index >= 0x80) {
-            index -= 0x100;
+        var idx = index;
+        if(idx >= 0x80) {
+            idx -= 0x100;
         }
 
-        index = index % Math.trunc(this._cartridge.prg.length / 0x4000);
+        idx = idx % Math.trunc(this._cartridge.prg.length / 0x4000);
         
-        var offset = index * 0x4000;
+        var offset = idx * 0x4000;
         if(offset < 0) {
             offset += this._cartridge.prg.length;
         }
@@ -211,13 +212,15 @@ export class Mmc1Mapper implements IMapper {
     }
 
     private _chrBankOffset(index: number) {
-        if(index >= 0x80) {
-            index -= 0x100;
+        var idx = index;
+
+        if(idx >= 0x80) {
+            idx -= 0x100;
         }
 
-        index = index % Math.trunc(this._cartridge.chr.length / 0x1000);
+        idx = idx % Math.trunc(this._cartridge.chr.length / 0x1000);
 
-        var offset = index * 0x1000;
+        var offset = idx * 0x1000;
         if(offset < 0) {
             offset += this._cartridge.chr.length;
         }

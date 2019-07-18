@@ -219,16 +219,16 @@ export class Ppu {
   public write$2001(dataByte: number) {
     this._regPPUMASK_greyscale = (dataByte & 1) === 1 ? true : false;
     this._regPPUMASK_showBgInLeftMost8pxOfScreen =
-      ((dataByte >> 1) & 1) === 1 ? true : false;
+      ((dataByte >>> 1) & 1) === 1 ? true : false;
     this._regPPUMASK_showSpritesLeftMost8pxOfScreen =
-      ((dataByte >> 2) & 1) === 1 ? true : false;
+      ((dataByte >>> 2) & 1) === 1 ? true : false;
     this._regPPUMASK_showBackground =
-      ((dataByte >> 3) & 1) === 1 ? true : false;
-    this._regPPUMASK_showSprites = ((dataByte >> 4) & 1) === 1 ? true : false;
-    this._regPPUMASK_emphasizeRed = ((dataByte >> 5) & 1) === 1 ? true : false;
+      ((dataByte >>> 3) & 1) === 1 ? true : false;
+    this._regPPUMASK_showSprites = ((dataByte >>> 4) & 1) === 1 ? true : false;
+    this._regPPUMASK_emphasizeRed = ((dataByte >>> 5) & 1) === 1 ? true : false;
     this._regPPUMASK_emphasizeGreen =
-      ((dataByte >> 6) & 1) === 1 ? true : false;
-    this._regPPUMASK_emphasizeBlue = ((dataByte >> 7) & 1) === 1 ? true : false;
+      ((dataByte >>> 6) & 1) === 1 ? true : false;
+    this._regPPUMASK_emphasizeBlue = ((dataByte >>> 7) & 1) === 1 ? true : false;
   }
 
   public read$2002() {
@@ -419,11 +419,9 @@ export class Ppu {
     this._bgTile.DataLow32 = tileData;
   }
 
-  private _getBackgroundPixel(x: number, y: number) {
-    let backgroundPixel = 0;
-
+  private _getBackgroundPixel() {
     if (!this._regPPUMASK_showBackground) {
-      return backgroundPixel;
+      return 0;
     }
 
     const pixel =
@@ -444,7 +442,7 @@ export class Ppu {
 
     let usingBackgroundPixel = false;
 
-    let backgroundPixel = this._getBackgroundPixel(x, y);
+    let backgroundPixel = this._getBackgroundPixel();
     var [spriteIndex, spritePixelColor] = this._getSpritePixel();
 
     if (x < 8 && !this._regPPUMASK_showBgInLeftMost8pxOfScreen) {
@@ -480,16 +478,14 @@ export class Ppu {
       }
     }
 
-    const attributeBits = color & 12;
-    const basePaletteAddress = this._getBasePaletteAddress(
+    var attributeBits = color & 12;
+    var basePaletteAddress = this._getBasePaletteAddress(
       attributeBits,
       usingBackgroundPixel
     );
-
-    let paletteOffset = color & 3;
-    var effectiveColorAddress = basePaletteAddress + paletteOffset;
-
-    let colorByte = this._ppuMemory.get(effectiveColorAddress);
+    var paletteOffset = color & 3;
+    var effectiveColorAddress = basePaletteAddress + (paletteOffset);
+    var colorByte = this._ppuMemory.get(effectiveColorAddress);
 
     this._uiFrameBuffer.drawPixel(x, y, PpuPalette[colorByte]);
   }
@@ -801,7 +797,7 @@ export class Ppu {
   private _initializeOam() {
     this._oam = [];
     for (let i = 0; i <= 0xff; i++) {
-      this._oam[i] = 0x0;
+      this._oam[i] = 0;
     }
   }
 

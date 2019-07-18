@@ -1,5 +1,3 @@
-import { Memory } from "./memory";
-import { PpuMemory } from "./ppu/ppumemory";
 import { Cartridge } from "./cartridge";
 
 // iNES file format
@@ -102,10 +100,10 @@ export class CartLoader {
 
   private _getHeader() {
     this._headerInfo.FormatHeader = this._romBytes.slice(0, 4);
-    this._headerInfo.PrgRomUnits = this._romBytes[4];
-    this._headerInfo.ChrRomUnits = this._romBytes[5];
-    this._headerInfo.Control1 = this._romBytes[6];
-    this._headerInfo.Control2 = this._romBytes[7];
-    this._headerInfo.PrgRamSizeUnits = this._romBytes[8];
+    this._headerInfo.PrgRomUnits = this._romBytes[4] & 0xff;
+    this._headerInfo.ChrRomUnits = this._romBytes[5] & 0xff;
+    this._headerInfo.Control1 = this._romBytes[6] & 0xff;
+    this._headerInfo.Control2 = this._romBytes[7] & 0xff;
+    this._headerInfo.PrgRamSizeUnits = this._romBytes[8] & 0xff;
   }
 }
