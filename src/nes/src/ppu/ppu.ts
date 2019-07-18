@@ -198,18 +198,18 @@ export class Ppu {
   }
 
   public write$2000(dataByte: number) {
-    this._regPPUCTRL_nt0 = (dataByte & 0x01) > 0 ? 1 : 0;
-    this._regPPUCTRL_nt1 = (dataByte & 0x02) > 0 ? 1 : 0;
-    this._regPPUCTRL_vramIncrement = (dataByte & 0x04) === 0x0 ? 1 : 32;
+    this._regPPUCTRL_nt0 = (dataByte & 1) === 1 ? 1 : 0;
+    this._regPPUCTRL_nt1 = ((dataByte >>> 1) & 1) === 1 ? 1 : 0;
+    this._regPPUCTRL_vramIncrement = ((dataByte >>> 2) & 1) === 1 ? 32 : 1;
     this._regPPUCTRL_spritePatternTableBaseAddress =
-      (dataByte & 0x08) === 0x0 ? 0 : 0x1000;
+      ((dataByte >>> 3) & 1) === 1 ? 0x1000 : 0;
     this._regPPUCTRL_backgroundPatternTableBaseAddress =
-      (dataByte & 0x10) === 0x0 ? 0 : 0x1000;
-    this._regPPUCTRL_spriteSizeLarge = (dataByte & 0x20) === 0x0 ? false : true;
+      ((dataByte >>> 4) & 1) === 1 ? 0x1000 : 0;
+    this._regPPUCTRL_spriteSizeLarge = ((dataByte >>> 5) & 1) === 1 ? true : false;
     this._regPPUCTRL_masterSlaveSelect =
-      (dataByte & 0x40) === 0x0 ? false : true;
+      ((dataByte >>> 6) & 1) === 1 ? true : false;
     this._regPPUCTRL_generateNmiAtVblankStart =
-      ((dataByte >> 7) & 1) === 1 ? true : false;
+      ((dataByte >>> 7) & 1) === 1 ? true : false;
 
     this._nmiChange();
 
