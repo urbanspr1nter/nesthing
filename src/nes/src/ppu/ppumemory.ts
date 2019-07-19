@@ -1,5 +1,5 @@
 import { IMapper } from "../mapper";
-import { MirrorMode } from "../constants";
+import { MirrorMode } from "../cpu/constants";
 
 const MirrorLookup = [
   [0, 0, 1, 1],

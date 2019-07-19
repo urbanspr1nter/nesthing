@@ -1,4 +1,4 @@
-import { ApuLengthTable, ApuDutyTable } from "./constants";
+import { ApuLengthTable, ApuDutyTable, Pulse } from "./constants";
 
 export class PulseWave {
   private _p: Pulse;
@@ -28,6 +28,9 @@ export class PulseWave {
       ConstantVolume: 0
     };
   }
+  get pulse() {
+    return this._p;
+  }
 
   public save() {
     return this._p;
@@ -35,10 +38,6 @@ export class PulseWave {
 
   public load(state: Pulse) {
     this._p = state;
-  }
-
-  get pulse() {
-    return this._p;
   }
 
   public writeControl(value: number) {
@@ -66,7 +65,7 @@ export class PulseWave {
   public writeTimerHigh(value: number) {
     this._p.LengthValue = ApuLengthTable[value >>> 3];
     this._p.TimerPeriod =
-      ((this._p.TimerPeriod & 0x00ff) | ((value & 7) << 8) & 0xffff);
+      (this._p.TimerPeriod & 0x00ff) | (((value & 7) << 8) & 0xffff);
     this._p.EnvelopeStart = true;
     this._p.DutyValue = 0;
   }
@@ -154,28 +153,4 @@ export class PulseWave {
       return this._p.ConstantVolume;
     }
   }
-}
-
-export interface Pulse {
-  Enabled: boolean;
-  Channel: number;
-  LengthEnabled: boolean;
-  LengthValue: number;
-  TimerPeriod: number;
-  TimerValue: number;
-  DutyMode: number;
-  DutyValue: number;
-  SweepReload: boolean;
-  SweepEnabled: boolean;
-  SweepNegate: boolean;
-  SweepShift: number;
-  SweepPeriod: number;
-  SweepValue: number;
-  EnvelopeEnabled: boolean;
-  EnvelopeLoop: boolean;
-  EnvelopeStart: boolean;
-  EnvelopePeriod: number;
-  EnvelopeValue: number;
-  EnvelopeVolume: number;
-  ConstantVolume: number;
 }

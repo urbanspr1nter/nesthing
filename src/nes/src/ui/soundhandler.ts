@@ -1,14 +1,11 @@
 /**
  * soundhandler.ts
  *
- * Roger Ngo, 2019
+ * Roger Ngo
+ *
  */
 import { AUDIO_BUFFER_LENGTH, AUDIO_SAMPLE_RATE } from "../apu/constants";
-
-export interface UiSoundState {
-  bufferDataQueue: string[];
-  currIndex: number;
-}
+import { UiSoundState } from "./constants";
 
 export class UiSoundHandler {
   private _audioContext: AudioContext;

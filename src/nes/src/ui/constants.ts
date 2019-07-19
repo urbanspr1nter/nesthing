@@ -55,3 +55,8 @@ export const RomFiles = {
   MegaMan2: require("../roms/mm2.json"),
   TeenageMutantHeroTurtles: require("../roms/tmnt.json")
 };
+
+export interface UiSoundState {
+  bufferDataQueue: string[];
+  currIndex: number;
+}

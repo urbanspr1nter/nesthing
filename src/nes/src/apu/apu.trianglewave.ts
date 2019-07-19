@@ -1,4 +1,4 @@
-import { ApuTriangleTable, ApuLengthTable } from "./constants";
+import { ApuTriangleTable, ApuLengthTable, Triangle } from "./constants";
 
 export class TriangleWave {
   private _triangle: Triangle;
@@ -17,16 +17,16 @@ export class TriangleWave {
     };
   }
 
+  get triangle() {
+    return this._triangle;
+  }
+
   public save() {
     return this._triangle;
   }
 
   public load(state: Triangle) {
     this._triangle = state;
-  }
-
-  get triangle() {
-    return this._triangle;
   }
 
   public writeControl(value: number) {
@@ -89,14 +89,3 @@ export class TriangleWave {
   }
 }
 
-export interface Triangle {
-  Enabled: boolean;
-  LengthEnabled: boolean;
-  LengthValue: number;
-  TimerPeriod: number;
-  TimerValue: number;
-  DutyValue: number;
-  CounterPeriod: number;
-  CounterValue: number;
-  CounterReload: boolean;
-}

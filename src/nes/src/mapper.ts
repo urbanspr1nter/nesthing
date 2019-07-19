@@ -1,5 +1,5 @@
-import { Cartridge } from "./cartridge";
-import { MirrorMode } from "./constants";
+import { Cartridge } from "./cartridge/cartridge";
+import { MirrorMode } from "./cpu/constants";
 
 export interface IMapper {
     save(): any;

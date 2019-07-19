@@ -1,16 +1,20 @@
 import { Memory, MemoryState } from "./memory";
-import { Ppu, PpuState } from "./ppu/ppu";
-import { Cpu, CpuState } from "./cpu";
-import { CartLoader } from "./cart-loader";
+import { Ppu } from "./ppu/ppu";
+import { Cpu } from "./cpu/cpu";
+import { CartridgeLoader } from "./cartridge/cartridge-loader";
 import { Controller } from "./controller";
-import { Apu, ApuState } from "./apu/apu";
-import { UiSoundHandler, UiSoundState } from "./ui/soundhandler";
+import { Apu } from "./apu/apu";
+import { UiSoundHandler } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
 import { IMapper, NromMapper, Mmc1Mapper } from "./mapper";
-import { Cartridge, CartridgeState } from "./cartridge";
+import { Cartridge } from "./cartridge/cartridge";
 import RomManager from "./ui/rommanager";
-import { Roms } from "./ui/constants";
+import { Roms, UiSoundState } from "./ui/constants";
+import { ApuState } from "./apu/constants";
+import { PpuState } from "./ppu/constants";
+import { CartridgeState } from "./cartridge/constants";
+import { CpuState } from "./cpu/constants";
 
 export interface ConsoleState {
   currentRom: Roms,
@@ -57,7 +61,7 @@ export class Nes {
     this._rom = RomManager.getRomData(options.rom);
     this._currentRom = options.rom;
     const romContents = this._rom.raw as number[];
-    const cartLoader = new CartLoader(romContents);
+    const cartLoader = new CartridgeLoader(romContents);
     this._cartridge = cartLoader.makeCartridge();
 
     if (this._cartridge.mapper === Mapper.NROM) {

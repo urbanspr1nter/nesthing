@@ -1,5 +1,5 @@
-import { Cpu } from "../cpu";
-import { ApuDmcTable } from "./constants";
+import { Cpu } from "../cpu/cpu";
+import { ApuDmcTable, Dmc } from "./constants";
 
 export class DmcSample {
   private _dmc: Dmc;
@@ -22,18 +22,18 @@ export class DmcSample {
     };
   }
 
+  get dmc() {
+    return this._dmc;
+  }
+
   public save() {
-    return {...this._dmc, ...{Cpu: undefined}};
+    return { ...this._dmc, ...{ Cpu: undefined } };
   }
 
   public load(state: Dmc) {
     var cpu = this._dmc.Cpu;
     this._dmc = state;
     this._dmc.Cpu = cpu;
-  }
-
-  get dmc() {
-    return this._dmc;
   }
 
   public writeControl(value: number) {
@@ -116,18 +116,3 @@ export class DmcSample {
   }
 }
 
-export interface Dmc {
-  Cpu: Cpu;
-  Enabled: boolean;
-  Value: number;
-  SampleAddress: number;
-  SampleLength: number;
-  CurrentAddress: number;
-  CurrentLength: number;
-  ShiftRegister: number;
-  BitCount: number;
-  TickPeriod: number;
-  TickValue: number;
-  Loop: boolean;
-  Irq: boolean;
-}

@@ -1,4 +1,5 @@
-import { CpuFrequencyHz } from "../constants";
+import { CpuFrequencyHz } from "../cpu/constants";
+import { Cpu } from "../cpu/cpu";
 
 export const AUDIO_BUFFER_LENGTH = 4096;
 export const AUDIO_SAMPLE_RATE = 44100;
@@ -24,3 +25,85 @@ export const ApuNoiseTable = [
 export const ApuDmcTable = [
     214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27
 ];
+
+export interface Pulse {
+  Enabled: boolean;
+  Channel: number;
+  LengthEnabled: boolean;
+  LengthValue: number;
+  TimerPeriod: number;
+  TimerValue: number;
+  DutyMode: number;
+  DutyValue: number;
+  SweepReload: boolean;
+  SweepEnabled: boolean;
+  SweepNegate: boolean;
+  SweepShift: number;
+  SweepPeriod: number;
+  SweepValue: number;
+  EnvelopeEnabled: boolean;
+  EnvelopeLoop: boolean;
+  EnvelopeStart: boolean;
+  EnvelopePeriod: number;
+  EnvelopeValue: number;
+  EnvelopeVolume: number;
+  ConstantVolume: number;
+}
+
+export interface Triangle {
+  Enabled: boolean;
+  LengthEnabled: boolean;
+  LengthValue: number;
+  TimerPeriod: number;
+  TimerValue: number;
+  DutyValue: number;
+  CounterPeriod: number;
+  CounterValue: number;
+  CounterReload: boolean;
+}  
+  
+export interface Noise {
+  Enabled: boolean;
+  Mode: boolean;
+  ShiftRegister: number;
+  LengthEnabled: boolean;
+  LengthValue: number;
+  TimerPeriod: number;
+  TimerValue: number;
+  EnvelopeEnabled: boolean;
+  EnvelopeLoop: boolean;
+  EnvelopeStart: boolean;
+  EnvelopePeriod: number;
+  EnvelopeValue: number;
+  EnvelopeVolume: number;
+  ConstantVolume: number;
+}
+
+export interface Dmc {
+  Cpu: Cpu;
+  Enabled: boolean;
+  Value: number;
+  SampleAddress: number;
+  SampleLength: number;
+  CurrentAddress: number;
+  CurrentLength: number;
+  ShiftRegister: number;
+  BitCount: number;
+  TickPeriod: number;
+  TickValue: number;
+  Loop: boolean;
+  Irq: boolean;
+}
+
+export interface ApuState {
+  cycles: number;
+  sampleRate: number;
+  framePeriod: number;
+  frameValue: number;
+  frameIrq: boolean;
+  square0: Pulse;
+  square1: Pulse;
+  triangle: Triangle;
+  noise: Noise;
+  dmc: Dmc;
+}

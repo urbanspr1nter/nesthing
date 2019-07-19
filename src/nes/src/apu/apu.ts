@@ -1,26 +1,13 @@
-import { Cpu } from "../cpu";
-import { InterruptRequestType } from "../cpu.interface";
+import { Cpu } from "../cpu/cpu";
+import { InterruptRequestType } from "../cpu/cpu.interface";
 import { FilterChain } from "./filterchain";
-import { CpuFrequencyHz } from "../constants";
-import { PulseWave, Pulse } from "./apu.pulsewave";
-import { TriangleWave, Triangle } from "./apu.trianglewave";
-import { NoiseWave, Noise } from "./apu.noisewave";
-import { DmcSample, Dmc } from "./apu.dmcsample";
+import { CpuFrequencyHz } from "../cpu/constants";
+import { PulseWave } from "./apu.pulsewave";
+import { TriangleWave } from "./apu.trianglewave";
+import { NoiseWave } from "./apu.noisewave";
+import { DmcSample } from "./apu.dmcsample";
 import { UiSoundHandler } from "../ui/soundhandler";
-import { ApuFrameCounterRate } from "./constants";
-
-export interface ApuState {
-  cycles: number;
-  sampleRate: number;
-  framePeriod: number;
-  frameValue: number;
-  frameIrq: boolean;
-  square0: Pulse;
-  square1: Pulse;
-  triangle: Triangle;
-  noise: Noise;
-  dmc: Dmc;
-}
+import { ApuFrameCounterRate, ApuState } from "./constants";
 
 const pulseTable = [];
 const tndTable = [];

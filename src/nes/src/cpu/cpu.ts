@@ -1,4 +1,4 @@
-import { Memory } from "./memory";
+import { Memory } from "../memory";
 import {
   IrqVectorLocation,
   NmiVectorLocation,
@@ -13,14 +13,7 @@ import {
   CpuRegisters,
   CycleContext
 } from "./cpu.interface";
-
-export interface CpuState {
-  registers: CpuRegisters;
-  currentCycles: number;
-  stallCycles: number;
-  interrupt: InterruptRequestType;
-  context: CycleContext;
-}
+import { CpuState } from "./constants";
 
 export class Cpu {
   private _registers: CpuRegisters;
@@ -47,6 +40,22 @@ export class Cpu {
     this._setCurrentContext(0, AddressingModes.Immediate);
   }
 
+  get memory() {
+    return this._memory;
+  }
+
+  set stallCycles(cycles: number) {
+    this._stallCycles = cycles;
+  }
+
+  get stallCycles() {
+    return this._stallCycles;
+  }
+
+  get currentCycles() {
+    return this._currentCycles;
+  }
+
   public load(state: CpuState) {
     this._registers = state.registers;
     this._currentCycles = state.currentCycles;
@@ -62,22 +71,6 @@ export class Cpu {
       interrupt: this._interrupt,
       context: this._context
     }
-  }
-
-  get memory() {
-    return this._memory;
-  }
-
-  set stallCycles(cycles: number) {
-    this._stallCycles = cycles;
-  }
-
-  get stallCycles() {
-    return this._stallCycles;
-  }
-
-  get currentCycles() {
-    return this._currentCycles;
   }
 
   public powerUp(): void {

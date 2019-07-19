@@ -33,7 +33,7 @@ export interface iNesHeader {
   PrgRamSizeUnits: number; // 8 KB units
 }
 
-export class CartLoader {
+export class CartridgeLoader {
   private _romBytes: number[];
   private _headerInfo: iNesHeader;
 
@@ -61,36 +61,36 @@ export class CartLoader {
 
     var mapper1 = this._headerInfo.Control1 >>> 4;
     var mapper2 = this._headerInfo.Control2 >>> 4;
-    var mapper = (mapper1 | (mapper2 << 4));
+    var mapper = mapper1 | (mapper2 << 4);
 
     var mirror1 = this._headerInfo.Control1 & 1;
     var mirror2 = (this._headerInfo.Control1 >>> 3) & 1;
-    var mirror = (mirror1 | (mirror2 << 1));
+    var mirror = mirror1 | (mirror2 << 1);
 
     var battery = (this._headerInfo.Control1 >>> 1) & 1;
 
-    if((this._headerInfo.Control1 & 4) === 4) {
-      for(let  i = 0; i < 512; i++) {
+    if ((this._headerInfo.Control1 & 4) === 4) {
+      for (let i = 0; i < 512; i++) {
         filePointer++;
       }
     }
 
     var prg = [];
     var prgRomSize = this._headerInfo.PrgRomUnits * 16384;
-    for(let i = 0; i < prgRomSize; i++) {
+    for (let i = 0; i < prgRomSize; i++) {
       prg.push(romData[filePointer]);
       filePointer++;
     }
 
     var chr = [];
     var chrRomSize = this._headerInfo.ChrRomUnits * 8192;
-    for(let i = 0; i < chrRomSize; i++) {
+    for (let i = 0; i < chrRomSize; i++) {
       chr.push(romData[filePointer]);
       filePointer++;
     }
 
-    if(this._headerInfo.ChrRomUnits === 0) {
-      for(let i = 0; i < 8192; i++) {
+    if (this._headerInfo.ChrRomUnits === 0) {
+      for (let i = 0; i < 8192; i++) {
         chr.push(0);
       }
     }

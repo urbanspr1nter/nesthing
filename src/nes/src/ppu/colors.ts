@@ -1,3 +1,14 @@
+/**
+ * colors.ts
+ * 
+ * Roger Ngo
+ */
+
+ /**
+  * NES PPU color palette
+  * 
+  * Format is 24-bit number as RGB 
+  */
 const palette = [
   0x666666, 0x002a88, 0x1412a7, 0x3b00a4, 0x5c007e, 0x6e0040, 0x6c0600, 0x561d00,
   0x333500, 0x0b4800, 0x005200, 0x004f08, 0x00404d, 0x000000, 0x000000, 0x000000,

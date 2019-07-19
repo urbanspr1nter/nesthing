@@ -1,4 +1,4 @@
-import { ApuNoiseTable, ApuLengthTable } from "./constants";
+import { ApuNoiseTable, ApuLengthTable, Noise } from "./constants";
 
 export class NoiseWave {
   private _noise: Noise;
@@ -22,16 +22,16 @@ export class NoiseWave {
     };
   }
 
+  get noise() {
+    return this._noise;
+  }
+
   public save() {
     return this._noise;
   }
 
   public load(state: Noise) {
     this._noise = state;
-  }
-
-  get noise() {
-    return this._noise;
   }
 
   public writeControl(value: number) {
@@ -115,21 +115,4 @@ export class NoiseWave {
       return this._noise.ConstantVolume;
     }
   }
-}
-
-export interface Noise {
-  Enabled: boolean;
-  Mode: boolean;
-  ShiftRegister: number;
-  LengthEnabled: boolean;
-  LengthValue: number;
-  TimerPeriod: number;
-  TimerValue: number;
-  EnvelopeEnabled: boolean;
-  EnvelopeLoop: boolean;
-  EnvelopeStart: boolean;
-  EnvelopePeriod: number;
-  EnvelopeValue: number;
-  EnvelopeVolume: number;
-  ConstantVolume: number;
 }
