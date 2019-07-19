@@ -2,12 +2,17 @@ import { NesConsole } from "./nesconsole";
 import RomManager from "./ui/rommanager";
 import { ConsoleState } from "./nes";
 import { Roms } from "./ui/constants";
+import { EventEmitter } from "events";
 
 var canvasId = "main";
 var gameConsole: NesConsole;
 var timeoutHandle = undefined;
+var eventEmitter = new EventEmitter();
 
 document.getElementById("btn-play").addEventListener("click", () => {
+  eventEmitter.emit("stop");
+  eventEmitter.removeAllListeners("stop");
+
   if(timeoutHandle) {
     clearTimeout(timeoutHandle);
   }
@@ -20,13 +25,11 @@ document.getElementById("btn-play").addEventListener("click", () => {
   );
 
   var game = RomManager.valueToGame(selectedGame);
-  gameConsole = new NesConsole(game, canvasId);
+
+  gameConsole = new NesConsole(game, canvasId, eventEmitter);
   gameConsole.setupDOM();
 
   timeoutHandle = setTimeout(function() {
-    document.getElementById("select-game").classList.add("hidden");
-    document.getElementById("btn-play").classList.add("hidden");
-
     setImmediate(() => gameConsole.run(performance.now()));
   }, 1000);
 });

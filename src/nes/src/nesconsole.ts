@@ -3,6 +3,7 @@ import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
 import { Controller } from "./controller";
 import { Roms } from "./ui/constants";
+import { EventEmitter } from "events";
 
 const ONE_SECOND_MS = 1000;
 const FPS = 60;
@@ -10,6 +11,8 @@ const KEY_UP_EVENT = "keyup";
 const KEY_DOWN_EVENT = "keydown";
 
 export class NesConsole {
+  private _isRunning: boolean;
+  private _eventEmitter: EventEmitter;
   private _nes: Nes;
   private _options: NesOptions;
   private _lastFrameTime: number;
@@ -18,7 +21,7 @@ export class NesConsole {
   private _ppuFrames: number;
   private _lastFps: string;
 
-  constructor(rom: Roms, canvasId: string) {
+  constructor(rom: Roms, canvasId: string, eventEmitter: EventEmitter) {
     const playerOneController = new Controller();
     const playerTwoController = new Controller();
 
@@ -39,6 +42,13 @@ export class NesConsole {
     this._msPerFrame = ONE_SECOND_MS / FPS;
 
     this._lastFps = "0.0";
+    this._isRunning = true;
+
+    this._eventEmitter = eventEmitter;
+    
+    this._eventEmitter.on("stop", () => {
+      this._isRunning = false;
+    });
   }
 
   get nes() {
@@ -69,6 +79,10 @@ export class NesConsole {
   }
 
   public run(timestamp: number) {
+    if(!this._isRunning) {
+      return;
+    }
+
     if (this._lastFrameTime === 0) {
       this._lastFrameTime = timestamp;
     }
