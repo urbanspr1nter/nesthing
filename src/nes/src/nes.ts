@@ -13,6 +13,7 @@ import RomManager from "./ui/rommanager";
 import { Roms } from "./ui/constants";
 
 export interface ConsoleState {
+  currentRom: Roms,
   cpu: CpuState,
   ppu: PpuState,
   apu: ApuState,
@@ -39,6 +40,7 @@ export enum Mapper {
   UNROM = 2
 }
 export class Nes {
+  private _currentRom: Roms;
   private _rom: any;
   private _memory: Memory;
   private _apu: Apu;
@@ -53,7 +55,7 @@ export class Nes {
 
   constructor(options: NesOptions) {
     this._rom = RomManager.getRomData(options.rom);
-
+    this._currentRom = options.rom;
     const romContents = this._rom.raw as number[];
     const cartLoader = new CartLoader(romContents);
     this._cartridge = cartLoader.makeCartridge();
@@ -88,6 +90,10 @@ export class Nes {
     this._initialize();
   }
 
+  get rom(): Roms {
+    return this._currentRom;
+  }
+
   get controller1(): Controller {
     return this._controllerOne;
   }
@@ -110,6 +116,7 @@ export class Nes {
 
   public save() {
     return {
+      currentRom: this._currentRom,
       cpu: this._cpu.save(),
       ppu: this._ppu.save(),
       apu: this._apu.save(),
@@ -121,6 +128,7 @@ export class Nes {
   }
 
   public load(state: ConsoleState) {
+    this._currentRom = state.currentRom;
     this._memory.load(state.memory);
     this._cpu.load(state.cpu);
     this._ppu.load(state.ppu);

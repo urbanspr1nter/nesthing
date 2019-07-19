@@ -6,7 +6,7 @@
 import { AUDIO_BUFFER_LENGTH, AUDIO_SAMPLE_RATE } from "../apu/constants";
 
 export interface UiSoundState {
-  bufferDataQueue: number[];
+  bufferDataQueue: string[];
   currIndex: number;
 }
 
@@ -43,14 +43,17 @@ export class UiSoundHandler {
   }
 
   public save() {
+    const safeQueue = this._bufferDataQueue.map(v => v.toString());
+
     return {
-      bufferDataQueue: this._bufferDataQueue,
+      bufferDataQueue: safeQueue,
       currIndex: this._currIndex
     }
   }
 
   public load(state: UiSoundState) {
-    this._bufferDataQueue = state.bufferDataQueue;
+    const convertedQueue = state.bufferDataQueue.map(v => Number(v));
+    this._bufferDataQueue = convertedQueue;
     this._currIndex = state.currIndex;
   }
 

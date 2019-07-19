@@ -87,14 +87,14 @@
       <hr />
       <h1 class="title is-1">NESthing</h1>
       <div>
-          For this demo, a few games are supported. Choose one from the list and
-          press "Play".
-          <strong>
-            Right now, there are a few bugs, but they will all get sorted out :).
-            If you would like to switch to a new game, you will have to refresh
-            this page and then hit "Play" again.
-          </strong>
-          <hr/>
+        For this demo, a few games are supported. Choose one from the list and
+        press "Play".
+        <strong>
+          Right now, there are a few bugs, but they will all get sorted out :).
+          If you would like to switch to a new game, you will have to refresh
+          this page and then hit "Play" again.
+        </strong>
+        <hr />
       </div>
       <div id="button-mapping-container">
         <div>
@@ -132,7 +132,7 @@
         <canvas id="main" width="256" height="240"></canvas>
       </div>
       <div>
-          <div id="fps">0 fps</div>
+        <div id="fps">0 fps</div>
       </div>
       <div class="controls">
         <div class="field">
@@ -165,7 +165,7 @@
         <div class="field">
           <div class="control">
             <button type="button" class="button" id="btn-save">
-                <i class="fas fa-file-download"></i> &nbsp; Save
+              <i class="fas fa-file-download"></i> &nbsp; Save
             </button>
           </div>
         </div>
@@ -176,16 +176,38 @@
       </div>
 
       <div>
-          <strong>Paste your save state JSON here, and then click "load"</strong>
+        <strong
+          >Load your save state file from disk here once you have started the
+          game. Click "Load" when ready.</strong
+        >
       </div>
       <div class="field">
-          <div class="control">
-            <button type="button" class="button" id="btn-load">
-                <i class="fas fa-upload"></i> &nbsp; Load
-            </button>
+        <div class="control">
+          <div class="file has-name">
+            <label class="file-label">
+              <input class="file-input" id="save-file" type="file" name="files[]" />
+              <span class="file-cta">
+                <span class="file-icon">
+                  <i class="fas fa-upload"></i>
+                </span>
+                <span class="file-label">
+                  Choose a file...
+                </span>
+              </span>
+              <span id="file-name" class="file-name">
+                  No file chosen.
+              </span>
+            </label>
           </div>
         </div>
-      <textarea cols="80" rows="16" id="console-dump"></textarea>
+      </div>
+      <div class="field">
+        <div class="control">
+          <button type="button" class="button" id="btn-load">
+            <i class="fas fa-upload"></i> &nbsp; Load
+          </button>
+        </div>
+      </div>
 
       <div class="information">
         <div>
