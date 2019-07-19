@@ -32,16 +32,21 @@ export class PpuMemory {
       this._mapper.write(decodedAddress, cleanValue);
     } else if (decodedAddress < 0x3f00) {
       const mode = this._mapper.cartridge.mirror;
-      const mirroredAddress = this._getMirrorAddress(mode, decodedAddress);
-      this._nameTableData[mirroredAddress % 2048] = cleanValue;
-    } else if (decodedAddress === 0x3f10) {
+      const mirroredAddress = Math.trunc(this._getMirrorAddress(mode, decodedAddress) % 2048);
+      this._nameTableData[mirroredAddress] = cleanValue;
+    } else if(decodedAddress >= 0x3f00 && decodedAddress <= 0x3fff) { 
+      const mappedPaletteAddress = decodedAddress & 0x3f1f;
+      if (mappedPaletteAddress === 0x3f10) {
       this._memory[0x3f00] = cleanValue;
-    } else if (decodedAddress === 0x3f14) {
+      } else if (mappedPaletteAddress === 0x3f14) {
       this._memory[0x3f04] = cleanValue;
-    } else if (decodedAddress === 0x3f18) {
+      } else if (mappedPaletteAddress === 0x3f18) {
       this._memory[0x3f08] = cleanValue;
-    } else if (decodedAddress === 0x3f1c) {
+      } else if (mappedPaletteAddress === 0x3f1c) {
       this._memory[0x3f0c] = cleanValue;
+    } else {
+        this._memory[mappedPaletteAddress] = cleanValue;
+      }
     } else {
       this._memory[decodedAddress] = cleanValue;
     }
@@ -49,22 +54,30 @@ export class PpuMemory {
 
   public get(address: number) {
     const decodedAddress = address % 0x4000;
+
     if (decodedAddress < 0x2000) {
       return this._mapper.read(decodedAddress);
     } else if (decodedAddress < 0x3f00) {
       const mode = this._mapper.cartridge.mirror;
-      const mirroredAddress = this._getMirrorAddress(mode, decodedAddress);
+      const mirroredAddress = Math.trunc(this._getMirrorAddress(mode, decodedAddress) % 2048);
 
-      return this._nameTableData[mirroredAddress % 2048];
-    } else if (decodedAddress === 0x3f10) {
+      return this._nameTableData[mirroredAddress];
+    } else if(decodedAddress >= 0x3f00 && decodedAddress <= 0x3fff) { 
+      const mappedPaletteAddress = decodedAddress & 0x3f1f;
+
+      if (mappedPaletteAddress === 0x3f10) {
       return this._memory[0x3f00];
-    } else if (decodedAddress === 0x3f14) {
+      } else if (mappedPaletteAddress === 0x3f14) {
       return this._memory[0x3f04];
-    } else if (decodedAddress === 0x3f18) {
+      } else if (mappedPaletteAddress === 0x3f18) {
       return this._memory[0x3f08];
-    } else if (decodedAddress === 0x3f1c) {
+      } else if (mappedPaletteAddress === 0x3f1c) {
       return this._memory[0x3f0c];
+      } else {
+        return this._memory[mappedPaletteAddress];
+      }
     }
+
     return this._memory[decodedAddress];
   }
 

@@ -8,14 +8,14 @@ import * as fs from "fs";
  */
 
 const bytes: number[] = [];
-const romContents = fs.readFileSync("./roms/original/FinalFantasy.nes");
+const romContents = fs.readFileSync("./roms/original/tmnt.nes");
 romContents.forEach(value => {
   bytes.push(value);
 });
 
 const result = {
-  name: "ff.nes",
+  name: "tmnt.nes",
   raw: bytes
 };
 
-fs.writeFileSync("./ff.json", JSON.stringify(result));
+fs.writeFileSync("./tmnt.json", JSON.stringify(result));

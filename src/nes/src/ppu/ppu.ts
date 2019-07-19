@@ -312,7 +312,7 @@ export class Ppu {
   public write$4014(dataByte: number) {
     let cpuAddress = (dataByte << 8) & 0xffff;
     for (let i = 0; i <= 0xff; i++) {
-      this._oam[this._regOAMADDR_address] = this._cpu.memory.get(cpuAddress);
+      this._oam[this._regOAMADDR_address & 0xff] = this._cpu.memory.get(cpuAddress);
       this._regOAMADDR_address++;
       cpuAddress++;
     }
@@ -562,7 +562,7 @@ export class Ppu {
         row = 7 - row;
       }
       const baseTableMultiplier = this
-        ._regPPUCTRL_spritePatternTableBaseAddress;
+        ._regPPUCTRL_spritePatternTableBaseAddress === 0x1000 ? 1 : 0;
       address = baseTableMultiplier * 0x1000 + (tileByte << 4) + row;
     } else {
       if ((attributes & 0x80) === 0x80) {
