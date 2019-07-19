@@ -14,6 +14,14 @@ import {
   CycleContext
 } from "./cpu.interface";
 
+export interface CpuState {
+  registers: CpuRegisters;
+  currentCycles: number;
+  stallCycles: number;
+  interrupt: InterruptRequestType;
+  context: CycleContext;
+}
+
 export class Cpu {
   private _registers: CpuRegisters;
   private _memory: Memory;
@@ -37,6 +45,23 @@ export class Cpu {
     this._interrupt = InterruptRequestType.None;
     this._stallCycles = 0;
     this._setCurrentContext(0, AddressingModes.Immediate);
+  }
+
+  public load(state: CpuState) {
+    this._registers = state.registers;
+    this._currentCycles = state.currentCycles;
+    this._stallCycles = state.stallCycles;
+    this._interrupt = state.interrupt;
+  }
+
+  public save(): CpuState {
+    return {
+      registers: this._registers,
+      currentCycles: this._currentCycles,
+      stallCycles: this._stallCycles,
+      interrupt: this._interrupt,
+      context: this._context
+    }
   }
 
   get memory() {

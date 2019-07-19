@@ -2,20 +2,30 @@ import { Cpu } from "../cpu";
 import { InterruptRequestType } from "../cpu.interface";
 import { FilterChain } from "./filterchain";
 import { CpuFrequencyHz } from "../constants";
-import { PulseWave } from "./apu.pulsewave";
-import { TriangleWave } from "./apu.trianglewave";
-import { NoiseWave } from "./apu.noisewave";
-import { DmcSample } from "./apu.dmcsample";
+import { PulseWave, Pulse } from "./apu.pulsewave";
+import { TriangleWave, Triangle } from "./apu.trianglewave";
+import { NoiseWave, Noise } from "./apu.noisewave";
+import { DmcSample, Dmc } from "./apu.dmcsample";
 import { UiSoundHandler } from "../ui/soundhandler";
 import { ApuFrameCounterRate } from "./constants";
+
+export interface ApuState {
+  cycles: number;
+  sampleRate: number;
+  framePeriod: number;
+  frameValue: number;
+  frameIrq: boolean;
+  square0: Pulse;
+  square1: Pulse;
+  triangle: Triangle;
+  noise: Noise;
+  dmc: Dmc;
+}
 
 const pulseTable = [];
 const tndTable = [];
 
 export class Apu {
-  private _cpu: Cpu;
-  private _currentCyclesForFrame: number;
-  private _cyclesPerFrame: number;
   private _cycles: number;
   private _sampleRate: number;
   private _framePeriod: number;
@@ -27,6 +37,8 @@ export class Apu {
   private _triangle: TriangleWave;
   private _noise: NoiseWave;
   private _dmc: DmcSample;
+
+  private _cpu: Cpu;
   private _uiSoundHandler: UiSoundHandler;
 
   constructor(uiSoundHandler: UiSoundHandler, audioSampleRate: number) {
@@ -41,9 +53,6 @@ export class Apu {
     this._filterChain = new FilterChain();
 
     this._cycles = 0;
-    this._currentCyclesForFrame = 0;
-    this._cyclesPerFrame = (audioSampleRate / 60) | 0;
-
     this._sampleRate = CpuFrequencyHz / audioSampleRate;
 
     this._filterChain.addFilters(
@@ -61,6 +70,33 @@ export class Apu {
     this._triangle = new TriangleWave();
     this._noise = new NoiseWave();
     this._uiSoundHandler = uiSoundHandler;
+  }
+
+  public save(): ApuState {
+    return {
+      cycles: this._cycles,
+      sampleRate: this._sampleRate,
+      framePeriod: this._framePeriod,
+      frameValue: this._frameValue,
+      frameIrq: this._frameIrq,
+      square0: this._square0.save(),
+      square1: this._square1.save(),
+      triangle: this._triangle.save(),
+      noise: this._noise.save(),
+      dmc: this._dmc.save()
+    }
+  }
+
+  public load(state: ApuState) {
+    this._cycles = state.cycles;
+    this._sampleRate = state.sampleRate;
+    this._framePeriod = state.framePeriod;
+    this._frameIrq = state.frameIrq;
+    this._square0.load(state.square0);
+    this._square1.load(state.square1);
+    this._triangle.load(state.triangle);
+    this._noise.load(state.noise);
+    this._dmc.load(state.dmc);
   }
 
   public setCpu(cpu: Cpu) {
@@ -170,12 +206,6 @@ export class Apu {
     const s2 = Math.trunc(cycle2 / this._sampleRate);
 
     if (s1 !== s2) {
-      this._currentCyclesForFrame++;
-
-      if (this._currentCyclesForFrame === this._cyclesPerFrame) {
-        this._currentCyclesForFrame = 0;
-      }
-
       this._sendSample();
     }
   }

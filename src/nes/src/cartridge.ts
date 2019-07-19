@@ -1,3 +1,12 @@
+export interface CartridgeState {
+    prg: number[];
+    chr: number[];
+    sram: number[];
+    mapper: number;
+    mirror: number;
+    battery: number;
+}
+
 export class Cartridge {
   private _prg: number[];
   private _chr: number[];
@@ -23,6 +32,26 @@ export class Cartridge {
     for(let i = 0; i < 0x2000; i++) {
         this._sram[i] = 0;
     }
+  }
+
+  public save(): CartridgeState {
+      return {
+          prg: this._prg,
+          chr: this._chr,
+          sram: this._sram,
+          mapper: this.mapper,
+          mirror: this._mirror,
+          battery: this._battery
+      }
+  }
+
+  public load(state: CartridgeState) {
+      this._prg = state.prg;
+      this._chr = state.chr;
+      this._sram = state.sram;
+      this._mapper = state.mapper;
+      this._mirror = state.mirror;
+      this._battery = state.battery;
   }
 
   get prg() {

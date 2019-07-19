@@ -1,16 +1,26 @@
-import { Memory } from "./memory";
-import { Ppu } from "./ppu/ppu";
-import { Cpu } from "./cpu";
+import { Memory, MemoryState } from "./memory";
+import { Ppu, PpuState } from "./ppu/ppu";
+import { Cpu, CpuState } from "./cpu";
 import { CartLoader } from "./cart-loader";
 import { Controller } from "./controller";
-import { Apu } from "./apu/apu";
-import { UiSoundHandler } from "./ui/soundhandler";
+import { Apu, ApuState } from "./apu/apu";
+import { UiSoundHandler, UiSoundState } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
 import { IMapper, NromMapper, Mmc1Mapper } from "./mapper";
-import { Cartridge } from "./cartridge";
+import { Cartridge, CartridgeState } from "./cartridge";
 import RomManager from "./ui/rommanager";
 import { Roms } from "./ui/constants";
+
+export interface ConsoleState {
+  cpu: CpuState,
+  ppu: PpuState,
+  apu: ApuState,
+  memory: MemoryState,
+  cartridge: CartridgeState,
+  mapper: any,
+  uiSoundHandler: UiSoundState;
+}
 
 export interface ControllerSet {
   one: Controller;
@@ -86,10 +96,6 @@ export class Nes {
     return this._controllerTwo;
   }
 
-  public cpuMemory(): number[] {
-    return this._memory.bits();
-  }
-
   get ppuFrames(): number {
     return this._ppu.frames;
   }
@@ -100,6 +106,28 @@ export class Nes {
 
   public ppuCycles(): number {
     return this._ppu.cycles;
+  }
+
+  public save() {
+    return {
+      cpu: this._cpu.save(),
+      ppu: this._ppu.save(),
+      apu: this._apu.save(),
+      memory: this._memory.save(),
+      cartridge: this._cartridge.save(),
+      mapper: this._mapper.save(),
+      uiSoundHandler: this._uiSoundHandler.save()
+    }
+  }
+
+  public load(state: ConsoleState) {
+    this._memory.load(state.memory);
+    this._cpu.load(state.cpu);
+    this._ppu.load(state.ppu);
+    this._apu.load(state.apu);
+    this._cartridge.load(state.cartridge);
+    this._mapper.load(state.mapper);
+    this._uiSoundHandler.load(state.uiSoundHandler);
   }
 
   public run(): number {

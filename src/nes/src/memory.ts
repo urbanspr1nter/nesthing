@@ -3,6 +3,10 @@ import { Controller } from "./controller";
 import { Apu } from "./apu/apu";
 import { IMapper } from "./mapper";
 
+export interface MemoryState {
+  data: number[];
+}
+
 /**
  * CPU MEMORY MAP
  *
@@ -33,6 +37,10 @@ export class Memory {
     controllerTwo: Controller
   ) {
     this._memory = [];
+    for(let i = 0; i < 0x10000; i++) {
+      this._memory.push(0);
+    }
+
     this._mapper = mapper;
     this._ppu = ppu;
     this._apu = apu;
@@ -40,8 +48,14 @@ export class Memory {
     this._controllerTwo = controllerTwo;
   }
 
-  public bits(): number[] {
-    return this._memory;
+  public save(): MemoryState {
+    return {
+      data: this._memory
+    }
+  }
+
+  public load(state: MemoryState) {
+    this._memory = state.data;
   }
 
   public set(address: number, value: number) {

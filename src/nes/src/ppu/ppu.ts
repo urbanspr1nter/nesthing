@@ -10,6 +10,53 @@ import { InterruptRequestType } from "../cpu.interface";
 import { UiFrameBuffer } from "../ui/framebuffer";
 import { IMapper } from "../mapper";
 
+export interface PpuState {
+  ppuMemoryBits: number[];
+  nameTableData: number[];
+  register: number;
+  ppuDataReadBuffer: number;
+  cycles: number;
+  scanlines: number;
+  frames: number;
+  evenFrame: boolean;
+  spriteCount: number;
+  ntByte: number;
+  attributeByte: number;
+  tileLowByte: number;
+  tileHighByte: number;
+  v: number;
+  t: number;
+  w: boolean;
+  regPPUCTRL_nt0: number;
+  regPPUCTRL_nt1: number;
+  regPPUCTRL_vramIncrement: number;
+  regPPUCTRL_spritePatternTableBaseAddress: number;
+  regPPUCTRL_backgroundPatternTableBaseAddress: number;
+  regPPUCTRL_spriteSizeLarge: boolean;
+  regPPUCTRL_masterSlaveSelect: boolean;
+  regPPUCTRL_generateNmiAtVblankStart: boolean;
+  regPPUMASK_greyscale: boolean;
+  regPPUMASK_showBgLeftMost8pxOfScreen: boolean;
+  regPPUMASK_showSpritesLeftMost8pxOfScreen: boolean;
+  regPPUMASK_showBackground: boolean;
+  regPPUMASK_showSprites: boolean;
+  regPPUMASK_emphasizeRed: boolean;
+  regPPUMASK_emphasizeGreen: boolean;
+  regPPUMASK_emphasizeBlue: boolean;
+  regPPUSTATUS_spriteOverflow: boolean;
+  regPPUSTATUS_spriteHit: boolean;
+  nmiOccurred: boolean;
+  regOAMADDR_address: number;
+  regOAMDATA_data: number;
+  regPPUSCROLL_x: number;
+  regPPUSCROLL_y: number;
+  bgTile: BackgroundData;
+  oam: number[];
+  onScreenSprites: SpriteData[];
+  nmiPrevious: boolean;
+  nmiDelay: number;
+}
+
 /**
  * Constants
  */
@@ -36,15 +83,14 @@ interface SpriteData {
  * In order to get some sort of speed, we can slam 2 numbers together with
  * a "high" and "low" property to serve the same purpose.
  */
-interface BackgroundData {
+export interface BackgroundData {
   DataHigh32: number;
   DataLow32: number;
 }
 
 export class Ppu {
-  private _register: number;
-  private _uiFrameBuffer: UiFrameBuffer;
   private _ppuMemory: PpuMemory;
+  private _register: number;
   private _ppuDataReadBuffer: number;
   private _cycles: number;
   private _scanlines: number;
@@ -59,7 +105,6 @@ export class Ppu {
   // Declare internal PPU variables
   private _v: number;
   private _t: number;
-  private _x: number; // Fine X scroll
   private _w: boolean; // first/second write toggle
 
   // Declare $2000/PPUCTRL bits
@@ -85,10 +130,7 @@ export class Ppu {
   // Declare $2002/PPUSTATUS bits
   private _regPPUSTATUS_spriteOverflow: boolean;
   private _regPPUSTATUS_spriteHit: boolean;
-  // private _regPPUSTATUS_vblankStarted: boolean;
   private _nmiOccurred: boolean;
-
-  private _cpu: Cpu;
 
   // Declare $2003/OAMADDR bits
   private _regOAMADDR_address: number;
@@ -101,12 +143,13 @@ export class Ppu {
   private _regPPUSCROLL_y: number;
 
   private _bgTile: BackgroundData;
-
   private _oam: number[];
   private _onScreenSprites: SpriteData[];
-
   private _nmiPrevious: boolean;
   private _nmiDelay: number;
+
+  private _uiFrameBuffer: UiFrameBuffer;
+  private _cpu: Cpu;
 
   constructor(uiFrameBuffer: UiFrameBuffer, mapper: IMapper) {
     this._uiFrameBuffer = uiFrameBuffer;
@@ -157,6 +200,102 @@ export class Ppu {
 
   set cpu(cpu: Cpu) {
     this._cpu = cpu;
+  }
+
+  public load(state: PpuState) {
+    this._ppuMemory.bits = state.ppuMemoryBits;
+    this._ppuMemory.nameTable = state.nameTableData;
+    this._register = state.register;
+    this._ppuDataReadBuffer = state.ppuDataReadBuffer;
+    this._cycles = state.cycles;
+    this._scanlines = state.scanlines;
+    this._frames =state.frames;
+    this._evenFrame = state.evenFrame;
+    this._spriteCount = state.spriteCount;
+    this._ntByte = state.ntByte;
+    this._attributeByte = state.attributeByte;
+    this._tileLowByte = state.tileLowByte;
+    this._tileHighByte = state.tileHighByte;
+    this._v = state.v;
+    this._t = state.t;
+    this._w = state.w;
+    this._regPPUCTRL_nt0 = state.regPPUCTRL_nt0;
+    this._regPPUCTRL_nt1 = state.regPPUCTRL_nt1;
+    this._regPPUCTRL_vramIncrement = state.regPPUCTRL_vramIncrement;
+    this._regPPUCTRL_spritePatternTableBaseAddress = state.regPPUCTRL_spritePatternTableBaseAddress;
+    this._regPPUCTRL_backgroundPatternTableBaseAddress = state.regPPUCTRL_backgroundPatternTableBaseAddress;
+    this._regPPUCTRL_spriteSizeLarge = state.regPPUCTRL_spriteSizeLarge;
+    this._regPPUCTRL_masterSlaveSelect  = state.regPPUCTRL_masterSlaveSelect;
+    this._regPPUCTRL_generateNmiAtVblankStart = state.regPPUCTRL_generateNmiAtVblankStart;
+    this._regPPUMASK_greyscale = state.regPPUMASK_greyscale;
+    this._regPPUMASK_showBgInLeftMost8pxOfScreen = state.regPPUMASK_showBgLeftMost8pxOfScreen;
+    this._regPPUMASK_showSpritesLeftMost8pxOfScreen = state.regPPUMASK_showSpritesLeftMost8pxOfScreen;
+    this._regPPUMASK_showBackground = state.regPPUMASK_showBackground;
+    this._regPPUMASK_showSprites = state.regPPUMASK_showSprites;
+    this._regPPUMASK_emphasizeRed = state.regPPUMASK_emphasizeRed;
+    this._regPPUMASK_emphasizeGreen = state.regPPUMASK_emphasizeGreen;
+    this._regPPUMASK_emphasizeBlue = state.regPPUMASK_emphasizeBlue;
+    this._regPPUSTATUS_spriteOverflow = state.regPPUSTATUS_spriteOverflow;
+    this._regPPUSTATUS_spriteHit = state.regPPUSTATUS_spriteHit;
+    this._nmiOccurred = state.nmiOccurred;
+    this._regOAMADDR_address = state.regOAMADDR_address;
+    this._regOAMDATA_data = state.regOAMDATA_data;
+    this._regPPUSCROLL_x = state.regPPUSCROLL_x;
+    this._regPPUSCROLL_y = state.regPPUSCROLL_y;
+    this._bgTile = state.bgTile;
+    this._oam = state.oam;
+    this._onScreenSprites = state.onScreenSprites;
+    this._nmiPrevious = state.nmiPrevious;
+    this._nmiDelay = state.nmiDelay;
+  }
+
+  public save(): PpuState {
+    return {
+      ppuMemoryBits: this._ppuMemory.bits,
+      nameTableData: this._ppuMemory.nameTable,
+      register: this._register,
+      ppuDataReadBuffer: this._ppuDataReadBuffer,
+      cycles: this._cycles,
+      scanlines: this._scanlines,
+      frames: this.frames,
+      evenFrame: this._evenFrame,
+      spriteCount: this._spriteCount,
+      ntByte: this._ntByte,
+      attributeByte: this._attributeByte,
+      tileLowByte: this._tileLowByte,
+      tileHighByte: this._tileHighByte,
+      v: this._v,
+      t: this._t,
+      w: this._w,
+      regPPUCTRL_nt0: this._regPPUCTRL_nt0,
+      regPPUCTRL_nt1: this._regPPUCTRL_nt1,
+      regPPUCTRL_vramIncrement: this._regPPUCTRL_vramIncrement,
+      regPPUCTRL_spritePatternTableBaseAddress: this._regPPUCTRL_spritePatternTableBaseAddress,
+      regPPUCTRL_backgroundPatternTableBaseAddress: this._regPPUCTRL_backgroundPatternTableBaseAddress,
+      regPPUCTRL_spriteSizeLarge: this._regPPUCTRL_spriteSizeLarge,
+      regPPUCTRL_masterSlaveSelect: this._regPPUCTRL_masterSlaveSelect,
+      regPPUCTRL_generateNmiAtVblankStart: this._regPPUCTRL_generateNmiAtVblankStart,
+      regPPUMASK_greyscale: this._regPPUMASK_greyscale,
+      regPPUMASK_showBgLeftMost8pxOfScreen: this._regPPUMASK_showBgInLeftMost8pxOfScreen,
+      regPPUMASK_showSpritesLeftMost8pxOfScreen: this._regPPUMASK_showSpritesLeftMost8pxOfScreen,
+      regPPUMASK_showBackground: this._regPPUMASK_showBackground,
+      regPPUMASK_showSprites: this._regPPUMASK_showSprites,
+      regPPUMASK_emphasizeRed: this._regPPUMASK_emphasizeRed,
+      regPPUMASK_emphasizeGreen: this._regPPUMASK_emphasizeGreen,
+      regPPUMASK_emphasizeBlue: this._regPPUMASK_emphasizeBlue,
+      regPPUSTATUS_spriteOverflow: this._regPPUSTATUS_spriteOverflow,
+      regPPUSTATUS_spriteHit: this._regPPUSTATUS_spriteHit,
+      nmiOccurred: this._nmiOccurred,
+      regOAMADDR_address: this._regOAMADDR_address,
+      regOAMDATA_data: this._regOAMDATA_data,
+      regPPUSCROLL_x: this._regPPUSCROLL_x,
+      regPPUSCROLL_y: this._regPPUSCROLL_y,
+      bgTile: this._bgTile,
+      oam: this._oam,
+      onScreenSprites: this._onScreenSprites,
+      nmiPrevious: this._nmiPrevious,
+      nmiDelay: this._nmiDelay
+    }
   }
 
   public step(): void {

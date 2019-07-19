@@ -17,6 +17,14 @@ export class TriangleWave {
     };
   }
 
+  public save() {
+    return this._triangle;
+  }
+
+  public load(state: Triangle) {
+    this._triangle = state;
+  }
+
   get triangle() {
     return this._triangle;
   }

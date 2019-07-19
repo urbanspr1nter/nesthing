@@ -22,6 +22,16 @@ export class DmcSample {
     };
   }
 
+  public save() {
+    return {...this._dmc, ...{Cpu: undefined}};
+  }
+
+  public load(state: Dmc) {
+    var cpu = this._dmc.Cpu;
+    this._dmc = state;
+    this._dmc.Cpu = cpu;
+  }
+
   get dmc() {
     return this._dmc;
   }

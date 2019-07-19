@@ -22,6 +22,14 @@ export class NoiseWave {
     };
   }
 
+  public save() {
+    return this._noise;
+  }
+
+  public load(state: Noise) {
+    this._noise = state;
+  }
+
   get noise() {
     return this._noise;
   }

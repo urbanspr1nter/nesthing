@@ -16,7 +16,6 @@ export enum ControllerPlayer {
 
 export class Controller {
   private _buttonMapPlayer: { [id: number]: boolean };
-
   private _strobePlayer: number;
   private _buttonIndex: number;
 

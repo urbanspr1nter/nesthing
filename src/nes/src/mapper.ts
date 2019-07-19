@@ -2,6 +2,8 @@ import { Cartridge } from "./cartridge";
 import { MirrorMode } from "./constants";
 
 export interface IMapper {
+    save(): any;
+    load(state: any);
     read(address: number): number;
     write(address: number, value: number): void;
     step(): void;
@@ -23,6 +25,20 @@ export class NromMapper implements IMapper {
 
     get cartridge() {
         return this._cartridge;
+    }
+
+    public save() {
+        return {
+            prgBanks: this._prgBanks,
+            prgBank1: this._prgBank1,
+            prgBank2: this._prgBank2
+        }
+    }
+
+    public load(state: any) {
+        this._prgBanks = state.prgBanks;
+        this._prgBank1 = state.prgBank1;
+        this._prgBank2 = state.prgBank2;
     }
 
     public read(address: number) {
@@ -95,6 +111,32 @@ export class Mmc1Mapper implements IMapper {
 
     get cartridge() {
         return this._cartridge;
+    }
+
+    public save() {
+        return {
+            shiftRegister: this._shiftRegister,
+            control: this._control,
+            prgMode: this._prgMode,
+            chrMode: this._chrMode,
+            prgBank: this._prgBank,
+            chrBank0: this._chrBank0,
+            chrBank1: this._chrBank1,
+            prgOffsets: this._prgOffsets,
+            chrOffsets: this._chrOffsets
+        }
+    }
+
+    public load(state: any) {
+        this._shiftRegister = state.shiftRegister;
+        this._control = state.control;
+        this._prgMode = state.prgMode;
+        this._chrMode = state.chrMode;
+        this._prgBank = state.prgBank;
+        this._chrBank0 = state.chrBank0;
+        this._chrBank1 = state.chrBank1;
+        this._prgOffsets = state.prgOffsets;
+        this._chrOffsets = state.chrOffsets;
     }
 
     public read(address: number): number {

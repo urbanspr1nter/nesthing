@@ -15,13 +15,33 @@ export class PpuMemory {
   private _nameTableData: number[];
 
   constructor(mapper: IMapper) {
-    this._memory = [];
     this._mapper = mapper;
+
+    this._memory = [];
+    for(let i = 0; i < 0x4000; i++) {
+      this._memory.push(0);
+    }
 
     this._nameTableData = [];
     for (let i = 0; i < 2048; i++) {
       this._nameTableData[i] = 0;
     }
+  }
+
+  get bits(): number[] {
+    return this._memory;
+  }
+
+  set bits(data: number[]) {
+    this._memory = data;
+  }
+
+  get nameTable(): number[] {
+    return this._nameTableData;
+  }
+
+  set nameTable(data: number[]) {
+    this._nameTableData = data;
   }
 
   public set(address: number, value: number) {

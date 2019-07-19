@@ -5,6 +5,11 @@
  */
 import { AUDIO_BUFFER_LENGTH, AUDIO_SAMPLE_RATE } from "../apu/constants";
 
+export interface UiSoundState {
+  bufferDataQueue: number[];
+  currIndex: number;
+}
+
 export class UiSoundHandler {
   private _audioContext: AudioContext;
   private _gainNode: GainNode;
@@ -35,6 +40,18 @@ export class UiSoundHandler {
       this._bufferDataQueue[i] = 0;
     }
     this._currIndex = 0;
+  }
+
+  public save() {
+    return {
+      bufferDataQueue: this._bufferDataQueue,
+      currIndex: this._currIndex
+    }
+  }
+
+  public load(state: UiSoundState) {
+    this._bufferDataQueue = state.bufferDataQueue;
+    this._currIndex = state.currIndex;
   }
 
   /**

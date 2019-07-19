@@ -29,6 +29,14 @@ export class PulseWave {
     };
   }
 
+  public save() {
+    return this._p;
+  }
+
+  public load(state: Pulse) {
+    this._p = state;
+  }
+
   get pulse() {
     return this._p;
   }

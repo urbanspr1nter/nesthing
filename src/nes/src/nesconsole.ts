@@ -1,4 +1,4 @@
-import { Nes, NesOptions } from "./nes";
+import { Nes, NesOptions, ConsoleState } from "./nes";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
 import { Controller } from "./controller";
@@ -43,6 +43,14 @@ export class NesConsole {
 
   get nes() {
     return this._nes;
+  }
+
+  public save() {
+    return JSON.stringify(this._nes.save());
+  }
+
+  public load(state: ConsoleState) {
+    this._nes.load(state);
   }
 
   public setupDOM() {
