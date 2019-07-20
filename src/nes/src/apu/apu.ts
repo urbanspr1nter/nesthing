@@ -2,10 +2,10 @@ import { Cpu } from "../cpu/cpu";
 import { InterruptRequestType } from "../cpu/cpu.interface";
 import { FilterChain } from "./filterchain";
 import { CpuFrequencyHz } from "../cpu/constants";
-import { PulseWave } from "./apu.pulsewave";
-import { TriangleWave } from "./apu.trianglewave";
-import { NoiseWave } from "./apu.noisewave";
-import { DmcSample } from "./apu.dmcsample";
+import { PulseWave } from "./pulsewave";
+import { TriangleWave } from "./trianglewave";
+import { NoiseWave } from "./noisewave";
+import { DmcSample } from "./dmcsample";
 import { UiSoundHandler } from "../ui/soundhandler";
 import { ApuFrameCounterRate, ApuState } from "./constants";
 
@@ -30,11 +30,11 @@ export class Apu {
 
   constructor(uiSoundHandler: UiSoundHandler, audioSampleRate: number) {
     for (let i = 0; i < 31; i++) {
-      pulseTable.push(Math.fround(95.52 / (8128.0 / Math.fround(i) + 100)));
+      pulseTable.push(Math.fround(95.52 / (8128.0 / i + 100)));
     }
 
     for (let i = 0; i < 203; i++) {
-      tndTable.push(Math.fround(163.67 / (24329.0 / Math.fround(i) + 100)));
+      tndTable.push(Math.fround(163.67 / (24329.0 / i + 100)));
     }
 
     this._filterChain = new FilterChain();
@@ -258,8 +258,9 @@ export class Apu {
     const n = this._noise.output();
     const d = this._dmc.output();
 
-    const pulseOut = pulseTable[p1 + p2];
-    const tndOut = tndTable[3 * t + 2 * n + d];
+    const pulseOut = pulseTable[Math.trunc(p1 + p2)];
+    const tndOut = tndTable[Math.trunc(3 * t + 2 * n + d)];
+    
     return Math.fround(pulseOut + tndOut);
   }
 
@@ -295,8 +296,9 @@ export class Apu {
       this._square0.stepTimer();
       this._square1.stepTimer();
       this._noise.stepTimer();
-      this._dmc.stepTimer();
+      this._dmc.stepTimer();      
     }
+
     this._triangle.stepTimer();
   }
 

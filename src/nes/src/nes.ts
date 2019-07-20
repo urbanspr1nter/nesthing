@@ -143,13 +143,13 @@ export class Nes {
   }
 
   public run(): number {
-    var totalCpuSteps = this._cpu.step();
+    const totalCpuSteps = this._cpu.step();
 
     for (let i = 0; i < totalCpuSteps; i++) {
       this._apu.step();
     }
 
-    var totalPpuSteps = totalCpuSteps * 3;
+    const totalPpuSteps = totalCpuSteps * 3;
     for (let i = 0; i < totalPpuSteps; i++) {
       this._ppu.step();
       this._mapper.step();

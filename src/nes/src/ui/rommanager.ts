@@ -7,10 +7,6 @@ export default class RomManager {
         return Roms.MarioBros;
       case 1:
         return Roms.DonkeyKong;
-      case 2:
-        return Roms.SpaceInvaders;
-      case 3:
-        return Roms.F1Race;
       case 4:
         return Roms.Tetris;
       case 5:
@@ -37,10 +33,6 @@ export default class RomManager {
         return RomFiles.MarioBros;
       case Roms.DonkeyKong:
         return RomFiles.DonkeyKong;
-      case Roms.SpaceInvaders:
-        return RomFiles.SpaceInvaders;
-      case Roms.F1Race:
-        return RomFiles.F1Race;
       case Roms.Tetris:
         return RomFiles.Tetris;
       case Roms.SuperMarioBros:

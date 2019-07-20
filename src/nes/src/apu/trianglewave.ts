@@ -85,7 +85,7 @@ export class TriangleWave {
       return 0;
     }
 
-    return ApuTriangleTable[this._triangle.DutyValue];
+    return ApuTriangleTable[this._triangle.DutyValue] & 0xff;
   }
 }
 

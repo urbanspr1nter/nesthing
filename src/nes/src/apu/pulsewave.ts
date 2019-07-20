@@ -148,9 +148,9 @@ export class PulseWave {
     }
 
     if (this._p.EnvelopeEnabled) {
-      return this._p.EnvelopeVolume;
+      return this._p.EnvelopeVolume & 0xff;
     } else {
-      return this._p.ConstantVolume;
+      return this._p.ConstantVolume & 0xff;
     }
   }
 }

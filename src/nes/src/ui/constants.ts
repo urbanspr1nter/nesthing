@@ -64,8 +64,6 @@ export enum Roms {
 export const RomFiles = {
   MarioBros: require("../roms/mario.json"),
   DonkeyKong: require("../roms/donkey.json"),
-  SpaceInvaders: require("../roms/space.json"),
-  F1Race: require("../roms/f1race.json"),
   Tetris: require("../roms/tetris.json"),
   SuperMarioBros: require("../roms/smb.json"),
   LegendOfZelda: require("../roms/loz.json"),

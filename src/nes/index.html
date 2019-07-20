@@ -85,7 +85,7 @@
       <hr />
       Back to <a href="http://rogerngo.com">home page</a>.
       <hr />
-      <h1 class="title is-1">NESthing</h1>
+      <h1 class="title is-1">NesThing</h1>
       <div>
         For this demo, a few games are supported. Choose one from the list and
         press "Play".
@@ -93,7 +93,7 @@
       </div>
       <div id="button-mapping-container">
         <div>
-          <strong>Player 1: Button Mapping</strong>
+          <strong>Player 1: Keyboard Mapping</strong>
           <table border="1">
             <tr>
               <td>START</td>
@@ -113,6 +113,27 @@
             </tr>
           </table>
         </div>
+        <div>
+          <strong>Player 1: XBOX 360 Controller Mapping</strong>
+          <table border="1">
+            <tr>
+              <td>START</td>
+              <td>Start</td>
+            </tr>
+            <tr>
+              <td>SELECT</td>
+              <td>Select</td>
+            </tr>
+            <tr>
+              <td>Up, Left, Down, Right</td>
+              <td>DPad-Up, DPad-Left, DPad-Down, DPad-Right</td>
+            </tr>
+            <tr>
+              <td>A, B</td>
+              <td>A, X</td>
+            </tr>
+          </table>
+        </div>
       </div>
 
       <div id="overlay">
@@ -123,7 +144,7 @@
           <img src="src/web/spinner.gif" />
         </div>
       </div>
-      <div class="nes-console">
+      <div class="nes-console" id="canvas-container">
         <canvas id="main" width="256" height="240"></canvas>
       </div>
       <div>
@@ -136,8 +157,6 @@
               <select id="select-game">
                 <option value="0">Mario Bros.</option>
                 <option value="1">Donkey Kong</option>
-                <option value="2">Space Invaders</option>
-                <option value="3">F1 Race</option>
                 <option value="4">Tetris</option>
                 <option value="5">Super Mario Bros.</option>
                 <option value="6">Legend of Zelda</option>
@@ -168,6 +187,7 @@
 
       <div class="indicators">
         <div id="saved-status"></div>
+        <div id="gamepad-status"></div>
       </div>
 
       <div>
@@ -180,7 +200,12 @@
         <div class="control">
           <div class="file has-name">
             <label class="file-label">
-              <input class="file-input" id="save-file" type="file" name="files[]" />
+              <input
+                class="file-input"
+                id="save-file"
+                type="file"
+                name="files[]"
+              />
               <span class="file-cta">
                 <span class="file-icon">
                   <i class="fas fa-upload"></i>
@@ -190,7 +215,7 @@
                 </span>
               </span>
               <span id="file-name" class="file-name">
-                  No file chosen.
+                No file chosen.
               </span>
             </label>
           </div>
@@ -207,7 +232,7 @@
       <div class="information">
         <div>
           GitHub repository:
-          <a href="https://github.com/urbanspr1nter/nesthing">NESthing</a>
+          <a href="https://github.com/urbanspr1nter/nesthing">nesthing</a>
         </div>
       </div>
 

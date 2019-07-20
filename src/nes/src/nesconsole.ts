@@ -90,24 +90,27 @@ export class NesConsole {
     this._frameTime += timestamp - this._lastFrameTime;
     this._lastFrameTime = timestamp;
 
-    while (this._frameTime >= this._msPerFrame) {
-
-      this._options.keyHandler.handlePlayerOneJoypad();
-      
+    while (this._frameTime >= this._msPerFrame) {      
       INNER: while (true) {
         this._ppuFrames = this._nes.ppuFrames;
         this._nes.run();
         if (this._nes.ppuFrames > this._ppuFrames) {
+
+          // Calculate current FPS
           const currFps = (ONE_SECOND_MS / this._frameTime).toFixed(2);
           if(currFps !== this._lastFps && (this._ppuFrames % FPS) === 0) {
             document.getElementById("fps").innerHTML = `${currFps} fps`;
             this._lastFps = currFps;
           }
+
+          // Handle joypad
+          this._options.keyHandler.handlePlayerOneJoypad();
           break INNER;
         }
       }
+
       this._frameTime -= this._msPerFrame;
-      break;
+      // break;
     }
 
     setImmediate(() => this.run(performance.now()));

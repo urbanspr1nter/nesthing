@@ -23,7 +23,7 @@ export class Filter {
     this._filter.PrevY = y;
     this._filter.PrevX = x;
 
-    return Math.fround(y);
+    return y;
   }
 }
 

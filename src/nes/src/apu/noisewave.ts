@@ -110,9 +110,9 @@ export class NoiseWave {
     }
 
     if (this._noise.EnvelopeEnabled) {
-      return this._noise.EnvelopeVolume;
+      return this._noise.EnvelopeVolume & 0xff;
     } else {
-      return this._noise.ConstantVolume;
+      return this._noise.ConstantVolume & 0xff;
     }
   }
 }
