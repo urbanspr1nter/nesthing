@@ -91,6 +91,9 @@ export class NesConsole {
     this._lastFrameTime = timestamp;
 
     while (this._frameTime >= this._msPerFrame) {
+
+      this._options.keyHandler.handlePlayerOneJoypad();
+      
       INNER: while (true) {
         this._ppuFrames = this._nes.ppuFrames;
         this._nes.run();

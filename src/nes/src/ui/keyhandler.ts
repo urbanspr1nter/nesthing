@@ -1,9 +1,10 @@
 import { Controller, Buttons } from "../controller";
-import { PlayerOneKeyMap, PlayerTwoKeyMap } from "./constants";
+import { PlayerOneKeyMap, PlayerTwoKeyMap, PlayerOneJoyMap } from "./constants";
 
 export class UiKeyHandler {
   private _controllerOne: Controller;
   private _controllerTwo: Controller;
+  private _gamepad: Gamepad;
 
   private _keyPressedPlayer1: { [id: number]: boolean };
   private _keyPressedPlayer2: { [id: number]: boolean };
@@ -19,6 +20,71 @@ export class UiKeyHandler {
     this._keyPressedPlayer2 = {
       ...this._getDefaultKeySettings()
     };
+  }
+
+  public handlePlayerOneJoypad() {
+    this._gamepad = navigator.getGamepads()[0];
+
+    if(!this._gamepad) {
+      return;
+    }
+
+    for(let i = 0; i < 17; i++) {
+      var gamepadButton = this._gamepad.buttons[i];
+      if(gamepadButton.pressed) {
+        if(i === PlayerOneJoyMap.X) {
+          this._keyPressedPlayer1[Buttons.B] = true;
+        }
+        if(i === PlayerOneJoyMap.A) {
+          this._keyPressedPlayer1[Buttons.A] = true;
+        }
+        if(i === PlayerOneJoyMap.UP) {
+          this._keyPressedPlayer1[Buttons.Up] = true;
+        }
+        if(i === PlayerOneJoyMap.DOWN) {
+          this._keyPressedPlayer1[Buttons.Down] = true;
+        }
+        if(i === PlayerOneJoyMap.LEFT) {
+          this._keyPressedPlayer1[Buttons.Left] = true;
+        }
+        if(i === PlayerOneJoyMap.RIGHT) {
+          this._keyPressedPlayer1[Buttons.Right] = true;
+        }
+        if(i === PlayerOneJoyMap.SELECT) {
+          this._keyPressedPlayer1[Buttons.Select] = true;
+        }
+        if(i === PlayerOneJoyMap.START) {
+          this._keyPressedPlayer1[Buttons.Start] = true;
+        }
+      } else {
+        if(i === PlayerOneJoyMap.X) {
+          this._keyPressedPlayer1[Buttons.B] = false;
+        }
+        if(i === PlayerOneJoyMap.A) {
+          this._keyPressedPlayer1[Buttons.A] = false;
+        }
+        if(i === PlayerOneJoyMap.UP) {
+          this._keyPressedPlayer1[Buttons.Up] = false;
+        }
+        if(i === PlayerOneJoyMap.DOWN) {
+          this._keyPressedPlayer1[Buttons.Down] = false;
+        }
+        if(i === PlayerOneJoyMap.LEFT) {
+          this._keyPressedPlayer1[Buttons.Left] = false;
+        }
+        if(i === PlayerOneJoyMap.RIGHT) {
+          this._keyPressedPlayer1[Buttons.Right] = false;
+        }
+        if(i === PlayerOneJoyMap.SELECT) {
+          this._keyPressedPlayer1[Buttons.Select] = false;
+        }
+        if(i === PlayerOneJoyMap.START) {
+          this._keyPressedPlayer1[Buttons.Start] = false;
+        }
+      }
+    }
+
+    this._controllerOne.setButtons(this._keyPressedPlayer1);
   }
 
   public handlePlayerOneKeyDown(key: string) {
