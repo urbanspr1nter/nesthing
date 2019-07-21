@@ -1,7 +1,6 @@
 import { NesConsole } from "./nesconsole";
-import RomManager from "./ui/rommanager";
+import RomManager, { Roms } from "./ui/rommanager";
 import { ConsoleState } from "./nes";
-import { Roms } from "./ui/constants";
 import { EventEmitter } from "events";
 
 var canvasId = "main";

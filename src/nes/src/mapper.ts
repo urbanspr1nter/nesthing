@@ -572,3 +572,66 @@ export class Mmc3Mapper implements IMapper {
     }
   }
 }
+
+export class AoromMapper implements IMapper {
+  private _cartridge: Cartridge;
+  private _prgBank: number;
+  
+  constructor(cartridge: Cartridge) {
+    this._cartridge = cartridge;
+    this._prgBank = 0;
+  }
+
+  get cartridge() {
+    return this._cartridge;
+  }
+
+  public save() {
+    return {
+      prgBank: 0
+    }
+  }
+
+  public load(state: any) {
+    this._prgBank = state.prgBank;
+  }
+
+  public step() {
+
+  }
+
+  public read(address: number) {
+    if(address < 0x2000) {
+      return this._cartridge.chr[address];
+    } else if(address >= 0x8000) {
+      {
+        let index = this._prgBank * 0x8000 + (address - 0x8000);
+        return this._cartridge.prg[index];
+      }
+    } else if(address >= 0x6000) {
+      {
+        let index = address - 0x6000;
+        return this._cartridge.sram[index];
+      }
+    }
+    return 0;
+  }
+
+  public write(address: number, value: number) {
+    if(address < 0x2000) {
+      this._cartridge.chr[address] = value;
+    } else if(address >= 0x8000) {
+      this._prgBank = value & 7;
+      if(value === 0) {
+        this._cartridge.mirror = MirrorMode.MirrorSingle0;
+      } else if(value === 0x10) {
+        this._cartridge.mirror = MirrorMode.MirrorSingle1;
+      }
+    } else if(address >= 0x6000) {
+      {
+        let index = address - 0x6000;
+        this._cartridge.sram[address] = value;
+      }
+    }
+  }
+}

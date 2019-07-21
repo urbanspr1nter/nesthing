@@ -7,10 +7,10 @@ import { Apu } from "./apu/apu";
 import { UiSoundHandler } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
-import { IMapper, NromMapper, Mmc1Mapper, Mmc3Mapper } from "./mapper";
+import { IMapper, NromMapper, Mmc1Mapper, Mmc3Mapper, AoromMapper } from "./mapper";
 import { Cartridge } from "./cartridge/cartridge";
-import RomManager from "./ui/rommanager";
-import { Roms, UiSoundState } from "./ui/constants";
+import RomManager, { Roms } from "./ui/rommanager";
+import { UiSoundState } from "./ui/constants";
 import { ApuState } from "./apu/constants";
 import { PpuState } from "./ppu/constants";
 import { CartridgeState } from "./cartridge/constants";
@@ -42,7 +42,8 @@ export enum Mapper {
   NROM = 0,
   MMC1 = 1,
   UNROM = 2,
-  MMC3 = 4
+  MMC3 = 4,
+  AOROM = 7
 }
 export class Nes {
   private _currentRom: Roms;
@@ -73,6 +74,8 @@ export class Nes {
       this._mapper = new NromMapper(this._cartridge);
     } else if(this._cartridge.mapper === Mapper.MMC3) {
       this._mapper = new Mmc3Mapper(this._cartridge);
+    } else if(this._cartridge.mapper === Mapper.AOROM) {
+      this._mapper = new AoromMapper(this._cartridge);
     }
 
     this._controllerOne = options.controller.one;
