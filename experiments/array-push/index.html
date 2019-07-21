@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      Array.prototype.push vs Fixed Array Experiment
+    </title>
+    <style>
+      table {
+        margin-top: 8px;
+      }
+
+      table,
+      tr,
+      th,
+      td {
+        border: 1px solid grey;
+        padding: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Array <code>push()</code> vs. Fixed Array Experiment</h1>
+    <code>July 21, 2019</code>
+    <p>
+      What is the performance between the two? Let's answer that question.
+    </p>
+    <h2>Setup</h2>
+    <p>
+      For this experiment, we want to find out whether, or not there is a
+      significant performance difference between
+      <em>appending</em> an element to an array using
+      <code>Array.prototype.push</code>, or using a array indexing to assign the
+      element to a fixed-sized array.
+    </p>
+    <p>
+      For both experiments, <code>MAX_SIZE = 100000</code> array elements will
+      be appended to the array. A total of <code>TOTAL_RUNS = 1000</code> will
+      be performed to append <code>MAX_SIZE</code> elements to the array.
+    </p>
+    <p>
+      In order to keep the memory footprint low, and only interest is to measure
+      the time it takes to add elements, the <code>push</code> experiment will
+      <strong>reassign</strong> an empty array after every run. For the
+      fixed-array experiment, the <code>currIndex</code> will be reassigned to
+      <strong>0</strong>.
+    </p>
+    <p>
+      This was tested with Google Chrome 75. So the V8 engine was used.
+    </p>
+    <h3>Experiment 1 - <code>Array.prototype.push</code></h3>
+    <div>
+      <button type="button" id="btn-exp-1">Start</button>
+      <div id="results-exp-1"></div>
+    </div>
+    <h3>
+      Experiment 2 - Indexing on Fixed Size Array
+    </h3>
+    <div>
+      <button type="button" id="btn-exp-2">Start</button>
+      <div id="results-exp-2"></div>
+    </div>
+    <h3>
+      Results
+    </h3>
+    <div>
+      In my case, here are some of the results I had over 10 trials:
+      <table>
+        <thead>
+          <tr>
+            <th>Trial</th>
+            <th>Experiment 1</th>
+            <th>Experiment 2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>2520.2850</td>
+            <td>746.2550</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>2522.1900</td>
+            <td>785.1450</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>2546.1150</td>
+            <td>804.0600</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>2581.1350</td>
+            <td>786.3850</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>2559.6750</td>
+            <td>785.3050</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>2541.3200</td>
+            <td>752.4950</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>2574.9300</td>
+            <td>782.2100</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>2558.7050</td>
+            <td>791.5350</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>2549.8200</td>
+            <td>768.5550</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>2570.2650</td>
+            <td>787.7500</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      As it turns out, in the average case, <code>Array.prototype.push</code> is
+      almost <strong>3.2x</strong> <em>slower</em>
+      than using a fixed-sized array with indexing. Why is that?
+    </p>
+    <p>
+      What seems to be the case is that if an arrays are treated more like
+      lists, such as the Java <code>ArrayList</code>, for example. This means
+      that an array without a fixed known size that is initially allocated like
+      the following:
+    </p>
+    <pre>
+        var arr = [];
+    </pre>
+    <p>
+      Has a fixed-block of memory allocated for it to some size. When
+      <code>push</code> is called, the array will be resized if there is not
+      enough space within this block of memory to store the new element.
+      Therefore a resizing routine is executed to create a bigger array, and
+      then copy the existing elements to this new array before finally appending
+      the new element to the new array. Of course, the existing array reference
+      is then updated to reference this new array.
+    </p>
+    <p>
+      Now for arrays in which we already know the number of elements we need to
+      add to, it is best to just have a setup routine that can allocate the
+      total number of elements first, and keeping track of the current index
+      when appending to the array. This way, we can avoid the resizing routine
+      performed, and will save a lot of execution time.
+    </p>
+    <p>
+      Fixed arrays won't work if your arrays become too large though, so it
+      really depends on your use-case here on which method to actually use.
+    </p>
+    <h3>Source Code</h3>
+    <a href="array-push.js">array-push.js</a>
+    <h3>References</h3>
+    <li>
+        <a href="https://github.com/v8/v8/blob/master/src/builtins/builtins-array.cc">
+            V8 - builtins-array.cc source code
+        </a>
+    </li>
+    <li>
+      <a
+        href="https://ryanpeden.com/how-do-javascript-arrays-work-under-the-hood/"
+        >How do JavaScript arrays work under the hood?</a
+      >
+    </li>
+    <li>
+        <a href="https://www.ecma-international.org/ecma-262/6.0/#sec-array.prototype.push">
+            ECMA-262 Spec - Array.prototype.push(... items)
+        </a>
+    </li>
+    <script src="array-push.js"></script>
+  </body>
+</html>
