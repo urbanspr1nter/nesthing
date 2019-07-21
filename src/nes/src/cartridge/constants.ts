@@ -1,6 +1,14 @@
+/**
+ * constants.ts
+ * 
+ * Roger Ngo
+ */
+
+/**
+ * The cartridge has a state which allows for it to be saved and loaded into
+ * memory.
+ */
 export interface CartridgeState {
-  prg: number[];
-  chr: number[];
   sram: number[];
   mapper: number;
   mirror: number;

@@ -110,7 +110,7 @@ export class NesConsole {
       }
 
       this._frameTime -= this._msPerFrame;
-      // break;
+      break;
     }
 
     setImmediate(() => this.run(performance.now()));

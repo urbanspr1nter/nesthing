@@ -1,5 +1,13 @@
+/**
+ * cartridge.ts
+ * 
+ * Roger Ngo
+ */
 import { CartridgeState } from "./constants";
 
+/**
+ * Represents the data of the ROM file as a cartridge.
+ */
 export class Cartridge {
   private _prg: number[];
   private _chr: number[];
@@ -27,24 +35,20 @@ export class Cartridge {
     }
   }
 
+  public load(state: CartridgeState) {
+    this._sram = state.sram;
+    this._mapper = state.mapper;
+    this._mirror = state.mirror;
+    this._battery = state.battery;
+  }
+
   public save(): CartridgeState {
     return {
-      prg: this._prg,
-      chr: this._chr,
       sram: this._sram,
       mapper: this.mapper,
       mirror: this._mirror,
       battery: this._battery
     };
-  }
-
-  public load(state: CartridgeState) {
-    this._prg = state.prg;
-    this._chr = state.chr;
-    this._sram = state.sram;
-    this._mapper = state.mapper;
-    this._mirror = state.mirror;
-    this._battery = state.battery;
   }
 
   get prg() {
