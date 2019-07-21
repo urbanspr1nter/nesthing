@@ -6,9 +6,39 @@ I wanted to just get better at TypeScript at first, but then I went down a rabbi
 
 
 
-## Status
+## Features and Status
 
 This emulator is on-going development and is my main "passion project" when it comes to just implementing whatever I have learned with regards to web development, JS, etc. 
+
+### Basic Features
+
+* Fully playable through a web browser
+* Keyboard and XBOX 360 control support. 
+* NROM, MMC1, MMC3 and AOROM games supported.
+* All playable through the latest versions of Chrome, "new" Microsoft Edge, and Firefox
+* Save states as JSON files, and loadable once game has been loaded.
+* Currently preloaded with several games.
+  * Mario Bros.
+  * Donkey Kong
+  * Tetris
+  * Super Mario Bros.
+  * Super Mario Bros. 3
+  * The Legend of Zelda
+  * Final Fantasy
+  * Mega Man
+  * Mega Man 2
+  * Silkworm
+  * Teenage Mutant Ninja Turtles
+  * Battletoads
+
+### Future Enhancements
+
+* Customizable control mapping
+* MMC5, and Sunsoft mappers support
+* Network play
+* Save state compression
+* NES ROM file loading for faster delivery of emulator, rather than preloading ROM files as JSON
+* Full debugging suite written in React
 
 
 
