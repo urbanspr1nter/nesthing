@@ -59,7 +59,8 @@ export enum Roms {
   FinalFantasy,
   SilkWorm,
   MegaMan2,
-  TeenageMutantHeroTurtles
+  TeenageMutantHeroTurtles,
+  SuperMarioBros3
 }
 export const RomFiles = {
   MarioBros: require("../roms/mario.json"),
@@ -71,7 +72,8 @@ export const RomFiles = {
   FinalFantasy: require("../roms/ff.json"),
   SilkWorm: require("../roms/silkworm.json"),
   MegaMan2: require("../roms/mm2.json"),
-  TeenageMutantHeroTurtles: require("../roms/tmnt.json")
+  TeenageMutantHeroTurtles: require("../roms/tmnt.json"),
+  SuperMarioBros3: require("../roms/smb3.json")
 };
 
 export interface UiSoundState {

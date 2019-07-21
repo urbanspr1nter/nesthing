@@ -116,6 +116,14 @@ export class Ppu {
     this._initializeSprites();
   }
 
+  get regPPUMASK_showBackground() {
+    return this._regPPUMASK_showBackground;
+  }
+
+  get regPPUMASK_showSprites() {
+    return this._regPPUMASK_showSprites;
+  }
+
   get frames(): number {
     return this._frames;
   }

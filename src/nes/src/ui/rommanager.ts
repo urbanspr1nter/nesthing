@@ -23,6 +23,8 @@ export default class RomManager {
         return Roms.MegaMan2;
       case 11:
         return Roms.TeenageMutantHeroTurtles;
+      case 12:
+        return Roms.SuperMarioBros3;
     }
     return Roms.MarioBros;
   }
@@ -49,6 +51,8 @@ export default class RomManager {
         return RomFiles.MegaMan2;
       case Roms.TeenageMutantHeroTurtles:
         return RomFiles.TeenageMutantHeroTurtles;
+      case Roms.SuperMarioBros3:
+        return RomFiles.SuperMarioBros3;
     }
   }
 }

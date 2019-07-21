@@ -7,7 +7,7 @@ import { Apu } from "./apu/apu";
 import { UiSoundHandler } from "./ui/soundhandler";
 import { UiFrameBuffer } from "./ui/framebuffer";
 import { UiKeyHandler } from "./ui/keyhandler";
-import { IMapper, NromMapper, Mmc1Mapper } from "./mapper";
+import { IMapper, NromMapper, Mmc1Mapper, Mmc3Mapper } from "./mapper";
 import { Cartridge } from "./cartridge/cartridge";
 import RomManager from "./ui/rommanager";
 import { Roms, UiSoundState } from "./ui/constants";
@@ -41,7 +41,8 @@ export interface NesOptions {
 export enum Mapper {
   NROM = 0,
   MMC1 = 1,
-  UNROM = 2
+  UNROM = 2,
+  MMC3 = 4
 }
 export class Nes {
   private _currentRom: Roms;
@@ -70,6 +71,8 @@ export class Nes {
       this._mapper = new Mmc1Mapper(this._cartridge);
     } else if (this._cartridge.mapper === Mapper.UNROM) {
       this._mapper = new NromMapper(this._cartridge);
+    } else if(this._cartridge.mapper === Mapper.MMC3) {
+      this._mapper = new Mmc3Mapper(this._cartridge);
     }
 
     this._controllerOne = options.controller.one;
@@ -90,6 +93,11 @@ export class Nes {
     this._cpu = new Cpu(this._memory);
     this._apu.setCpu(this._cpu);
     this._ppu.cpu = this._cpu;
+
+    if(this._cartridge.mapper === Mapper.MMC3) {
+      (this._mapper as Mmc3Mapper).cpu = this._cpu;
+      (this._mapper as Mmc3Mapper).ppu = this._ppu;
+    }
 
     this._initialize();
   }
