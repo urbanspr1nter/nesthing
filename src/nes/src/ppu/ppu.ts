@@ -112,8 +112,20 @@ export class Ppu {
       DataLow32: 0
     };
 
-    this._initializeOam();
-    this._initializeSprites();
+    this._oam = [];
+    for (let i = 0; i <= 0xff; i++) {
+      this._oam[i] = 0;
+    }
+
+    this._onScreenSprites = [];
+    for (let i = 0; i < 8; i++) {
+      this._onScreenSprites.push({
+        BaseOamAddress: 0,
+        PositionX: 0,
+        Data: 0,
+        Priority: 0
+      });
+    }
   }
 
   get regPPUMASK_showBackground() {
@@ -868,25 +880,6 @@ export class Ppu {
       this._clearVblank();
       this._regPPUSTATUS_spriteHit = false;
       this._regPPUSTATUS_spriteOverflow = false;
-    }
-  }
-
-  private _initializeOam() {
-    this._oam = [];
-    for (let i = 0; i <= 0xff; i++) {
-      this._oam[i] = 0;
-    }
-  }
-
-  private _initializeSprites() {
-    this._onScreenSprites = [];
-    for (let i = 0; i < 8; i++) {
-      this._onScreenSprites.push({
-        BaseOamAddress: 0,
-        PositionX: 0,
-        Data: 0,
-        Priority: 0
-      });
     }
   }
 }

@@ -1,9 +1,8 @@
 /**
  * JS gives us no native "pretty" way to handle 64 bit numbers.
  *
- * I have personally found that BigInt tends to be a bit too slow
- * a lot of the frequent shifts we would be required to do for background
- * pattern tiles.
+ * I have personally found that BigInt tends to be a bit too slow for the 
+ * frequent shifts we would be required to do for background pattern tiles.
  *
  * In order to get some sort of speed, we can slam 2 numbers together with
  * a "high" and "low" property to serve the same purpose.

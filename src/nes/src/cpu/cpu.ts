@@ -1,3 +1,9 @@
+/**
+ * cpu.ts
+ * 
+ * Roger Ngo
+ */
+
 import { Memory } from "../memory";
 import {
   IrqVectorLocation,
@@ -15,6 +21,10 @@ import {
 } from "./cpu.interface";
 import { CpuState } from "./constants";
 
+/**
+ * Provides the main implementation for the CPU. It emulates only the necessary instructions 
+ * to successfully run NES games based on the Ricoh 2A03.
+ */
 export class Cpu {
   private _registers: CpuRegisters;
   private _memory: Memory;
@@ -73,6 +83,15 @@ export class Cpu {
     }
   }
 
+  /**
+   * Initial boot up routine for the CPU. Will set:
+   * 
+   * 1. P - status register to 0x24, 
+   * 2. SP - stack pointer register to 0x01fd
+   * 3. Initialize all CPU memory to be 0xff
+   * 4. Performs a Reset interrupt
+   * 5. Initializes the internal execution context
+   */
   public powerUp(): void {
     this.P = 0x24;
     this.SP = 0x01fd;
@@ -85,8 +104,60 @@ export class Cpu {
     this._interruptReset();
     this._setCurrentContext(0, AddressingModes.Immediate);
   }
+
+  /**
+   * Requests the CPU to execute an interrupt handler for the next execution cycle. 
+   * We will ignore the interrupt request if the request type is IRQ and interrupts are 
+   * disabled.
+   * 
+   * @param interruptRequestType interrupt type to be requested for the next execution cycle
+   */
   public requestInterrupt(interruptRequestType: InterruptRequestType) {
+    if(interruptRequestType === InterruptRequestType.IRQ 
+      && this._getStatusBitFlag(StatusBitPositions.InterruptDisable)) {
+      return;
+    }
     this._interrupt = interruptRequestType;
+  }
+
+  /**
+   * Runs a single instruction for the CPU. If an interrupt was previously requested, then 
+   * the interrupt will be handled first, followed by the instruction to be executed.
+   * 
+   * What is returned is the total number of CPU cycles the CPU had executed.
+   */
+  public step(): number {
+    const prevCurrentCycles = this._currentCycles;
+
+    if (this._stallCycles > 0) {
+      this._runStallCycle();
+      return this._currentCycles - prevCurrentCycles;
+    }
+    
+    if (this._interrupt === InterruptRequestType.NMI) {
+      this._handleNmi();
+    } else if (
+      this._interrupt === InterruptRequestType.IRQ &&
+      !this._getStatusBitFlag(StatusBitPositions.InterruptDisable)
+    ) {
+      this._irq();
+    }
+    
+    const op = this._memory.get(this.PC);
+
+    let addressInfo = this._getAddressFromMode(OpAddressingMode[op]);
+
+    this.PC = this.PC + InstructionSizes[op];
+    this._currentCycles += Cycles[op];
+    if (addressInfo.pageCrossed) {
+      this._currentCycles += PageCycles[op];
+    }
+
+    this._setCurrentContext(addressInfo.address, OpAddressingMode[op]);
+
+    this._handleOp(op);
+
+    return this._currentCycles - prevCurrentCycles;
   }
 
   private _setCurrentContext(address: number, addressingMode: AddressingModes) {
@@ -111,13 +182,13 @@ export class Cpu {
     this._stackPush(currPcLow);
     this._stackPush(this.P);
 
-    this.setStatusBit(StatusBitPositions.InterruptDisable);
+    this._setStatusBit(StatusBitPositions.InterruptDisable);
 
     this.PC =
       (this.memRead(ResetVectorLocation.High) << 8) |
       this.memRead(ResetVectorLocation.Low);
 
-    this.setStatusBit(StatusBitPositions.InterruptDisable);
+    this._setStatusBit(StatusBitPositions.InterruptDisable);
 
     this._currentCycles += 7;
   }
@@ -160,19 +231,19 @@ export class Cpu {
     this._registers.P = value & 0xff;
   }
 
-  public setStatusBit(bit: StatusBitPositions): void {
+  private _setStatusBit(bit: StatusBitPositions): void {
     this.P = this.P | (1 << bit);
   }
 
-  public clearStatusBit(bit: StatusBitPositions): void {
+  private _clearStatusBit(bit: StatusBitPositions): void {
     this.P = this.P & ~(1 << bit);
   }
 
-  public getStatusBitFlag(bit: StatusBitPositions): boolean {
+  private _getStatusBitFlag(bit: StatusBitPositions): boolean {
     return (this.P & (1 << bit)) > 0;
   }
 
-  public isOverflow(first: number, second: number, final: number): boolean {
+  private _isOverflow(first: number, second: number, final: number): boolean {
     const modifiedFirst = first & 0xff;
     const modifiedSecond = second & 0xff;
     const modifiedFinal = final & 0xff;
@@ -186,7 +257,7 @@ export class Cpu {
     }
   }
 
-  public isCarry(first: number, second: number, carry: number, adc: boolean) {
+  private _isCarry(first: number, second: number, carry: number, adc: boolean) {
     const modifiedFirst = first & 0xff;
     const modifiedSecond = second & 0xff;
     const modifiedCarry = carry & 0xff;
@@ -249,18 +320,18 @@ export class Cpu {
   private _setNegative(dataByte: number) {
     const modified = dataByte & 0xff;
     if ((modified & 0x80) === 0x80) {
-      this.setStatusBit(StatusBitPositions.Negative);
+      this._setStatusBit(StatusBitPositions.Negative);
     } else {
-      this.clearStatusBit(StatusBitPositions.Negative);
+      this._clearStatusBit(StatusBitPositions.Negative);
     }
   }
 
   private _setZero(dataByte: number) {
     const modified = dataByte & 0xff;
     if (modified === 0) {
-      this.setStatusBit(StatusBitPositions.Zero);
+      this._setStatusBit(StatusBitPositions.Zero);
     } else {
-      this.clearStatusBit(StatusBitPositions.Zero);
+      this._clearStatusBit(StatusBitPositions.Zero);
     }
   }
 
@@ -273,9 +344,9 @@ export class Cpu {
     this._setNegative(result);
 
     if (xformedA >= xformedB) {
-      this.setStatusBit(StatusBitPositions.Carry);
+      this._setStatusBit(StatusBitPositions.Carry);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this._clearStatusBit(StatusBitPositions.Carry);
     }
   }
 
@@ -287,7 +358,7 @@ export class Cpu {
 
     this._php();
 
-    this.setStatusBit(StatusBitPositions.InterruptDisable);
+    this._setStatusBit(StatusBitPositions.InterruptDisable);
     this.PC =
       (this.memRead(NmiVectorLocation.High) << 8) |
       this.memRead(NmiVectorLocation.Low);
@@ -302,7 +373,7 @@ export class Cpu {
     this._stackPush(currPcLow);
 
     this._php();
-    this.setStatusBit(StatusBitPositions.InterruptDisable);
+    this._setStatusBit(StatusBitPositions.InterruptDisable);
     this.PC =
       (this.memRead(IrqVectorLocation.High) << 8) |
       this.memRead(IrqVectorLocation.Low);
@@ -313,23 +384,23 @@ export class Cpu {
   private _adc() {
     const a = this.A;
     const b = this.memRead(this._context.Address);
-    const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+    const carry = this._getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
 
     this.A = a + b + carry;
 
     this._setZero(this.A);
     this._setNegative(this.A);
 
-    if (this.isCarry(a, b, carry, true)) {
-      this.setStatusBit(StatusBitPositions.Carry);
+    if (this._isCarry(a, b, carry, true)) {
+      this._setStatusBit(StatusBitPositions.Carry);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (this.isOverflow(a, b, this.A)) {
-      this.setStatusBit(StatusBitPositions.Overflow);
+    if (this._isOverflow(a, b, this.A)) {
+      this._setStatusBit(StatusBitPositions.Overflow);
     } else {
-      this.clearStatusBit(StatusBitPositions.Overflow);
+      this._clearStatusBit(StatusBitPositions.Overflow);
     }
   }
 
@@ -356,9 +427,9 @@ export class Cpu {
     }
 
     if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
+      this._setStatusBit(StatusBitPositions.Carry);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this._clearStatusBit(StatusBitPositions.Carry);
     }
 
     this._setNegative(result);
@@ -366,21 +437,21 @@ export class Cpu {
   }
 
   private _bcc() {
-    if (!this.getStatusBitFlag(StatusBitPositions.Carry)) {
+    if (!this._getStatusBitFlag(StatusBitPositions.Carry)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
   }
 
   private _bcs() {
-    if (this.getStatusBitFlag(StatusBitPositions.Carry)) {
+    if (this._getStatusBitFlag(StatusBitPositions.Carry)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
   }
 
   private _beq() {
-    if (this.getStatusBitFlag(StatusBitPositions.Zero)) {
+    if (this._getStatusBitFlag(StatusBitPositions.Zero)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
@@ -391,9 +462,9 @@ export class Cpu {
     const overflow = (value >>> 6) & 1;
 
     if (overflow > 0) {
-      this.setStatusBit(StatusBitPositions.Overflow);
+      this._setStatusBit(StatusBitPositions.Overflow);
     } else {
-      this.clearStatusBit(StatusBitPositions.Overflow);
+      this._clearStatusBit(StatusBitPositions.Overflow);
     }
 
     this._setZero(value & this.A);
@@ -401,21 +472,21 @@ export class Cpu {
   }
 
   private _bmi() {
-    if (this.getStatusBitFlag(StatusBitPositions.Negative)) {
+    if (this._getStatusBitFlag(StatusBitPositions.Negative)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
   }
 
   private _bne() {
-    if (!this.getStatusBitFlag(StatusBitPositions.Zero)) {
+    if (!this._getStatusBitFlag(StatusBitPositions.Zero)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
   }
 
   private _bpl() {
-    if (!this.getStatusBitFlag(StatusBitPositions.Negative)) {
+    if (!this._getStatusBitFlag(StatusBitPositions.Negative)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
@@ -436,33 +507,33 @@ export class Cpu {
   }
 
   private _bvc() {
-    if (!this.getStatusBitFlag(StatusBitPositions.Overflow)) {
+    if (!this._getStatusBitFlag(StatusBitPositions.Overflow)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
   }
 
   private _bvs() {
-    if (this.getStatusBitFlag(StatusBitPositions.Overflow)) {
+    if (this._getStatusBitFlag(StatusBitPositions.Overflow)) {
       this.PC = this._context.Address;
       this._addBranchCycles(this._context);
     }
   }
 
   private _clc() {
-    this.clearStatusBit(StatusBitPositions.Carry);
+    this._clearStatusBit(StatusBitPositions.Carry);
   }
 
   private _cld() {
-    this.clearStatusBit(StatusBitPositions.DecimalMode);
+    this._clearStatusBit(StatusBitPositions.DecimalMode);
   }
 
   private _cli() {
-    this.clearStatusBit(StatusBitPositions.InterruptDisable);
+    this._clearStatusBit(StatusBitPositions.InterruptDisable);
   }
 
   private _clv() {
-    this.clearStatusBit(StatusBitPositions.Overflow);
+    this._clearStatusBit(StatusBitPositions.Overflow);
   }
 
   private _cmp() {
@@ -573,9 +644,9 @@ export class Cpu {
     this._setZero(result);
 
     if (carry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
+      this._setStatusBit(StatusBitPositions.Carry);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this._clearStatusBit(StatusBitPositions.Carry);
     }
   }
 
@@ -609,8 +680,8 @@ export class Cpu {
     this.P = pStatus;
   }
 
-  public _rol() {
-    const currCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+  private _rol() {
+    const currCarry = this._getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
     let newCarry: number;
     let result: number;
 
@@ -632,14 +703,14 @@ export class Cpu {
     this._setZero(result);
 
     if (newCarry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
+      this._setStatusBit(StatusBitPositions.Carry);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this._clearStatusBit(StatusBitPositions.Carry);
     }
   }
 
-  public _ror() {
-    const currCarry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+  private _ror() {
+    const currCarry = this._getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
     let newCarry: number;
     let result: number;
 
@@ -661,9 +732,9 @@ export class Cpu {
     this._setZero(result);
 
     if (newCarry === 1) {
-      this.setStatusBit(StatusBitPositions.Carry);
+      this._setStatusBit(StatusBitPositions.Carry);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this._clearStatusBit(StatusBitPositions.Carry);
     }
   }
 
@@ -676,56 +747,56 @@ export class Cpu {
     this.P = newP;
   }
 
-  public _rts() {
+  private _rts() {
     const newLowPC = this._stackPull();
     const newHighPC = this._stackPull();
     this.PC = ((newHighPC << 8) | newLowPC) + 1;
   }
 
-  public _sbc() {
+  private _sbc() {
     const a = this.A;
     const b = this.memRead(this._context.Address);
-    const carry = this.getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
+    const carry = this._getStatusBitFlag(StatusBitPositions.Carry) ? 1 : 0;
 
     this.A = a - b - (1 - carry);
 
     this._setZero(this.A);
     this._setNegative(this.A);
 
-    if (this.isCarry(a, b, 1 - carry, false)) {
-      this.setStatusBit(StatusBitPositions.Carry);
+    if (this._isCarry(a, b, 1 - carry, false)) {
+      this._setStatusBit(StatusBitPositions.Carry);
     } else {
-      this.clearStatusBit(StatusBitPositions.Carry);
+      this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (this.isOverflow(a, b, this.A)) {
-      this.setStatusBit(StatusBitPositions.Overflow);
+    if (this._isOverflow(a, b, this.A)) {
+      this._setStatusBit(StatusBitPositions.Overflow);
     } else {
-      this.clearStatusBit(StatusBitPositions.Overflow);
+      this._clearStatusBit(StatusBitPositions.Overflow);
     }
   }
 
-  public _sec() {
-    this.setStatusBit(StatusBitPositions.Carry);
+  private _sec() {
+    this._setStatusBit(StatusBitPositions.Carry);
   }
 
-  public _sed() {
-    this.setStatusBit(StatusBitPositions.DecimalMode);
+  private _sed() {
+    this._setStatusBit(StatusBitPositions.DecimalMode);
   }
 
-  public _sei() {
-    this.setStatusBit(StatusBitPositions.InterruptDisable);
+  private _sei() {
+    this._setStatusBit(StatusBitPositions.InterruptDisable);
   }
 
-  public _sta() {
+  private _sta() {
     this.memWrite(this._context.Address, this.A);
   }
 
-  public _stx() {
+  private _stx() {
     this.memWrite(this._context.Address, this.X);
   }
 
-  public _sty() {
+  private _sty() {
     this.memWrite(this._context.Address, this.Y);
   }
 
@@ -836,42 +907,7 @@ export class Cpu {
     return { address: address & 0xffff, pageCrossed };
   }
 
-  // Returns cycles ran
-  public step(): number {
-    const prevCurrentCycles = this._currentCycles;
-
-    if (this._stallCycles > 0) {
-      this._runStallCycle();
-      return this._currentCycles - prevCurrentCycles;
-    }
-    
-    if (this._interrupt === InterruptRequestType.NMI) {
-      this._handleNmi();
-    } else if (
-      this._interrupt === InterruptRequestType.IRQ &&
-      !this.getStatusBitFlag(StatusBitPositions.InterruptDisable)
-    ) {
-      this._irq();
-    }
-    
-    const op = this._memory.get(this.PC);
-
-    let addressInfo = this._getAddressFromMode(OpAddressingMode[op]);
-
-    this.PC = this.PC + InstructionSizes[op];
-    this._currentCycles += Cycles[op];
-    if (addressInfo.pageCrossed) {
-      this._currentCycles += PageCycles[op];
-    }
-
-    this._setCurrentContext(addressInfo.address, OpAddressingMode[op]);
-
-    this.handleOp(op);
-
-    return this._currentCycles - prevCurrentCycles;
-  }
-
-  public handleOp(opCode: number) {
+  private _handleOp(opCode: number) {
     switch (opCode) {
       case 0x00:
         this._brk();

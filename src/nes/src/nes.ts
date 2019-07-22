@@ -121,11 +121,11 @@ export class Nes {
     return this._ppu.frames;
   }
 
-  public scanlines(): number {
+  get scanlines(): number {
     return this._ppu.scanlines;
   }
 
-  public ppuCycles(): number {
+  get ppuCycles(): number {
     return this._ppu.cycles;
   }
 
