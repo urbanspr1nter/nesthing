@@ -14,6 +14,14 @@
       NesThing
     </title>
     <style>
+      @font-face {
+        font-family: "nintenderregular";
+        src: url("./src/web/nintender-webfont.woff2") format("woff2"),
+          url("./src/nintender-webfont.woff") format("woff");
+        font-weight: normal;
+        font-style: normal;
+      }
+
       body {
         font-family: monospace;
       }
@@ -78,6 +86,41 @@
       .hidden {
         display: none;
       }
+
+      .nes-main-title {
+        color: #ff003c;
+        font-family: "nintenderregular";
+      }
+
+      .nes-console-buttons {
+        display: inline-flex;
+      }
+
+      .nes-console-buttons .field {
+        margin: 8px;
+      }
+
+      .nes-button {
+        width: 112px;
+        padding: 8px;
+        color: #ff003c;
+        background-color: #c8c8c8;
+        font-size: medium;
+        font-family: "nintenderregular";
+        box-shadow: 0 1px 1px 1px #a0a0a0;
+      }
+
+      .nes-button:hover {
+        cursor: pointer;
+      }
+
+      .load-state-container {
+        display: inline-flex;
+      }
+
+      .load-state-container .field {
+        margin: 8px;
+      }
     </style>
   </head>
   <body>
@@ -85,7 +128,7 @@
       <hr />
       Back to <a href="http://rogerngo.com">home page</a>.
       <hr />
-      <h1 class="title is-1">NesThing</h1>
+      <h1 class="title is-1 nes-main-title">NesThing</h1>
       <div>
         For this demo, a few games are supported. Choose one from the list and
         press "Play".
@@ -151,7 +194,8 @@
       </div>
 
       <div class="nes-console" id="canvas-container">
-        <canvas id="main" width="256" height="240"></canvas>
+          <canvas id="back" width="256" height="240"></canvas>
+        <canvas id="main" width="512" height="480"></canvas>
       </div>
       <div>
         <div id="fps">0 fps</div>
@@ -176,20 +220,24 @@
             </div>
           </div>
         </div>
-        <div class="field">
-          <div class="control">
-            <button type="button" class="button is-primary" id="btn-play">
-              <i class="fas fa-play"></i> &nbsp; Play
-            </button>
+
+        <div class="nes-console-buttons">
+          <div class="field">
+            <div class="control">
+              <button type="button" class="nes-button" id="btn-play">
+                <i class="fas fa-play"></i> &nbsp; PLAY
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="control">
+              <button type="button" class="nes-button" id="btn-reset">
+                <i class="fas fa-redo-alt"></i> &nbsp; RESET
+              </button>
+            </div>
           </div>
         </div>
-        <div class="field">
-          <div class="control">
-            <button type="button" class="button is-primary" id="btn-reset">
-              <i class="fas fa-redo-alt"></i> &nbsp; Reset
-            </button>
-          </div>
-        </div>
+
         <div class="field">
           <div class="control">
             <button type="button" class="button" id="btn-save">
@@ -209,36 +257,38 @@
           game. Click "Load" when ready.</strong
         >
       </div>
-      <div class="field">
-        <div class="control">
-          <div class="file has-name">
-            <label class="file-label">
-              <input
-                class="file-input"
-                id="save-file"
-                type="file"
-                name="files[]"
-              />
-              <span class="file-cta">
-                <span class="file-icon">
-                  <i class="fas fa-upload"></i>
+      <div class="load-state-container">
+        <div class="field">
+          <div class="control">
+            <div class="file has-name">
+              <label class="file-label">
+                <input
+                  class="file-input"
+                  id="save-file"
+                  type="file"
+                  name="files[]"
+                />
+                <span class="file-cta">
+                  <span class="file-icon">
+                    <i class="fas fa-upload"></i>
+                  </span>
+                  <span class="file-label">
+                    Choose a file...
+                  </span>
                 </span>
-                <span class="file-label">
-                  Choose a file...
+                <span id="file-name" class="file-name">
+                  No file chosen.
                 </span>
-              </span>
-              <span id="file-name" class="file-name">
-                No file chosen.
-              </span>
-            </label>
+              </label>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="field">
-        <div class="control">
-          <button type="button" class="button" id="btn-load">
-            <i class="fas fa-upload"></i> &nbsp; Load
-          </button>
+        <div class="field">
+          <div class="control">
+            <button type="button" class="button is-info" id="btn-load">
+              <i class="fas fa-upload"></i> &nbsp; Load
+            </button>
+          </div>
         </div>
       </div>
 
