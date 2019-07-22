@@ -77,7 +77,7 @@ export class NesConsole {
       this._options.keyHandler.handlePlayerTwoKeyUp(e.key);
     });
   }
-
+  
   public run(timestamp: number) {
     if(!this._isRunning) {
       return;

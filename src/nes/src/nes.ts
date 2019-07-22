@@ -129,6 +129,10 @@ export class Nes {
     return this._ppu.cycles;
   }
 
+  public reset() {
+    this._cpu.powerUp();
+  }
+
   public save() {
     return {
       currentRom: this._currentRom,
