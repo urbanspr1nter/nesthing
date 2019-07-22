@@ -42,16 +42,16 @@ export class UiSoundHandler {
   public save() {
     const safeQueue = this._bufferDataQueue.map(v => v.toString());
 
-    return {
-      bufferDataQueue: safeQueue,
-      currIndex: this._currIndex
-    }
+    //return {
+      //bufferDataQueue: safeQueue,
+      //currIndex: this._currIndex
+    //}
   }
 
   public load(state: UiSoundState) {
-    const convertedQueue = state.bufferDataQueue.map(v => Number(v));
-    this._bufferDataQueue = convertedQueue;
-    this._currIndex = state.currIndex;
+    //const convertedQueue = state.bufferDataQueue.map(v => Number(v));
+    //this._bufferDataQueue = convertedQueue;
+    //this._currIndex = state.currIndex;
   }
 
   /**

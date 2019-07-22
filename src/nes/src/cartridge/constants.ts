@@ -9,6 +9,7 @@
  * memory.
  */
 export interface CartridgeState {
+  chr: number[],
   sram: number[];
   mapper: number;
   mirror: number;

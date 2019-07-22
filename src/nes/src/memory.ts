@@ -50,12 +50,14 @@ export class Memory {
 
   public save(): MemoryState {
     return {
-      data: this._memory
+      data: this._memory.slice(0, 0x0800)
     }
   }
 
   public load(state: MemoryState) {
-    this._memory = state.data;
+    for(let i = 0; i < 0x0800; i++) {
+      this._memory[i] = state.data[i];
+    }
   }
 
   public set(address: number, value: number) {

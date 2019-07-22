@@ -153,7 +153,9 @@ export class Ppu {
   }
 
   public load(state: PpuState) {
-    this._ppuMemory.bits = state.ppuMemoryBits;
+    for(let i = 0x3f00; i < 0x3f20; i++) {
+      this._ppuMemory.bits[i] = state.ppuMemoryBits[i - 0x3f00];
+    }
     this._ppuMemory.nameTable = state.nameTableData;
     this._register = state.register;
     this._ppuDataReadBuffer = state.ppuDataReadBuffer;
@@ -201,7 +203,7 @@ export class Ppu {
 
   public save(): PpuState {
     return {
-      ppuMemoryBits: this._ppuMemory.bits,
+      ppuMemoryBits: this._ppuMemory.bits.slice(0x3f00, 0x3f20),
       nameTableData: this._ppuMemory.nameTable,
       register: this._register,
       ppuDataReadBuffer: this._ppuDataReadBuffer,

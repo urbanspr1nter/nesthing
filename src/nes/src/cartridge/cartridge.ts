@@ -36,6 +36,9 @@ export class Cartridge {
   }
 
   public load(state: CartridgeState) {
+    if(state.chr) {
+      this._chr = state.chr;
+    }
     this._sram = state.sram;
     this._mapper = state.mapper;
     this._mirror = state.mirror;
@@ -44,6 +47,7 @@ export class Cartridge {
 
   public save(): CartridgeState {
     return {
+      chr: this._chr,
       sram: this._sram,
       mapper: this.mapper,
       mirror: this._mirror,
