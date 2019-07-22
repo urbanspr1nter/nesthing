@@ -26,8 +26,7 @@ export const RomFiles = {
   SilkWorm: require("../roms/silkworm.json"),
   MegaMan2: require("../roms/mm2.json"),
   TeenageMutantHeroTurtles: require("../roms/tmnt.json"),
-  SuperMarioBros3: require("../roms/smb3.json"),
-  Battletoads: require("../roms/bt.json")
+  SuperMarioBros3: require("../roms/smb3.json")
 };
 
 export default class RomManager {
@@ -55,8 +54,6 @@ export default class RomManager {
         return Roms.TeenageMutantHeroTurtles;
       case 12:
         return Roms.SuperMarioBros3;
-      case 13:
-        return Roms.Battletoads;
     }
     return Roms.MarioBros;
   }
@@ -85,8 +82,6 @@ export default class RomManager {
         return RomFiles.TeenageMutantHeroTurtles;
       case Roms.SuperMarioBros3:
         return RomFiles.SuperMarioBros3;
-      case Roms.Battletoads:
-        return RomFiles.Battletoads;
     }
   }
 }
