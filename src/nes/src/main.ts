@@ -3,12 +3,52 @@ import RomManager, { Roms } from "./ui/rommanager";
 import { ConsoleState } from "./nes";
 import { EventEmitter } from "events";
 
+// https://developer.mozilla.org/en-US/docs/Web/API/Document/readyState
+const ReadyState = {
+  Loading: "loading",
+  Interactive: "interactive",
+  Complete: "complete"
+}
+
+enum NotificationType {
+  Danger = "is-danger",
+  Information = "is-info"
+}
+
+document.onreadystatechange = () => {
+  if(document.readyState === ReadyState.Interactive) {
+    const notificationContainer = document.getElementById("notification-container");
+    notificationContainer.classList.add("hidden");
+
+    document.getElementById("btn-dismiss-notification").addEventListener("click", () => {
+      const notificationContainer = document.getElementById("notification-container");
+      notificationContainer.classList.add("hidden");
+    });
+
+    document.getElementById("btn-reset").addEventListener("click", () => {
+      gameConsole.nes.reset();
+    });
+  }
+  if(document.readyState === ReadyState.Complete) {
+    document.getElementById("overlay").className = "hidden";
+  }
+}
+
 const pako = require("pako");
 const canvasId = "main";
 const eventEmitter = new EventEmitter();
 
 var gameConsole: NesConsole;
 var timeoutHandle = undefined;
+
+function setNotification(message: string, type: NotificationType) {
+  const notificationMessage = document.getElementById("notification-message");
+  notificationMessage.innerHTML = message;
+
+  const notificationContainer = document.getElementById("notification-container");
+  notificationContainer.classList.remove("hidden");
+  notificationContainer.classList.add(type);
+}
 
 document.getElementById("btn-play").addEventListener("click", () => {
   eventEmitter.emit("stop");
@@ -35,15 +75,12 @@ document.getElementById("btn-play").addEventListener("click", () => {
   }, 1000);
 });
 
-document.getElementById("btn-reset").addEventListener("click", () => {
-  gameConsole.nes.reset();
-});
+
 
 document.getElementById("btn-save").addEventListener("click", () => {
   var data = gameConsole.save();
 
-  document.getElementById("saved-status").innerHTML =
-    "<strong>State Saved!</strong>";
+  setNotification("Saved state!", NotificationType.Information);
 
   saveData(
     data,
@@ -66,7 +103,7 @@ document.getElementById("save-file").addEventListener("change", () => {
 
 document.getElementById("btn-load").addEventListener("click", () => {
   if (!gameConsole) {
-    alert("Start a game!");
+    setNotification("Start a game!", NotificationType.Danger);
     return;
   }
   const files = (document.getElementById("save-file") as HTMLInputElement)
@@ -83,7 +120,7 @@ document.getElementById("btn-load").addEventListener("click", () => {
       const data: ConsoleState = JSON.parse(jsonString);
 
       if (data.currentRom !== gameConsole.nes.rom) {
-        alert("Game doesn't match!");
+        setNotification("Game doesn't match!", NotificationType.Danger);
         return;
       }
 
@@ -94,28 +131,22 @@ document.getElementById("btn-load").addEventListener("click", () => {
   reader.readAsText(file);
 });
 
-document.getElementById("overlay").className = "hidden";
-
-/* function to save JSON to file from browser
- * adapted from http://bgrins.github.io/devtools-snippets/#console-save
- * @param {Object} data -- json object to save
- * @param {String} file -- file name to save to
- */
 function saveData(data, filename) {
   if (!data) {
-    console.error("No data");
+    setNotification("No data to save.", NotificationType.Danger);
     return;
   }
 
-  if (!filename)
+  if (!filename) {
     filename = `${Roms[gameConsole.nes.rom]}-save-state-${new Date(
       Date.now()
     ).toISOString()}.dat`;
+  }
 
-  var d = pako.deflate(data, { to: "string" });
-  var blob = new Blob([d]);
-  var e = document.createEvent("MouseEvents");
-  var a = document.createElement("a");
+  const compressedData = pako.deflate(data, { to: "string" });
+  const blob = new Blob([compressedData]);
+  const e = document.createEvent("MouseEvents");
+  const a = document.createElement("a");
 
   a.download = filename;
   a.href = window.URL.createObjectURL(blob);
