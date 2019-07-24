@@ -2,7 +2,7 @@
  * ppu.ts
  *
  * Roger Ngo
- * 
+ *
  * This PPU is heavily based on fogleman's NES PPU written in Go.
  */
 import { PpuMemory } from "./ppumemory";
@@ -154,7 +154,7 @@ export class Ppu {
   }
 
   public load(state: PpuState) {
-    for(let i = 0x3f00; i < 0x3f20; i++) {
+    for (let i = 0x3f00; i < 0x3f20; i++) {
       this._ppuMemory.bits[i] = state.ppuMemoryBits[i - 0x3f00];
     }
     this._ppuMemory.nameTable = state.nameTableData;
@@ -162,7 +162,7 @@ export class Ppu {
     this._ppuDataReadBuffer = state.ppuDataReadBuffer;
     this._cycles = state.cycles;
     this._scanlines = state.scanlines;
-    this._frames =state.frames;
+    this._frames = state.frames;
     this._evenFrame = state.evenFrame;
     this._spriteCount = state.spriteCount;
     this._ntByte = state.ntByte;
@@ -175,14 +175,19 @@ export class Ppu {
     this._regPPUCTRL_nt0 = state.regPPUCTRL_nt0;
     this._regPPUCTRL_nt1 = state.regPPUCTRL_nt1;
     this._regPPUCTRL_vramIncrement = state.regPPUCTRL_vramIncrement;
-    this._regPPUCTRL_spritePatternTableBaseAddress = state.regPPUCTRL_spritePatternTableBaseAddress;
-    this._regPPUCTRL_backgroundPatternTableBaseAddress = state.regPPUCTRL_backgroundPatternTableBaseAddress;
+    this._regPPUCTRL_spritePatternTableBaseAddress =
+      state.regPPUCTRL_spritePatternTableBaseAddress;
+    this._regPPUCTRL_backgroundPatternTableBaseAddress =
+      state.regPPUCTRL_backgroundPatternTableBaseAddress;
     this._regPPUCTRL_spriteSizeLarge = state.regPPUCTRL_spriteSizeLarge;
-    this._regPPUCTRL_masterSlaveSelect  = state.regPPUCTRL_masterSlaveSelect;
-    this._regPPUCTRL_generateNmiAtVblankStart = state.regPPUCTRL_generateNmiAtVblankStart;
+    this._regPPUCTRL_masterSlaveSelect = state.regPPUCTRL_masterSlaveSelect;
+    this._regPPUCTRL_generateNmiAtVblankStart =
+      state.regPPUCTRL_generateNmiAtVblankStart;
     this._regPPUMASK_greyscale = state.regPPUMASK_greyscale;
-    this._regPPUMASK_showBgInLeftMost8pxOfScreen = state.regPPUMASK_showBgLeftMost8pxOfScreen;
-    this._regPPUMASK_showSpritesLeftMost8pxOfScreen = state.regPPUMASK_showSpritesLeftMost8pxOfScreen;
+    this._regPPUMASK_showBgInLeftMost8pxOfScreen =
+      state.regPPUMASK_showBgLeftMost8pxOfScreen;
+    this._regPPUMASK_showSpritesLeftMost8pxOfScreen =
+      state.regPPUMASK_showSpritesLeftMost8pxOfScreen;
     this._regPPUMASK_showBackground = state.regPPUMASK_showBackground;
     this._regPPUMASK_showSprites = state.regPPUMASK_showSprites;
     this._regPPUMASK_emphasizeRed = state.regPPUMASK_emphasizeRed;
@@ -224,14 +229,19 @@ export class Ppu {
       regPPUCTRL_nt0: this._regPPUCTRL_nt0,
       regPPUCTRL_nt1: this._regPPUCTRL_nt1,
       regPPUCTRL_vramIncrement: this._regPPUCTRL_vramIncrement,
-      regPPUCTRL_spritePatternTableBaseAddress: this._regPPUCTRL_spritePatternTableBaseAddress,
-      regPPUCTRL_backgroundPatternTableBaseAddress: this._regPPUCTRL_backgroundPatternTableBaseAddress,
+      regPPUCTRL_spritePatternTableBaseAddress: this
+        ._regPPUCTRL_spritePatternTableBaseAddress,
+      regPPUCTRL_backgroundPatternTableBaseAddress: this
+        ._regPPUCTRL_backgroundPatternTableBaseAddress,
       regPPUCTRL_spriteSizeLarge: this._regPPUCTRL_spriteSizeLarge,
       regPPUCTRL_masterSlaveSelect: this._regPPUCTRL_masterSlaveSelect,
-      regPPUCTRL_generateNmiAtVblankStart: this._regPPUCTRL_generateNmiAtVblankStart,
+      regPPUCTRL_generateNmiAtVblankStart: this
+        ._regPPUCTRL_generateNmiAtVblankStart,
       regPPUMASK_greyscale: this._regPPUMASK_greyscale,
-      regPPUMASK_showBgLeftMost8pxOfScreen: this._regPPUMASK_showBgInLeftMost8pxOfScreen,
-      regPPUMASK_showSpritesLeftMost8pxOfScreen: this._regPPUMASK_showSpritesLeftMost8pxOfScreen,
+      regPPUMASK_showBgLeftMost8pxOfScreen: this
+        ._regPPUMASK_showBgInLeftMost8pxOfScreen,
+      regPPUMASK_showSpritesLeftMost8pxOfScreen: this
+        ._regPPUMASK_showSpritesLeftMost8pxOfScreen,
       regPPUMASK_showBackground: this._regPPUMASK_showBackground,
       regPPUMASK_showSprites: this._regPPUMASK_showSprites,
       regPPUMASK_emphasizeRed: this._regPPUMASK_emphasizeRed,
@@ -250,7 +260,7 @@ export class Ppu {
       onScreenSprites: this._onScreenSprites,
       nmiPrevious: this._nmiPrevious,
       nmiDelay: this._nmiDelay
-    }
+    };
   }
 
   public step(): void {
@@ -299,7 +309,8 @@ export class Ppu {
       ((dataByte >>> 3) & 1) === 1 ? 0x1000 : 0;
     this._regPPUCTRL_backgroundPatternTableBaseAddress =
       ((dataByte >>> 4) & 1) === 1 ? 0x1000 : 0;
-    this._regPPUCTRL_spriteSizeLarge = ((dataByte >>> 5) & 1) === 1 ? true : false;
+    this._regPPUCTRL_spriteSizeLarge =
+      ((dataByte >>> 5) & 1) === 1 ? true : false;
     this._regPPUCTRL_masterSlaveSelect =
       ((dataByte >>> 6) & 1) === 1 ? true : false;
     this._regPPUCTRL_generateNmiAtVblankStart =
@@ -322,7 +333,8 @@ export class Ppu {
     this._regPPUMASK_emphasizeRed = ((dataByte >>> 5) & 1) === 1 ? true : false;
     this._regPPUMASK_emphasizeGreen =
       ((dataByte >>> 6) & 1) === 1 ? true : false;
-    this._regPPUMASK_emphasizeBlue = ((dataByte >>> 7) & 1) === 1 ? true : false;
+    this._regPPUMASK_emphasizeBlue =
+      ((dataByte >>> 7) & 1) === 1 ? true : false;
   }
 
   public read$2002() {
@@ -406,7 +418,9 @@ export class Ppu {
   public write$4014(dataByte: number) {
     let cpuAddress = (dataByte << 8) & 0xffff;
     for (let i = 0; i <= 0xff; i++) {
-      this._oam[this._regOAMADDR_address & 0xff] = this._cpu.memory.get(cpuAddress);
+      this._oam[this._regOAMADDR_address & 0xff] = this._cpu.memory.get(
+        cpuAddress
+      );
       this._regOAMADDR_address++;
       cpuAddress++;
     }
@@ -514,11 +528,9 @@ export class Ppu {
   }
 
   private _getBackgroundPixel() {
-    if (!this._regPPUMASK_showBackground) {
-      return 0;
-    }
-
-    return this._wasmModule._bgTile_getPixel(this._regPPUSCROLL_x);
+    return !this._regPPUMASK_showBackground
+      ? 0
+      : this._wasmModule._bgTile_getPixel(this._regPPUSCROLL_x);
   }
 
   /**
@@ -575,7 +587,8 @@ export class Ppu {
       usingBackgroundPixel
     );
     var paletteOffset = color & 3;
-    var effectiveColorAddress = basePaletteAddress + (paletteOffset);
+    var effectiveColorAddress = basePaletteAddress + paletteOffset;
+
     var colorByte = this._ppuMemory.get(effectiveColorAddress);
 
     this._uiFrameBuffer.drawPixel(x, y, PpuPalette[colorByte]);
@@ -652,8 +665,8 @@ export class Ppu {
       if ((attributes & 0x80) === 0x80) {
         row = 7 - row;
       }
-      const baseTableMultiplier = this
-        ._regPPUCTRL_spritePatternTableBaseAddress === 0x1000 ? 1 : 0;
+      const baseTableMultiplier =
+        this._regPPUCTRL_spritePatternTableBaseAddress === 0x1000 ? 1 : 0;
       address = baseTableMultiplier * 0x1000 + (tileByte << 4) + row;
     } else {
       if ((attributes & 0x80) === 0x80) {
@@ -806,14 +819,6 @@ export class Ppu {
     this._frames++;
     this._evenFrame != this._evenFrame;
   }
-
-  /*
-  private _shiftBackgroundTile4(): void {
-    this._bgTile.DataHigh32 <<= 4;
-    this._bgTile.DataHigh32 =
-      this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf);
-    this._bgTile.DataLow32 <<= 4;
-  }*/
 
   private _processTick(): void {
     const isRenderingEnabled =
