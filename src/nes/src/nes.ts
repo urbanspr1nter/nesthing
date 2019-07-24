@@ -59,7 +59,7 @@ export class Nes {
   private _controllerOne: Controller;
   private _controllerTwo: Controller;
 
-  constructor(options: NesOptions) {
+  constructor(options: NesOptions, pf: any) {
     this._rom = RomManager.getRomData(options.rom);
     this._currentRom = options.rom;
     const romContents = this._rom.raw as number[];
@@ -83,7 +83,7 @@ export class Nes {
 
     this._uiSoundHandler = new UiSoundHandler(0.8);
 
-    this._apu = new Apu(this._uiSoundHandler, 44100);
+    this._apu = new Apu(this._uiSoundHandler, 44100, pf);
     this._ppu = new Ppu(options.frameRenderer, this._mapper);
     this._memory = new Memory(
       this._ppu,

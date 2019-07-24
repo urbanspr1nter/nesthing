@@ -21,7 +21,7 @@ export class NesConsole {
   private _ppuFrames: number;
   private _lastFps: string;
 
-  constructor(rom: Roms, canvasId: string, eventEmitter: EventEmitter) {
+  constructor(rom: Roms, canvasId: string, eventEmitter: EventEmitter, pf: any) {
     const playerOneController = new Controller();
     const playerTwoController = new Controller();
 
@@ -35,7 +35,7 @@ export class NesConsole {
       rom
     };
 
-    this._nes = new Nes(this._options);
+    this._nes = new Nes(this._options, pf);
     this._frameTime = 0;
     this._lastFrameTime = 0;
     this._ppuFrames = 0;
@@ -77,7 +77,7 @@ export class NesConsole {
       this._options.keyHandler.handlePlayerTwoKeyUp(e.key);
     });
   }
-  
+
   public run(timestamp: number) {
     if(!this._isRunning) {
       return;

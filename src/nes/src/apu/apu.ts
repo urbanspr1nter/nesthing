@@ -28,7 +28,12 @@ export class Apu {
   private _cpu: Cpu;
   private _uiSoundHandler: UiSoundHandler;
 
-  constructor(uiSoundHandler: UiSoundHandler, audioSampleRate: number) {
+  private _pf: any;
+
+  constructor(uiSoundHandler: UiSoundHandler, audioSampleRate: number, pf: any) {
+
+    this._pf = pf;
+
     for (let i = 0; i < 31; i++) {
       pulseTable.push(Math.fround(95.52 / (8128.0 / i + 100)));
     }
@@ -247,7 +252,8 @@ export class Apu {
   }
 
   private _sendSample() {
-    const output = this._filterChain.step(this._output());
+    // const output = this._filterChain.step(this._output());
+    const output = this._pf._runFilterChains(this._output());
     this._uiSoundHandler.receiveSample(output);
   }
 

@@ -22,7 +22,7 @@ export const RomFiles = {
   SuperMarioBros: require("../roms/smb.json"),
   LegendOfZelda: require("../roms/loz.json"),
   MegaMan: require("../roms/mm.json"),
-  FinalFantasy: require("../roms/ff.json"),
+  FinalFantasy:  require("../roms/ff.json"),
   SilkWorm: require("../roms/silkworm.json"),
   MegaMan2: require("../roms/mm2.json"),
   TeenageMutantHeroTurtles: require("../roms/tmnt.json"),
