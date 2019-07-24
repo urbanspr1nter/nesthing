@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build-wasm": "sh ./src/wasm/build.sh"
+    "build-wasm": "sh ./src/wasm/build.sh",
+    "build": "webpack && npm run build-wasm"
   },
   "author": "Roger Ngo",
   "license": "ISC",
