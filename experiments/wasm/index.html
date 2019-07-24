@@ -1,1 +1,28 @@
-<script src="index.js"></script>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WASM vs JS</title>
+    <style>
+        button {
+            width: 256px;
+            height: 48px;
+            font-size: medium;
+        }
+        button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+    </style>
+  </head>
+  <body>
+    <h1 id="wasm-result"></h1>
+    <button type="button" id="btn-wasm" class="disabled">(Not ready) Run WASM Test</button>
+
+    <h1 id="js-result"></h1>
+    <button type="button" id="btn-js">Run JS Test</button>
+
+    <script src="main.js"></script>
+    <script src="index.js"></script>
+  </body>
+</html>

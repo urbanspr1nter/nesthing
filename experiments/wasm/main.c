@@ -1,17 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <emscripten.h>
 
-const int MAX_SIZE = 1000000;
-const int MAX_RUNS = 1000;
+int MAX_SIZE = 1000000;
+int MAX_RUNS = 1000;
+int arr[MAX_SIZE];
 
-EMSCRIPTEN_KEEPALIVE
 float benchmark() {
     int i, j;
     float seconds;
     clock_t t;
-    int arr[MAX_SIZE];
 
     srand(time(0));
 
@@ -23,7 +21,7 @@ float benchmark() {
     }
     t = clock() - t;
 
-    seconds = ((float)t / CLOCKS_PER_SEC);
+    seconds = ((float)t) / CLOCKS_PER_SEC;
 
     return seconds;
 }

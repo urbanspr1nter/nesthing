@@ -1,42 +1,59 @@
-const importObject ={
-    env: {
-      STACKTOP: 0,
-      STACK_MAX:65536,
-      abortStackOverflow: function(val) { throw new Error("stackoverfow"); },
-      memory: new WebAssembly.Memory( { initial: 256, maximum:256 } ),
-      table: new WebAssembly.Table( { initial:14, maximum:14, element: "anyfunc" } ),
-      __memory_base:0,
-      __table_base:0,
-      _clock: () => {},
-      abort: () => {},
-      ___syscall146: () => {},
-      _emscripten_memcpy_big: () => {},
-      ___syscall6: () => {},
-      ___syscall54: () => {},
-      _time: () => {},
-      ___syscall140: () => {},
-      _printf: () => {},
-      _rand: () => {},
-      _srand: () => {},
-      abortOnCannotGrowMemory: () => {},
-      nullFunc_ii: () => {},
-      nullFunc_iiii: () => {},
-      nullFunc_jiji: () => {},
-      ___lock: () => {},
-      ___setErrNo: () => {},
-      ___unlock: () => {},
-      _emscripten_get_heap_size: () => {},
-      _emscripten_memcpy_big: () => {},
-      _emscripten_resize_heap: () => {},
-      setTempRet0: () => {},
-      tempDoublePtr: 0,
-      DYNAMICTOP_PTR: 0
-    }
+Module.onRuntimeInitialized = function onModuleInitialized() {
+  document.getElementById("btn-wasm").classList.remove("disabled");
+  document.getElementById("btn-wasm").innerHTML = `Run WASM Test`;
+  document
+    .getElementById("btn-wasm")
+    .addEventListener("click", function onWasmClicked() {
+      document.getElementById("btn-wasm").classList.add("disabled");
+
+      document.getElementById("wasm-result").innerHTML = `Running WASM test...`;
+
+      setTimeout(function() {
+        var result = Module._benchmark();
+
+        document.getElementById(
+          "wasm-result"
+        ).innerHTML = `${result} seconds to finish for WASM`;
+
+        document.getElementById("btn-wasm").classList.remove("disabled");
+      }, 500);
+    });
 };
 
-WebAssembly.instantiateStreaming(fetch("main.wasm"), importObject).then((m) => {
-    const { instance } = m;
+document
+  .getElementById("btn-js")
+  .addEventListener("click", function onJsClicked() {
+    document.getElementById("btn-js").classList.add("disabled");
 
-    const n = instance.exports._benchmark();
-    console.log(n);
-});
+    document.getElementById("js-result").innerHTML = `Running JS test...`;
+
+    setTimeout(function() {
+      var result = jsBenchmark();
+
+      document.getElementById(
+        "js-result"
+      ).innerHTML = `${result} seconds to finish for JS`;
+
+      document.getElementById("btn-js").classList.remove("disabled");
+    }, 500);
+  });
+
+function jsBenchmark() {
+  const MAX_SIZE = 1000000;
+  const MAX_RUNS = 1000;
+
+  const arr = [];
+  for (let i = 0; i < MAX_SIZE; i++) {
+    arr[i] = 0;
+  }
+
+  const t = performance.now();
+  for (let i = 0; i < MAX_RUNS; i++) {
+    for (let j = 0; j < MAX_SIZE; j++) {
+      arr[j] = Math.random();
+    }
+  }
+  const seconds = (performance.now() - t) / 1000;
+
+  return seconds;
+}
