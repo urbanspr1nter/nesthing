@@ -16,18 +16,18 @@ typedef struct FirstOrderFilter {
     float PrevY;
 } FirstOrderFilter;
 
-int FILTER_COUNT = 3;
+const int FILTER_COUNT = 3;
 int chainIdx;
 FirstOrderFilter filters[FILTER_COUNT];
 
 /*
     A test function to see if everything is working correctly.
 */
-int test() {
+int pf_test() {
     return 999;
 }
 
-FirstOrderFilter *lowPassFilter(int sampleRate, int cutoffFrequency) {
+FirstOrderFilter *pf_lowPassFilter(int sampleRate, int cutoffFrequency) {
     FirstOrderFilter *f = malloc(sizeof(FirstOrderFilter));
 
     float c = sampleRate / M_PI / cutoffFrequency;
@@ -42,7 +42,7 @@ FirstOrderFilter *lowPassFilter(int sampleRate, int cutoffFrequency) {
     return f;
 }
 
-FirstOrderFilter *highPassFilter(int sampleRate, int cutoffFrequency) {
+FirstOrderFilter *pf_highPassFilter(int sampleRate, int cutoffFrequency) {
     FirstOrderFilter *f = malloc(sizeof(FirstOrderFilter));
 
     float c = sampleRate / M_PI / cutoffFrequency;
@@ -57,11 +57,11 @@ FirstOrderFilter *highPassFilter(int sampleRate, int cutoffFrequency) {
     return f;
 }
 
-void addFilterToChain(FirstOrderFilter *f) {
+void pf_addFilterToChain(FirstOrderFilter *f) {
     filters[chainIdx++] = *f;
 }
 
-float step(float x, FirstOrderFilter *f) {
+float pf_step(float x, FirstOrderFilter *f) {
     float y = (f->B0 * x) + (f->B1 * f->PrevX) - (f->A1 * f->PrevY);
 
     f->PrevY = y;
@@ -70,14 +70,14 @@ float step(float x, FirstOrderFilter *f) {
     return y;
 }
 
-float runFilterChains(float x) {
+float pf_runFilterChains(float x) {
     int i;
     float workingX = x;
 
     for(i = 0; i < FILTER_COUNT; i++) {
         FirstOrderFilter *f = &filters[i];
         
-        workingX = step(workingX, f);
+        workingX = pf_step(workingX, f);
     }
 
     return workingX;
@@ -86,16 +86,16 @@ float runFilterChains(float x) {
 /*
     Use this to test.
 */
-int main(int argc, char **argv) {
-    FirstOrderFilter *highPassFilter1 = highPassFilter(44100, 90);
-    FirstOrderFilter *highPassFilter2 = highPassFilter(44100, 440);
-    FirstOrderFilter *lowPassFilter1 = lowPassFilter(44100, 14000);
+int _main(int argc, char **argv) {
+    FirstOrderFilter *highPassFilter1 = pf_highPassFilter(44100, 90);
+    FirstOrderFilter *highPassFilter2 = pf_highPassFilter(44100, 440);
+    FirstOrderFilter *lowPassFilter1 = pf_lowPassFilter(44100, 14000);
     
-    addFilterToChain(highPassFilter1);
-    addFilterToChain(highPassFilter2);
-    addFilterToChain(lowPassFilter1);
+    pf_addFilterToChain(highPassFilter1);
+    pf_addFilterToChain(highPassFilter2);
+    pf_addFilterToChain(lowPassFilter1);
 
-    float result = runFilterChains(5);
+    float result = pf_runFilterChains(5);
 
     printf("%f \n", result);
 

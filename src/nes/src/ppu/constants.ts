@@ -1,18 +1,4 @@
 /**
- * JS gives us no native "pretty" way to handle 64 bit numbers.
- *
- * I have personally found that BigInt tends to be a bit too slow for the 
- * frequent shifts we would be required to do for background pattern tiles.
- *
- * In order to get some sort of speed, we can slam 2 numbers together with
- * a "high" and "low" property to serve the same purpose.
- */
-export interface BackgroundData {
-  DataHigh32: number;
-  DataLow32: number;
-}
-
-/**
  * The data structure to encapsulate the various sprite information
  * we will need to render.
  */
@@ -63,7 +49,8 @@ export interface PpuState {
   regOAMDATA_data: number;
   regPPUSCROLL_x: number;
   regPPUSCROLL_y: number;
-  bgTile: BackgroundData;
+  bgTileHigh32: number;
+  bgTileLow32: number;
   oam: number[];
   onScreenSprites: SpriteData[];
   nmiPrevious: boolean;

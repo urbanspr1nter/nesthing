@@ -110,3 +110,4 @@ typings/
 
 */**/nes/dist
 */**/nes/src/roms/original
+*/**/nes/src/wasm/**/*.o

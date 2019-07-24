@@ -84,7 +84,7 @@ export class Nes {
     this._uiSoundHandler = new UiSoundHandler(0.8);
 
     this._apu = new Apu(this._uiSoundHandler, 44100, pf);
-    this._ppu = new Ppu(options.frameRenderer, this._mapper);
+    this._ppu = new Ppu(options.frameRenderer, this._mapper, pf);
     this._memory = new Memory(
       this._ppu,
       this._apu,

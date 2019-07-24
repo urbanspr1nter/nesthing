@@ -11,7 +11,7 @@ import { Cpu } from "../cpu/cpu";
 import { InterruptRequestType } from "../cpu/cpu.interface";
 import { UiFrameBuffer } from "../ui/framebuffer";
 import { IMapper } from "../mapper";
-import { PpuState, BackgroundData, SpriteData } from "./constants";
+import { PpuState, SpriteData } from "./constants";
 
 /**
  * Constants
@@ -72,7 +72,7 @@ export class Ppu {
   private _regPPUSCROLL_x: number;
   private _regPPUSCROLL_y: number;
 
-  private _bgTile: BackgroundData;
+  // private _bgTile: BackgroundData;
   private _oam: number[];
   private _onScreenSprites: SpriteData[];
   private _nmiPrevious: boolean;
@@ -81,9 +81,13 @@ export class Ppu {
   private _uiFrameBuffer: UiFrameBuffer;
   private _cpu: Cpu;
 
-  constructor(uiFrameBuffer: UiFrameBuffer, mapper: IMapper) {
+  private _wasmModule: any;
+
+  constructor(uiFrameBuffer: UiFrameBuffer, mapper: IMapper, wasmModule: any) {
     this._uiFrameBuffer = uiFrameBuffer;
     this._ppuMemory = new PpuMemory(mapper);
+
+    this._wasmModule = wasmModule;
 
     this._register = 0;
     this._scanlines = 240;
@@ -107,10 +111,7 @@ export class Ppu {
 
     this._spriteCount = 0;
 
-    this._bgTile = {
-      DataHigh32: 0,
-      DataLow32: 0
-    };
+    this._wasmModule._bgTile_init();
 
     this._oam = [];
     for (let i = 0; i <= 0xff; i++) {
@@ -194,11 +195,12 @@ export class Ppu {
     this._regOAMDATA_data = state.regOAMDATA_data;
     this._regPPUSCROLL_x = state.regPPUSCROLL_x;
     this._regPPUSCROLL_y = state.regPPUSCROLL_y;
-    this._bgTile = state.bgTile;
     this._oam = state.oam;
     this._onScreenSprites = state.onScreenSprites;
     this._nmiPrevious = state.nmiPrevious;
     this._nmiDelay = state.nmiDelay;
+    this._wasmModule._bgTile_setHigh32(state.bgTileHigh32);
+    this._wasmModule._bgTile_setTile32(state.bgTileLow32);
   }
 
   public save(): PpuState {
@@ -242,7 +244,8 @@ export class Ppu {
       regOAMDATA_data: this._regOAMDATA_data,
       regPPUSCROLL_x: this._regPPUSCROLL_x,
       regPPUSCROLL_y: this._regPPUSCROLL_y,
-      bgTile: this._bgTile,
+      bgTileHigh32: this._wasmModule._bgTile_getHigh32(),
+      bgTileLow32: this._wasmModule._bgTile_getLow32(),
       oam: this._oam,
       onScreenSprites: this._onScreenSprites,
       nmiPrevious: this._nmiPrevious,
@@ -507,7 +510,7 @@ export class Ppu {
       tileData |= attributeByte | highBit | lowBit;
     }
 
-    this._bgTile.DataLow32 = tileData;
+    this._wasmModule._bgTile_setLow32(tileData);
   }
 
   private _getBackgroundPixel() {
@@ -515,10 +518,7 @@ export class Ppu {
       return 0;
     }
 
-    const pixel =
-      (this._bgTile.DataHigh32 >>> ((7 - this._regPPUSCROLL_x) << 2)) & 0xf;
-
-    return pixel;
+    return this._wasmModule._bgTile_getPixel(this._regPPUSCROLL_x);
   }
 
   /**
@@ -807,12 +807,13 @@ export class Ppu {
     this._evenFrame != this._evenFrame;
   }
 
+  /*
   private _shiftBackgroundTile4(): void {
     this._bgTile.DataHigh32 <<= 4;
     this._bgTile.DataHigh32 =
       this._bgTile.DataHigh32 | ((this._bgTile.DataLow32 >>> 28) & 0xf);
     this._bgTile.DataLow32 <<= 4;
-  }
+  }*/
 
   private _processTick(): void {
     const isRenderingEnabled =
@@ -829,7 +830,7 @@ export class Ppu {
         this._renderPixel();
       }
       if (isRenderLine && isFetchCycle) {
-        this._shiftBackgroundTile4();
+        this._wasmModule._bgTile_shiftLeft4();
 
         switch (this._cycles % 8) {
           case 1:

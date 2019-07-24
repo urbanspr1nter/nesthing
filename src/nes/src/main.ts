@@ -126,7 +126,7 @@ function init() {
 }
 
 function checkModule() {
-  if(Module._test) {
+  if(Module._pf_test) {
     init();
     console.log("Initialized!");
   } else {
