@@ -18,7 +18,7 @@ export class Apu {
   private _framePeriod: number;
   private _frameValue: number;
   private _frameIrq: boolean;
-  private _filterChain: FilterChain;
+  // private _filterChain: FilterChain;
   private _square0: PulseWave;
   private _square1: PulseWave;
   private _triangle: TriangleWave;
@@ -31,7 +31,6 @@ export class Apu {
   private _pf: any;
 
   constructor(uiSoundHandler: UiSoundHandler, audioSampleRate: number, pf: any) {
-
     this._pf = pf;
 
     for (let i = 0; i < 31; i++) {
@@ -42,11 +41,12 @@ export class Apu {
       tndTable.push(Math.fround(163.67 / (24329.0 / i + 100)));
     }
 
-    this._filterChain = new FilterChain();
+    // this._filterChain = new FilterChain();
 
     this._cycles = 0;
     this._sampleRate = CpuFrequencyHz / audioSampleRate;
 
+    /*
     this._filterChain.addFilters(
       this._filterChain.highPassFilter(audioSampleRate, 90)
     );
@@ -56,6 +56,11 @@ export class Apu {
     this._filterChain.addFilters(
       this._filterChain.lowPassFilter(audioSampleRate, 14000)
     );
+    */
+
+    pf._addFilterToChain(pf._highPassFilter(audioSampleRate, 90));
+    pf._addFilterToChain(pf._highPassFilter(audioSampleRate, 440));
+    pf._addFilterToChain(pf._lowPassFilter(audioSampleRate, 14000));
 
     this._square0 = new PulseWave(1);
     this._square1 = new PulseWave(2);
@@ -252,8 +257,15 @@ export class Apu {
   }
 
   private _sendSample() {
+    // Filter Chain JS
     // const output = this._filterChain.step(this._output());
+
+    // Filter Chain WASM
     const output = this._pf._runFilterChains(this._output());
+
+    // No Filter Chain
+    // const output = this._output();
+    
     this._uiSoundHandler.receiveSample(output);
   }
 

@@ -21,7 +21,12 @@ export class NesConsole {
   private _ppuFrames: number;
   private _lastFps: string;
 
-  constructor(rom: Roms, canvasId: string, eventEmitter: EventEmitter, pf: any) {
+  constructor(
+    rom: Roms,
+    canvasId: string,
+    eventEmitter: EventEmitter,
+    pf: any
+  ) {
     const playerOneController = new Controller();
     const playerTwoController = new Controller();
 
@@ -45,7 +50,7 @@ export class NesConsole {
     this._isRunning = true;
 
     this._eventEmitter = eventEmitter;
-    
+
     this._eventEmitter.on("stop", () => {
       this._isRunning = false;
     });
@@ -79,7 +84,7 @@ export class NesConsole {
   }
 
   public run(timestamp: number) {
-    if(!this._isRunning) {
+    if (!this._isRunning) {
       return;
     }
 
@@ -90,15 +95,14 @@ export class NesConsole {
     this._frameTime += timestamp - this._lastFrameTime;
     this._lastFrameTime = timestamp;
 
-    while (this._frameTime >= this._msPerFrame) {      
+    while (this._frameTime >= this._msPerFrame) {
       INNER: while (true) {
         this._ppuFrames = this._nes.ppuFrames;
         this._nes.run();
         if (this._nes.ppuFrames > this._ppuFrames) {
-
           // Calculate current FPS
           const currFps = (ONE_SECOND_MS / this._frameTime).toFixed(2);
-          if(currFps !== this._lastFps && (this._ppuFrames % FPS) === 0) {
+          if (currFps !== this._lastFps && this._ppuFrames % FPS === 0) {
             document.getElementById("fps").innerHTML = `${currFps} fps`;
             this._lastFps = currFps;
           }
@@ -112,7 +116,7 @@ export class NesConsole {
       this._frameTime -= this._msPerFrame;
       break;
     }
-
+    
     setImmediate(() => this.run(performance.now()));
   }
 }

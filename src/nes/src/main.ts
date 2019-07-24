@@ -3,21 +3,19 @@ import RomManager, { Roms } from "./ui/rommanager";
 import { ConsoleState } from "./nes";
 import { EventEmitter } from "events";
 
+const pako = require("pako");
+const canvasId = "main";
+const eventEmitter = new EventEmitter();
 // https://developer.mozilla.org/en-US/docs/Web/API/Document/readyState
 const ReadyState = {
   Loading: "loading",
   Interactive: "interactive",
   Complete: "complete"
 };
-
 enum NotificationType {
   Danger = "is-danger",
   Information = "is-info"
 }
-
-const pako = require("pako");
-const canvasId = "main";
-const eventEmitter = new EventEmitter();
 
 let gameConsole: NesConsole;
 
@@ -41,72 +39,7 @@ document.onreadystatechange = () => {
       gameConsole.nes.reset();
     });
   }
-  if (document.readyState === ReadyState.Complete) {
-    document.getElementById("overlay").className = "hidden";
-  }
 };
-
-function init() {
-  const pf = Module;
-  const hp1 = pf._highPassFilter(44100, 90);
-  const hp2 = pf._highPassFilter(44100, 440);
-  const lp1 = pf._lowPassFilter(44100, 14000);
-
-  pf._addFilterToChain(hp1);
-  pf._addFilterToChain(hp2);
-  pf._addFilterToChain(lp1);
-
-  document.getElementById("btn-play").addEventListener("click", () => {
-    eventEmitter.emit("stop");
-    eventEmitter.removeAllListeners("stop");
-
-    var selectElement = document.getElementById(
-      "select-game"
-    ) as HTMLSelectElement;
-    var selectedGame = Number(
-      selectElement.options[selectElement.selectedIndex].value
-    );
-
-    var game = RomManager.valueToGame(selectedGame);
-
-    gameConsole = new NesConsole(game, canvasId, eventEmitter, pf);
-    gameConsole.setupDOM();
-
-    setTimeout(function() {
-      setImmediate(() => gameConsole.run(performance.now()));
-    }, 1000);
-  });
-}
-
-if(Module._test) {
-  init();
-} else {
-  setTimeout(init, 1000);
-}
-
-function setNotification(message: string, type: NotificationType) {
-  const notificationMessage = document.getElementById("notification-message");
-  notificationMessage.innerHTML = message;
-
-  const notificationContainer = document.getElementById(
-    "notification-container"
-  );
-  notificationContainer.classList.remove("hidden");
-  notificationContainer.classList.add(type);
-}
-
-document.getElementById("btn-save").addEventListener("click", () => {
-  var data = gameConsole.save();
-
-  setNotification("Saved state!", NotificationType.Information);
-
-  saveData(
-    data,
-    `${Roms[gameConsole.nes.rom]}-save-state-${new Date(
-      Date.now()
-    ).toISOString()}.dat`
-  );
-});
 
 document.getElementById("save-file").addEventListener("change", () => {
   var files = (document.getElementById("save-file") as HTMLInputElement).files;
@@ -148,6 +81,70 @@ document.getElementById("btn-load").addEventListener("click", () => {
 
   reader.readAsText(file);
 });
+
+document.getElementById("btn-save").addEventListener("click", () => {
+  const data = gameConsole.save();
+
+  setNotification("Saved state!", NotificationType.Information);
+
+  saveData(
+    data,
+    `${Roms[gameConsole.nes.rom]}-save-state-${new Date(
+      Date.now()
+    ).toISOString()}.dat`
+  );
+});
+
+// Run bootstrap code
+checkModule();
+
+function init() {
+  const pf = Module;
+
+  document.getElementById("btn-play").addEventListener("click", () => {
+    eventEmitter.emit("stop");
+    eventEmitter.removeAllListeners("stop");
+
+    var selectElement = document.getElementById(
+      "select-game"
+    ) as HTMLSelectElement;
+    var selectedGame = Number(
+      selectElement.options[selectElement.selectedIndex].value
+    );
+
+    var game = RomManager.valueToGame(selectedGame);
+
+    gameConsole = new NesConsole(game, canvasId, eventEmitter, pf);
+    gameConsole.setupDOM();
+
+    setTimeout(function() {
+      setImmediate(() => gameConsole.run(performance.now()));
+    }, 1000);
+  });
+
+  document.getElementById("overlay").className = "hidden";
+}
+
+function checkModule() {
+  if(Module._test) {
+    init();
+    console.log("Initialized!");
+  } else {
+    console.log("Waiting to initialize...");
+    setTimeout(checkModule, 250);
+  }
+}
+
+function setNotification(message: string, type: NotificationType) {
+  const notificationMessage = document.getElementById("notification-message");
+  notificationMessage.innerHTML = message;
+
+  const notificationContainer = document.getElementById(
+    "notification-container"
+  );
+  notificationContainer.classList.remove("hidden");
+  notificationContainer.classList.add(type);
+}
 
 function saveData(data, filename) {
   if (!data) {

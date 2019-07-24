@@ -1,3 +1,9 @@
+/*
+    passfilters.c
+
+    Roger Ngo
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -10,9 +16,13 @@ typedef struct FirstOrderFilter {
     float PrevY;
 } FirstOrderFilter;
 
+int FILTER_COUNT = 3;
 int chainIdx;
-FirstOrderFilter filters[3];
+FirstOrderFilter filters[FILTER_COUNT];
 
+/*
+    A test function to see if everything is working correctly.
+*/
 int test() {
     return 999;
 }
@@ -64,7 +74,7 @@ float runFilterChains(float x) {
     int i;
     float workingX = x;
 
-    for(i = 0; i < 3; i++) {
+    for(i = 0; i < FILTER_COUNT; i++) {
         FirstOrderFilter *f = &filters[i];
         
         workingX = step(workingX, f);
@@ -73,7 +83,10 @@ float runFilterChains(float x) {
     return workingX;
 }
 
-int main() {
+/*
+    Use this to test.
+*/
+int main(int argc, char **argv) {
     FirstOrderFilter *highPassFilter1 = highPassFilter(44100, 90);
     FirstOrderFilter *highPassFilter2 = highPassFilter(44100, 440);
     FirstOrderFilter *lowPassFilter1 = lowPassFilter(44100, 14000);
@@ -85,4 +98,6 @@ int main() {
     float result = runFilterChains(5);
 
     printf("%f \n", result);
+
+    return 0;
 }

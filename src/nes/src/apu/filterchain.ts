@@ -1,3 +1,11 @@
+/**
+ * filterchain.ts
+ * 
+ * Roger Ngo
+ * 
+ * NOTE: THIS FILE IS DEPRECATED
+ */
+
 const PI = Math.PI;
 
 interface FirstOrderFilter {
