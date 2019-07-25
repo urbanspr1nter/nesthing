@@ -5,7 +5,6 @@
  *
  */
 import { AUDIO_BUFFER_LENGTH, AUDIO_SAMPLE_RATE } from "../apu/constants";
-import { UiSoundState } from "./constants";
 
 export class UiSoundHandler {
   private _audioContext: AudioContext;
@@ -32,26 +31,15 @@ export class UiSoundHandler {
     );
     this._bufferData = this._buffer.getChannelData(0);
 
-    this._bufferDataQueue = [];
-    for (let i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
-      this._bufferDataQueue[i] = 0;
-    }
-    this._currIndex = 0;
+    this._clearBufferDataQueue();
   }
 
   public save() {
-    const safeQueue = this._bufferDataQueue.map(v => v.toString());
-
-    //return {
-      //bufferDataQueue: safeQueue,
-      //currIndex: this._currIndex
-    //}
+    // Not Implemented.
   }
 
-  public load(state: UiSoundState) {
-    //const convertedQueue = state.bufferDataQueue.map(v => Number(v));
-    //this._bufferDataQueue = convertedQueue;
-    //this._currIndex = state.currIndex;
+  public load() {
+    this._clearBufferDataQueue();
   }
 
   /**
@@ -62,6 +50,11 @@ export class UiSoundHandler {
    */
   public receiveSample(value: number) {
     if (this._currIndex === AUDIO_BUFFER_LENGTH) {
+
+      if(this._bufferData.byteLength === 0) {
+        this._bufferData = this._buffer.getChannelData(0);
+      }
+      
       this._bufferData.set(this._bufferDataQueue);
 
       this._bufferSource = this._audioContext.createBufferSource();
@@ -74,5 +67,13 @@ export class UiSoundHandler {
     }
 
     this._bufferDataQueue[this._currIndex++] = value;
+  }
+
+  private _clearBufferDataQueue() {
+    this._bufferDataQueue = [];
+    for (let i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
+      this._bufferDataQueue[i] = 0;
+    }
+    this._currIndex = 0;
   }
 }

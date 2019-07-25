@@ -10,7 +10,6 @@ import { UiKeyHandler } from "./ui/keyhandler";
 import { IMapper, NromMapper, Mmc1Mapper, Mmc3Mapper, AoromMapper } from "./mapper";
 import { Cartridge } from "./cartridge/cartridge";
 import RomManager, { Roms } from "./ui/rommanager";
-import { UiSoundState } from "./ui/constants";
 import { ApuState } from "./apu/constants";
 import { PpuState } from "./ppu/constants";
 import { CartridgeState } from "./cartridge/constants";
@@ -23,8 +22,7 @@ export interface ConsoleState {
   apu: ApuState,
   memory: MemoryState,
   cartridge: CartridgeState,
-  mapper: any,
-  uiSoundHandler: UiSoundState;
+  mapper: any
 }
 
 export interface ControllerSet {
@@ -141,8 +139,7 @@ export class Nes {
       apu: this._apu.save(),
       memory: this._memory.save(),
       cartridge: this._cartridge.save(),
-      mapper: this._mapper.save(),
-      uiSoundHandler: this._uiSoundHandler.save()
+      mapper: this._mapper.save()
     }
   }
 
@@ -154,7 +151,9 @@ export class Nes {
     this._apu.load(state.apu);
     this._cartridge.load(state.cartridge);
     this._mapper.load(state.mapper);
-    this._uiSoundHandler.load(state.uiSoundHandler);
+
+    // No state needed to be passed.
+    this._uiSoundHandler.load();
   }
 
   public run(): number {
