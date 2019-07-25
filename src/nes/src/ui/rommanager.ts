@@ -10,7 +10,7 @@ export enum Roms {
   FinalFantasy,
   SilkWorm,
   MegaMan2,
-  TeenageMutantHeroTurtles,
+  SuperC,
   SuperMarioBros3,
   Battletoads
 }
@@ -25,7 +25,7 @@ export const RomFiles = {
   FinalFantasy:  require("../roms/ff.json"),
   SilkWorm: require("../roms/silkworm.json"),
   MegaMan2: require("../roms/mm2.json"),
-  TeenageMutantHeroTurtles: require("../roms/tmnt.json"),
+  SuperC: require("../roms/superc.json"),
   SuperMarioBros3: require("../roms/smb3.json")
 };
 
@@ -51,7 +51,7 @@ export default class RomManager {
       case 10:
         return Roms.MegaMan2;
       case 11:
-        return Roms.TeenageMutantHeroTurtles;
+        return Roms.SuperC;
       case 12:
         return Roms.SuperMarioBros3;
     }
@@ -78,8 +78,8 @@ export default class RomManager {
         return RomFiles.SilkWorm;
       case Roms.MegaMan2:
         return RomFiles.MegaMan2;
-      case Roms.TeenageMutantHeroTurtles:
-        return RomFiles.TeenageMutantHeroTurtles;
+      case Roms.SuperC:
+        return RomFiles.SuperC;
       case Roms.SuperMarioBros3:
         return RomFiles.SuperMarioBros3;
     }
