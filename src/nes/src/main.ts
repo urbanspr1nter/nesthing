@@ -3,6 +3,9 @@ import RomManager, { Roms } from "./ui/rommanager";
 import { ConsoleState } from "./nes";
 import { EventEmitter } from "events";
 
+// @ts-ignore
+const WasmModule = Module;
+
 const pako = require("pako");
 const canvasId = "main";
 const eventEmitter = new EventEmitter();
@@ -99,7 +102,7 @@ document.getElementById("btn-save").addEventListener("click", () => {
 checkModule();
 
 function init() {
-  const pf = Module;
+  const pf = WasmModule;
 
   document.getElementById("btn-play").addEventListener("click", () => {
     eventEmitter.emit("stop");
@@ -126,7 +129,7 @@ function init() {
 }
 
 function checkModule() {
-  if(Module._pf_test) {
+  if(WasmModule._pf_test) {
     init();
     console.log("Initialized!");
   } else {
