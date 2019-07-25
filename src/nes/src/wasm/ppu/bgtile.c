@@ -43,36 +43,3 @@ void bgTile_setLow32(uint32_t value) {
 void bgTile_setHigh32(uint32_t value) {
     backgroundTile->high32 = value;
 }
-
-int main(int argc, char **argv) {
-    bgTile_init();
-
-    backgroundTile->high32 = 0xf0f0f0f0;
-    backgroundTile->low32 = 0xf0f0f0f0;
-
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_shiftLeft4();
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_shiftLeft4();
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_shiftLeft4();
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_shiftLeft4();
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_shiftLeft4();
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_shiftLeft4();
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_shiftLeft4();
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-
-    bgTile_setLow32(0xf0f0f0f0);
-    printf("hi: %u, lo: %u\n", bgTile_getHigh32(), bgTile_getLow32());
-}
