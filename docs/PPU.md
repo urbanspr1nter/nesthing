@@ -8,23 +8,21 @@ After a while, running `nestest.nes` a few times, you will some sense of some se
 
 Now it's time to implement the PPU (Picture Processing Unit)! Where do we begin? This document aims to give the programmer a "first start" when it comes to writing basic NES PPU emulation. 
 
-At this current time, `NesThing` doesn't really have a full-featured PPU -- yet. However, *Mario Bros.* and *Donkey Kong* are somewhat playable, so the document aims to explain the PPU in this context. 
-
-The following discussion aims to give the reader an approach to achieve the same thing with their own implementation. 
+Usually, the best games to start out with in emulating a PPU is to attempt to emulate one of the earlier NES games. This can either be something like Mario Bros., or Donkey Kong. `NesThing` initially had a PPU implementation that would simply output 1 complete frame of Donkey Kong at a time. After sanity checks, scanline rendering was implemented. So, the following discussion aims to give the reader an approach to achieve the same thing with their own implementation. 
 
 I should also warn that everything that will be discussed in this document is in the context of **NTSC video**. However, most of the information is applicable to PAL too. I suppose that it's just the *exact* numbers will be slightly different, but if you're familiar with video, you will know what to look out for: refresh rates, timings, etc. These are all easily referenced elsewhere.
 
 ## The Facts
 
-The system architecture of the NES is not **von Neumann**. In other words, it is **not** a system architecture that is designed for components to work serially, where all input is given to the CPU, and the CPU works to give output to some other device. The basic diagram from this [article](https://en.wikipedia.org/wiki/Von_Neumann_architecture) is shown below:
+The system architecture of the NES is not **von Neumann**. In other words, it is **not** a system architecture that is designed for components to work serially through the CPU. For example: all input is given to the CPU, and the CPU works to give output to some other device. The basic diagram from this [article](https://en.wikipedia.org/wiki/Von_Neumann_architecture) is shown below:
 
 ![von Neumann architecture](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Von_Neumann_Architecture.svg/2560px-Von_Neumann_Architecture.svg.png)
 
 Notice that the central processing unit is literally the **central** processing unit. All input data from I/O devices is passed through some bus where the CPU receives this information, and processes this information for output.
 
-To give a very dumbed-down example, think of the von Neumann architecture in the perspective of a desktop computer. With input data being passed through to the CPU, this means that a key stroke from the keyboard would be registered as a binary stream of data from a controller to the CPU. The CPU is then responsible for interpreting this data and then outputting it onto another component in the system, such as a monitor. 
+To give a very simple example, think of the von Neumann architecture in the perspective of a desktop computer. With input data being passed through to the CPU, this means that a key press from the keyboard would be registered as a binary stream of data from a controller to the CPU. The CPU is then responsible for interpreting this data and then outputting it onto another component in the system, such as a monitor. 
 
-Since the NES is not a von Neumann machine, and the CPU and PPU do not execute serially. These two components then execute in parallel. To make matters more interesting, the CPU and PPU share the same data bus. In effect, these components can interfere with each other through corruption of data depending on how programs (games) are written.
+Since the NES is not a von Neumann machine, the CPU and PPU do not execute serially. These two components then execute in parallel. To make matters more interesting, the CPU and PPU share the same data bus. In effect, these components can interfere with each other through corruption of data depending on how programs (games) are written.
 
 To the beginner emulator author such as myself, I have found that understanding the pattern on how the CPU and PPU execute alongside one another, is not immediately obvious. Personally, I was used to the von Neumann style architecture of execution, and could not accept the fact that the CPU and PPU were independent and must cooperate with each other through the use of various registers and flags found within them.
 
@@ -56,7 +54,7 @@ while (true) {
 }
 ```
 
-Since the NES CPU and PPU execute at the same time in real-life, we will compensate by emulating this parallel execution through explotation of the fact that modern computers are generally very fast.
+Since the NES CPU and PPU execute at the same time in real-life, we will compensate by emulating this parallel execution through exploiting the fact that modern computers are generally very fast.
 
 We can execute the CPU and PPU separately, in the smallest possible time periods we can manage. We can define a "small time period" as a single CPU instruction. 
 
@@ -66,7 +64,7 @@ Since your desktop computer runs very fast, doing this frequently will create th
 
 The approach I have described here is called *catch-up*. A good resource is to read up on emulator catch up from **NesDev**. See the discussion on [emulator catchup](https://wiki.nesdev.com/w/index.php/Catch-up).
 
-One temptation for an approach to emulate the CPU and PPU executing with each other is to write a multi-threaded emulator where the CPU and PPU are executed in 2 different threads at once, and access each other through calls. This is very complicated, and generally not a recommend approach at all. 
+**Danger:** One temptation for an approach to emulate the CPU and PPU executing with each other is to write a multi-threaded emulator where the CPU and PPU are executed in 2 different threads at once, and access each other through calls. This is very complicated, and generally not a recommend approach at all. 
 
 ## Synchronizing Execution
 
@@ -96,7 +94,7 @@ Now, I think this is the perfect moment to discuss the internal registers which 
 
 ## Memory-Mapped I/O
 
-As discussed previously, the CPU, PPU and discussed later, APU, all share the same data bus. The CPU makes a request to some address in memory for I/O, and the controller is reads the address to see where the data byte hould be pulled from: RAM, hardware register, etc. All data bytes flow through the same bus.
+As previously discussed, the CPU, PPU and will be discussed later, APU, all share the same data bus. The CPU makes a request to some address in memory for I/O, and the controller reads the address to see where the data byte hould be pulled from: RAM, hardware register, etc. All data bytes flow through the same bus.
 
 Because of this, the CPU and PPU aren't directly connected to each other, per se, but rather connected to the common data bus where the data is manipulated by memory address reads and writes.
 
@@ -127,7 +125,7 @@ To review, the memory layout of the NES is:
 |4018-401F|APU and I/O Functionality that is normally disabled|8 B|
 |4020-FFFF|Mapped to Cartridge PRG ROM, PRG RAM, etc.|49120 B|
 
-An example of this is writing to PPU memory. This requires manipulation of the `v` register to set the proper VRAM address needed to place the data into the data bus to the PPU  memory. This gives a total of 8 bytes, or 8 mapped registers for the CPU to communicate with the PPU.
+An example of this is writing to PPU memory. This requires manipulation of the `v` register to set the proper VRAM address needed in order to place the data into the data bus to the PPU  memory. This gives a total of 8 bytes, or 8 mapped registers for the CPU to communicate with the PPU.
 
 The misconception is that reading/writing data to the memory-mapped I/O addresses serves as some sort of asynchronous request that occurs from the CPU to the appropriate hardware device, where for example, the mental model of execution may result in something like this:
 
@@ -194,17 +192,27 @@ This approach is an easy way to simulate easy interfacing for register reads, an
 
 The NES PPU can output a total of 64 colors in its color space. Really, only 52 color are "unique". These colors are actually more of a **CLUT** (color lookup table), and the RGB values have already been predefined. 
 
-It is then fair to claim and assume that each value such as `$2C` read from memory when dealing with colors refers to the light-blue color as seen in the palette shown above. Or more precisely: `rgb(62, 194, 205)`, or:
+We can then deduce that each value such as: `$2C` as a data byte read from memory refers to the light-blue color as seen in the palette shown above. Or more precisely: `rgb(62, 194, 205)`, or those who prefer visuals :):
 
 ![Color 2C](assets/ppu_color_2C.png)
 
 Since we are dealing with writing an emulator, let's start referring to "dots" as "pixels" to be rendered. Ultimately the end goal of implementing the PPU is to output an image rendered on screen on what the real PPU would output onto the television.
 
-Just because there are 64 colors to choose from to represent an image does not mean they can all be used at once. As an even bigger restriction, the number of active colors on screen could only be 16. This limitation may have lead to creative art during the later titles released on the NES as the limited color palette was being maximized.
+Just because there are 64 colors to choose from to represent an image does not mean they can all be used at once. 
+
+The restriction is that there can be a total of 32 active colors on screen but only 25 active **disinct** colors on screen.
+
+* 1 single universal background color
+* 12 distinct background tile colors (4 repeated colors)
+* 12 disintct sprite tile colors (4 repeated colors)
+
+This limitation may have lead to creative art during the later titles released on the NES as the limited color palette was being maximized.
 
 If the number of simultaneous colors on screen can only be 16, this means that we only need 4 bits to represent a pixel. The possible values which can be represented by 4 bits is then a value anywhere from: 0-15. 
 
-Each bit of the 4-bit pixel color respresents something. The 2 most significant bits represent the **attribute** bits, which help dictate what 4-color palette to use. The 2 lease significant bits represent the combination of high and low tile bits from the group of 16 bytes which have been referenced by the nametable byte.
+A background color palette is then 4 palettes of 3+1 colors each, and the sprite color palette is then 4 palettes of 3+1 colors each. This totals to 8 different color palettes to be used.
+
+Each bit of the 4-bit pixel color respresents something. The 2 most significant bits represent the **attribute** bits, which help dictate what 4-color palette to use. The 2 least significant bits represent the combination of high and low tile bits from the group of 16 bytes which have been referenced by the nametable byte.
 
 ```
 AAHL
@@ -224,7 +232,29 @@ The memory layout of the background palettes is as follows:
 |$3F09|2|
 |$3F0D|3|
 
-Suppose then our memory map is as follows:
+The memory layout for sprite palettes is just offset by 16, starting at `$3F11`. 
+
+|Address|Palette Index|
+|-------|-------------|
+|$3F11|0|
+|$3F15|1|
+|$3F19|2|
+|$3F1D|3|
+
+For background color addresses, it is noteworthy point out that the following addresses actually mirror the corresponding background palette addresses:
+
+|Address|Mirrored|
+|-------|--------|
+|$3F10|$3F00|
+|$3F14|$3F04|
+|$3F18|$3F08|
+|$3F1C|$3F0C|
+
+As stated in [NesDev](https://wiki.nesdev.com/w/index.php/PPU_palettes):
+
+>A symptom of not having implemented this correctly in an emulator is the sky being black in Super Mario Bros., which writes the backdrop color through $3F10.
+
+To reinforce our learning, suppose then our memory map is as follows:
 
 ```
 $3F00: $0F
@@ -237,7 +267,7 @@ $3F05: $27
 $3F08: $27
 ```
 
-A 4 bit string representing a single can be: `0010` which translates to hex value `$2`. Dissecting this, we can see that `AA = 00` which then gives us a `basePaletteAddress = $3F01`. The index, which is zero based can be calculated by taking the lower order 2 bits where `HL = 10`: `colorOffset = $10 - $01 = $01`. We then compute the `effectiveAddress` of the color byte as follows:
+Let's try to decipher how a specific value can map to a color byte. A 4 bit string representing a single can be: `0010` which translates to hex value `$2`. Dissecting this, we can see that `AA = 00` which then gives us a `basePaletteAddress = $3F01`. The index, which is zero based can be calculated by taking the lower order 2 bits where `HL = 10`: `colorOffset = $10 - $01 = $01`. We then compute the `effectiveAddress` of the color byte as follows:
 
 ```
 const effectiveAddress = basePaletteAddress + colorOffset;
@@ -253,7 +283,7 @@ Now, let's take a look at how we can even obtain the values of the bits to build
 
 ## Background Tile Rendering
 
-Since we know that a single color is a string of 4 bits, `AAHL`, you may expect that we need 3 different pieces of information: attribute bits, high bits and low bits of the background tile. In fact, we need 4!
+Since we know that a single color is a string of 4 bits, `AAHL`, you may expect that we need 3 different pieces of information: attribute bits, high bits and low bits of the background tile. In fact, we need 4 piece of information!
 
 The next few sections introduce some terminology which will hopefully clarify a lot of the ambiguity when it comes to getting your first frame rendered with background tiles.
 
@@ -261,9 +291,9 @@ The next few sections introduce some terminology which will hopefully clarify a 
 
 As briefly mentioned earlier, each background tile is made up of a high byte, and a low byte for pixel content. A tile is `8x8` pixels, and each within this 8x8 grid, is represented by a high tile byte, and a low tile byte -- giving a total of 16 bytes to represent a background tile.
 
-This string of 16 bytes can be found in the location of the CHR-ROM in memory. However, the NES does not draw these 16 bytes directly to represent a background tile. That would be completely wasteful.
+This string of 16 bytes can be found in the location of the CHR data in memory -- these are found in addresses `$0000` to `$1FFF`. However, the NES does not draw these 16 bytes directly to represent a background tile. That would be completely wasteful.
 
-Instead, the NES keeps a single copy of these background tiles, and ultimately references them within a nametable. A `nametable` is a chunk in memory intended to represent the current frame of background tiles which the NES is currently rendering.
+Instead, the NES keeps a **single** copy of these background tiles, and ultimately references them within a nametable. A `nametable` is a chunk in memory intended to represent the current frame of background tiles which the NES is currently rendering.
 
 Each byte in the nametable is intended to represent a background tile. Since the NES resolution is `256x240`, we can compute the tile resolution of the nametable like so:
 
@@ -281,11 +311,13 @@ TilesPerColumn = 240 / 8
 = 30
 ```
 
-The nametable is essentially a representation of 32x30 tiles, where each tile is composed of 8x8 pixels. Each nametable byte then references a sepcific address to the 16 byte chunk of the background tile.
+The nametable is essentially a representation of **32x30 tiles**, where each tile is composed of 8x8 pixels. Each nametable byte then references a sepcific address to the 16 byte chunk of the background tile.
 
 The base nametable address, or the starting address where all the background tiles are stored in memory is controlled through the PPU register `$2000`. Background patterns are referenced starting at `$0000`, or `$1000`, depending on what bit is set within `$2000`.
 
-The NES not only has 1 nametable, but 4 nametables with only 2 being active at a time to facilitate scrolling. This means that a total of 2 KB is reserved for nametables. Each nametable is 960 bytes each whith some space allocated for attribute memory for each background tile (which is an additional 64 bytes). Therefore, each nametable is composed of 1024 bytes, or 1 KB.
+The NES not only has 1 nametable, but 4 nametables with only 2 being active at a time to facilitate scrolling. 
+
+This means that a total of 2 KB is reserved for nametables. Each nametable is 960 bytes each whith some space allocated for attribute memory for each background tile (which is an additional 64 bytes). Therefore, each nametable is composed of 1024 bytes, or 1 KB. Note, that this is where the saying goes for the NES having "2KB of VRAM" -- this is the memory occupied for the 2 nametables.
 
  The nametables start at addresses `$2000`, `$2400`, `$2800`, and `$2C00`. We will only discuss in the context of a single nametable for this document. Let's assume `$2000`, and the memory map of a nametable as follows:
 
@@ -294,7 +326,9 @@ The NES not only has 1 nametable, but 4 nametables with only 2 being active at a
 |`$2000 - $23BF`|Background tile data|960 B|
 |`$23C0 - $23FF`|Attribute bytes|64 B|
 
-To reiterate once more, nametable bytes are used as an index into the real set of background tile data found elsewhere in PPU memory starting at `$0000`, or `$1000`. We will now move onto discussing how that works.
+To state once more, nametable bytes are used as an *index into the real set of background tile data found elsewhere in PPU memory*. These background tile data bytes have addresses starting at `$0000`, or `$1000`. The total number of bytes occupied within this address space is then `$2000`. 
+
+We will now move onto discussing how that works.
 
 ## Background Pattern Tiles
 
@@ -308,7 +342,7 @@ const lowBgTile = backgroundTileBaseAddress + ($10 * getByte(nametableAddress)) 
 const highBgTile = backgroundTileBaseAddress + ($10 * getByte(nametableAddress)) + fineY + 8;
 ```
 
-We will discuss `fineY` soon but notice the `+8` when computing the `highBgTile`. A single background pattern is composed of 16 bytes. 8 bytes serve as a low bit of a 2 bit color index offset. 
+We will discuss `fineY` soon but notice the `+8` when computing the `highBgTile`. A single background pattern is composed of 16 bytes. 8 bytes serve as a low bit of a 2 bit color index offset, while the latter 8 bytes of the 16 serve as a the high bits of the 2 bit color offset.
 
 ## Attribute Byte
 
@@ -326,7 +360,7 @@ Therefore it is better to imagine the nametable as an index to the real pattern 
 
 Since a tile is represented as an 8x8 set of pixels, this gives 8 rows of 8 pixels. Each background tile is a set of 16 bytes, with 8 representing the low order bits of the 4-bit color, while the last set of 8 bytes represent the high order bits of the 4-bit color of that pixel.
 
-Therefore, each row is composed of 2 bytes to form the 8 pixel row. 
+Therefore, each row is composed of 2 bytes to form the 8 pixel row. We will now walk through an example!
 
 ## Example
 
@@ -375,10 +409,10 @@ When the title screen loads, the entire contents of the name table looks like:
 
 This entire table is 32x30 entries long, with the starting address at `$2000`, and the very last element at `$23BF`. You can make some quick deductions here. The first deduction is that `$24` correponds to some blank tile that represents the black background. You may also notice that if you stand far away, you can see the general pattern of the title screen. Here, you can then assume that `$62` is probably the pattern that composes the `DONKEY KONG` title on the title screen.
 
-We are interested in finding out what pattern makes up `1`. The location we are looking at in the name table is then at address `$2209`. Let's express it like this:
+We are interested in finding out what pattern makes up tile `1`. The location we are looking at in the name table is then at address `$2209`. Let's express it like this:
 
 ```
-Nt[0x2209] = 0x1
+nameTable[0x2209] = 0x1
 ```
 
 Now, that we have the name table byte, we need to find the group of 16 bytes within memory which composes the entire pattern. In order to do so, we must first find `baseNtAddress`. This is found through the use of inspecting the PPU register `$2000` to see which base name table address we should use. 
@@ -458,9 +492,9 @@ Which outputs the values:
 00000000
 ```
 
-Here, we can clearly see the "1" that has been formed. Each individual value at a specific bit location in the low and high merged value corresponds to the color index at a specific palette.
+Here, we can clearly see the **1** that has been formed. Each individual value at a specific bit location in the low and high merged value corresponds to the color index at a specific palette.
 
-Therefore that is why it is important to know the attribute byte which corresponds to this background tile in order to pick the paltte, and then the specific color offset from this palette (colors 0, 1, 2, or 3) based on this merged result.
+This is why it is important to know the attribute byte which corresponds to this background tile in order to pick the palette, and then the specific color offset from this palette (colors 0, 1, 2, or 3) based on this merged result.
 
 In this case, we know that the pixels forming the `1` uses the second color (1) of its palette to form the character, while the first color (0) of its palette is used as the background color.
 
@@ -551,7 +585,9 @@ Palettes in PPU memory are stored beginning at `$3F00`.This is repeated at addre
 | `$3F09 - $3F0B` | Group 2 |
 | `$3F0D - $3F0F` | Group 3 |
 
-With all this, we know now that beginning at 3F00 to 3F0F, there are 16 bytes allocated for background colors. Let's take a look at the contents in memory:
+We have already been introduced to this previously in the discussion of palettes.
+
+With all this, we know now that beginning at `$3F00` to `$3F0F`, there are 16 bytes allocated for background colors. Let's take a look at the contents in memory:
 
 ```
 3F00: 0F 
@@ -575,13 +611,13 @@ With all this, we know now that beginning at 3F00 to 3F0F, there are 16 bytes al
 3F0F: 00
 ```
 
-Looking at group 1, we have the addresses 3F04, 3F05, 3F06, and 3F07.
+Looking at group 1, we have the addresses `$3F04`, `$3F05`, `$3F06`, and `$3F07`.
 
 What colors do these correspond to? Remember the color palette? 
 
 ![Color Palette](./assets/ppu_color_palette.png)
 
-The values in the palette are: 0F, 27, 27, and 27. Which translates to the following palette:
+The values in the palette are: `$0F`, `$27`, `$27`, and `$27`. Which translates to the following palette:
 
 ![Bg Tile 1 Palette](./assets/bg-tile-1-palette.png)
 
@@ -598,9 +634,9 @@ Knowing the attribute bits are $01, we need to now figure out which color within
 00000000
 ```
 
-Each color here is either the 4 bit color 0100, or 0101. 0100 corresponds to the black color, while 0101 corresponds to the goldenrod color. After a while you can see how the 1 pattern is finally formed.
+Each color here is either the 4 bit color `A=00, HL=00 => 0100`, or `A=01, HL=01 => 0101`. `0100` corresponds to the black color, while `0101` corresponds to the goldenrod color. After a while you can see how the 1 pattern is finally formed.
 
-By creating a 512x512 image with each pixel being represented as a 64x64 grid, we can manually reconstruct the image with the 4 bit color by filling in these regions with that very color. 
+By creating a 512x512 image with each pixel being represented as a 8x8 grid, we can manually reconstruct the image with the 4 bit color by filling in these regions with that very color. 
 
 We can see this indeed gives us the background tile in which we are interested in.
 
@@ -616,7 +652,42 @@ For the 256 cycles in a single scanline which are visible, there are in turn, 24
 
 In this section, I will discuss how the PPU processes a background tile with some ideas on how we can create an emulated PPU which executes a single cycle at a time. This will be useful for adapting execution of some number of cycles dependent on the CPU.
 
-If you read the PPU rendering "Line-by-Line Timing" documentation on NesDev, the description of all the specific points at which the PPU renders can be quite intimidating. I'll try to make it simpler here by re-stating the important points in verbiage more tailored towards the programmer.
+If you read the PPU rendering [Line-by-Line Timing](https://wiki.nesdev.com/w/index.php/PPU_rendering) documentation on NesDev, the description of all the specific points at which the PPU renders can be quite intimidating. I'll try to make it simpler here by re-stating the important points in verbiage more tailored towards the programmer.
+
+### WIP 
+Each cycle within the 340 cycles has a different purpose within the scanline. This is most evident for visible scanlines. 
+
+1. Pre-Render scanline -1 or 261
+    * No pixels are rendered in this scanline. From an emulation standpoint, we can use this to fill the background shift registers, for the first 2 tiles of the NEXT scanline.
+2. Visible scanlines 0-239
+    * CPU should not be writing to PPU memory during this phase of the rendering process. 
+    * Corrupting the nametable is a worry here because nametable bytes can point different tile data.
+    * Cycle 0
+        * Idle cycle. Nothing happens here
+    * Cycles 1-256
+        * This is the "hot section" of where most of the "rendering" happens. For 256 cycles total, there are 32 tiles rendered per line.
+        * Each tile being rendered is not the full tile, but the current row within the tile. 
+        * Each row within the tile takes 8 cycles to complete. (2 ppu cycles per memory access)
+            * Nametable byte
+            * Attribute table byte
+            * pattern table tile low byte
+            * pattern table tile high byte 
+        * We need to remember that for the first 2 tiles, it has already been loaded, so the first tile fetched is actually tile 3.
+
+        * At the same time, we are also doing sprite evaluation... basically rendering the sprites on screen.
+        * It is good to just separate these as two processes.
+    * Cycles 257-320
+        * Fetch the tiles for the next scanline. 
+        * it's just dummy fetches and mainly these occur simply to evaluate the sprites
+    * Cycles 321-336
+        * First 2 tiles for the next scanline are fetched and loaded to the registers here. 
+        * Same as 1-256.
+    * Cycles 337-340
+        * Just 2 nametable bytes fetched. Unknown what they are for exactly.
+3. Post-render scanline 240
+    * Idles for 340 cycles... HOWEVER VBLANK is set AFTER THIS LINE
+4. VBLANK scanlines 241-260
+    * VBLANK! CPU can write to PPU memory here. 
 
 ### The VRAM Address
 
