@@ -255,8 +255,8 @@ export class Apu {
     const n = this._noise.output();
     const d = this._dmc.output();
 
-    const pulseOut = pulseTable[Math.trunc(p1 + p2)];
-    const tndOut = tndTable[Math.trunc(3 * t + 2 * n + d)];
+    const pulseOut = pulseTable[p1 + p2];
+    const tndOut = tndTable[3 * t + 2 * n + d];
     
     return Math.fround(pulseOut + tndOut);
   }

@@ -205,17 +205,17 @@
           <div class="control">
             <div class="select is-medium">
               <select id="select-game">
-                <option value="0">Mario Bros.</option>
                 <option value="1">Donkey Kong</option>
-                <option value="4">Tetris</option>
+                <option value="0">Mario Bros.</option>
                 <option value="5">Super Mario Bros.</option>
+                <option value="12">Super Mario Bros. 3</option>
+                <option value="4">Tetris</option>
+                <option value="8">Final Fantasy</option>
                 <option value="6">Legend of Zelda</option>
                 <option value="7">Mega Man</option>
-                <option value="8">Final Fantasy</option>
-                <option value="9">Silk Worm</option>
                 <option value="10">Mega Man 2</option>
                 <option value="11">Super C</option>
-                <option value="12">Super Mario Bros. 3</option>
+                <option value="9">Silk Worm</option>
               </select>
             </div>
           </div>
@@ -237,14 +237,6 @@
             </div>
           </div>
         </div>
-
-        <div class="field">
-          <div class="control">
-            <button type="button" class="button" id="btn-save">
-              <i class="fas fa-file-download"></i> &nbsp; Save
-            </button>
-          </div>
-        </div>
       </div>
 
       <div class="indicators">
@@ -252,12 +244,16 @@
       </div>
 
       <div>
-        <strong
-          >Load your save state file from disk here once you have started the
-          game. Click "Load" when ready.</strong
-        >
+        <strong>Save, or load your game from disk.</strong>
       </div>
       <div class="load-state-container">
+        <div class="field">
+          <div class="control">
+            <button type="button" class="button" id="btn-save">
+              <i class="fas fa-file-download"></i> &nbsp; Save
+            </button>
+          </div>
+        </div>
         <div class="field">
           <div class="control">
             <div class="file has-name">

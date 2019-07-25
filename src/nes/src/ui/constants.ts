@@ -26,7 +26,7 @@ export const PlayerTwoKeyMap = {
   Right: "ArrowRight"
 };
 
-export const PlayerOneJoyMap = {
+export const PlayerJoyMap = {
   A: 0,
   B: 1,
   X: 2,
