@@ -88,11 +88,6 @@
         display: none;
       }
 
-      .nes-main-title {
-        color: #ff003c;
-        font-family: "nintenderregular";
-      }
-
       .nes-console-buttons {
         display: inline-flex;
       }
@@ -129,7 +124,7 @@
       <hr />
       Back to <a href="http://rogerngo.com">home page</a>.
       <hr />
-      <h1 class="title is-1 nes-main-title">NesThing</h1>
+      <div id="main-title-container"></div>
       <div>
         For this demo, a few games are supported. Choose one from the list and
         press "Play".
@@ -288,17 +283,7 @@
         </div>
       </div>
 
-      <div class="information">
-        <div>
-          GitHub repository:
-          <a href="https://github.com/urbanspr1nter/nesthing">nesthing</a>
-        </div>
-      </div>
-
-      <hr />
-      Roger Ngo. <a href="http://rogerngo.com">http://rogerngo.com</a>
-      <hr />
-    </div>
+      <div id="footer-container"></div>
 
     <script src="./src/wasm/wasmModule.js"></script>
     <script src="./dist/bundle.js" type="text/javascript"></script>

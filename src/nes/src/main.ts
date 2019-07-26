@@ -4,7 +4,8 @@ import { ConsoleState } from "./nes";
 import { EventEmitter } from "events";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import Hello from "./web/components/Hello";
+import { MainTitle } from "./web/components/Title";
+import { Footer } from "./web/components/Footer";
 
 // @ts-ignore
 const WasmModule = Module;
@@ -132,7 +133,7 @@ function init() {
 }
 
 function checkModule() {
-  if(WasmModule._pf_test) {
+  if (WasmModule._pf_test) {
     init();
     console.log("Initialized!");
   } else {
@@ -192,4 +193,11 @@ function saveData(data, filename) {
   a.dispatchEvent(e);
 }
 
-ReactDOM.render(React.createElement(Hello), document.getElementById("gamepad-status"));
+ReactDOM.render(
+  React.createElement(MainTitle, { title: "NesThing" }),
+  document.getElementById("main-title-container")
+);
+ReactDOM.render(
+  React.createElement(Footer),
+  document.getElementById("footer-container")
+);
