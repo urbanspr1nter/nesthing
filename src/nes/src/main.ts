@@ -2,6 +2,9 @@ import { NesConsole } from "./nesconsole";
 import RomManager, { Roms } from "./ui/rommanager";
 import { ConsoleState } from "./nes";
 import { EventEmitter } from "events";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import Hello from "./web/components/Hello";
 
 // @ts-ignore
 const WasmModule = Module;
@@ -188,3 +191,5 @@ function saveData(data, filename) {
   );
   a.dispatchEvent(e);
 }
+
+ReactDOM.render(React.createElement(Hello), document.getElementById("gamepad-status"));
