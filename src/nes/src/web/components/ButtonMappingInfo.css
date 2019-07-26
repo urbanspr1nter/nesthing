@@ -1,0 +1,16 @@
+.button-mapping-info-container div {
+  margin-right: 8px;
+}
+
+.button-mapping-info-container .button-mapping-info-table tr {
+  border: 1px solid black;
+}
+
+.button-mapping-info-container .button-mapping-info-table td {
+  border: 1px solid black;
+  padding: 4px;
+}
+
+.button-mapping-info-container .button-mapping-info-table td:nth-of-type(even) {
+  font-weight: 700;
+}

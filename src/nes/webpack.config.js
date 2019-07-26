@@ -9,6 +9,10 @@ module.exports = {
         test: /\.ts(x)?$/,
         use: "ts-loader",
         exclude: /node_modules/
+      },
+      {
+        test: /\.css$/i,
+        use: ["style-loader", "css-loader"]
       }
     ]
   },

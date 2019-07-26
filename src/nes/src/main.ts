@@ -6,6 +6,7 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { MainTitle } from "./web/components/Title";
 import { Footer } from "./web/components/Footer";
+import { ButtonMappingInfo } from "./web/components/ButtonMappingInfo";
 
 // @ts-ignore
 const WasmModule = Module;
@@ -200,4 +201,8 @@ ReactDOM.render(
 ReactDOM.render(
   React.createElement(Footer),
   document.getElementById("footer-container")
+);
+ReactDOM.render(
+  React.createElement(ButtonMappingInfo),
+  document.getElementById("button-mapping-info")
 );
