@@ -1,0 +1,13 @@
+#nes-console-screen .nes-console {
+  background: url("./src/web/overlay2.png");
+  width: 428px;
+  height: 409px;
+  margin-bottom: 8px;
+}
+
+#nes-console-screen canvas {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  margin-left: 84px;
+  margin-top: 58px;
+}

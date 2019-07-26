@@ -2,7 +2,7 @@ const path = require("path");
 
 module.exports = {
   entry: "./src/main.ts",
-  devtool: "inline-source-map",
+  /*devtool: "inline-source-map",*/
   module: {
     rules: [
       {
@@ -12,7 +12,18 @@ module.exports = {
       },
       {
         test: /\.css$/i,
-        use: ["style-loader", "css-loader"]
+        use: [
+          {
+            loader: "style-loader"
+          },
+          {
+            loader: "css-loader",
+            options: {
+              url: false
+            }
+          }
+        ],
+        exclude: /node_modules/
       }
     ]
   },

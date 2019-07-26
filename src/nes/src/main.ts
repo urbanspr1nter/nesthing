@@ -7,6 +7,7 @@ import * as ReactDOM from "react-dom";
 import { MainTitle } from "./web/components/Title";
 import { Footer } from "./web/components/Footer";
 import { ButtonMappingInfo } from "./web/components/ButtonMappingInfo";
+import NesConsoleScreen from "./web/components/NesConsoleScreen";
 
 // @ts-ignore
 const WasmModule = Module;
@@ -206,3 +207,7 @@ ReactDOM.render(
   React.createElement(ButtonMappingInfo),
   document.getElementById("button-mapping-info")
 );
+ReactDOM.render(
+  React.createElement(NesConsoleScreen),
+  document.getElementById("nes-console-screen")
+)

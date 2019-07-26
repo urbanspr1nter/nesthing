@@ -27,24 +27,10 @@
         font-family: monospace;
       }
 
-      canvas {
-        -webkit-transform: translateZ(0);
-        transform: translateZ(0);
-        margin-left: 84px;
-        margin-top: 58px;
-      }
-
       select {
         height: 36px;
         box-shadow: none;
         font-size: large;
-      }
-
-      .nes-console {
-        background: url("./src/web/overlay2.png");
-        width: 428px;
-        height: 409px;
-        margin-bottom: 8px;
       }
 
       .information {
@@ -134,9 +120,7 @@
         <div id="notification-message"></div>
       </div>
 
-      <div class="nes-console" id="canvas-container">
-        <canvas id="main" width="256" height="240"></canvas>
-      </div>
+      <div id="nes-console-screen"></div>
       <div>
         <div id="fps">0 fps</div>
       </div>
