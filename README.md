@@ -30,16 +30,15 @@ This emulator is on-going development and is my main "passion project" when it c
   * Silkworm
   * Teenage Mutant Ninja Turtles
   * Battletoads
+* Svae state compression
 
 ### Future Enhancements
 
 * Customizable control mapping
 * MMC5, and Sunsoft mappers support
 * Network play
-* Save state compression
 * NES ROM file loading for faster delivery of emulator, rather than preloading ROM files as JSON
 * Full debugging suite written in React
-
 
 
 ## Requirements
@@ -64,14 +63,13 @@ Then navigate to the `./src/nes` directory and do:
 npm install
 ```
 
-Build with webpack within the same directory:
+Build with webpack and compile C code to WASM within the same directory:
 
 ```
-webpack
+npm run build
 ```
 
 The distribution files are within `dist` and just open `./src/index.html` to demo.
-
 
 
 ## Live Demo
