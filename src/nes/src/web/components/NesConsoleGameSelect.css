@@ -1,0 +1,11 @@
+.nes-console-game-select .select {
+    margin-top: 8px;
+    width: 170px;
+    font-size: smaller;
+    height: 36px;
+    box-shadow: none;
+    display: inline-flex;
+  }
+.nes-console-game-select select {
+    min-width: 170px;
+}

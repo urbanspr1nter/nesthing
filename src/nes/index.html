@@ -27,12 +27,6 @@
         font-family: monospace;
       }
 
-      select {
-        height: 36px;
-        box-shadow: none;
-        font-size: large;
-      }
-
       .information {
         margin-top: 16px;
         margin-bottom: 16px;
@@ -62,34 +56,16 @@
         display: none;
       }
 
-      .nes-console-buttons {
-        display: inline-flex;
-      }
-
-      .nes-console-buttons .field {
-        margin: 8px;
-      }
-
-      .nes-button {
-        width: 112px;
-        padding: 8px;
-        color: #ff003c;
-        background-color: #c8c8c8;
-        font-size: medium;
-        font-family: "nintenderregular";
-        box-shadow: 0 1px 1px 1px #a0a0a0;
-      }
-
-      .nes-button:hover {
-        cursor: pointer;
-      }
-
       .load-state-container {
         display: inline-flex;
       }
 
       .load-state-container .field {
         margin: 8px;
+      }
+
+      .nes-console-controls {
+        display: inline-flex;
       }
     </style>
   </head>
@@ -124,43 +100,10 @@
       <div>
         <div id="fps">0 fps</div>
       </div>
-      <div class="controls">
-        <div class="field">
-          <div class="control">
-            <div class="select is-medium">
-              <select id="select-game">
-                <option value="1">Donkey Kong</option>
-                <option value="0">Mario Bros.</option>
-                <option value="5">Super Mario Bros.</option>
-                <option value="12">Super Mario Bros. 3</option>
-                <option value="4">Tetris</option>
-                <option value="8">Final Fantasy</option>
-                <option value="6">Legend of Zelda</option>
-                <option value="7">Mega Man</option>
-                <option value="10">Mega Man 2</option>
-                <option value="11">Super C</option>
-                <option value="9">Silk Worm</option>
-              </select>
-            </div>
-          </div>
-        </div>
 
-        <div class="nes-console-buttons">
-          <div class="field">
-            <div class="control">
-              <button type="button" class="nes-button" id="btn-play">
-                <i class="fas fa-play"></i> &nbsp; PLAY
-              </button>
-            </div>
-          </div>
-          <div class="field">
-            <div class="control">
-              <button type="button" class="nes-button" id="btn-reset">
-                <i class="fas fa-redo-alt"></i> &nbsp; RESET
-              </button>
-            </div>
-          </div>
-        </div>
+      <div class="nes-console-controls">
+        <div id="nes-console-game-select-container"></div>
+        <div id="nes-console-buttons-container"></div>
       </div>
 
       <div class="indicators">

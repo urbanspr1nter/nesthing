@@ -1,0 +1,21 @@
+.nes-console-buttons {
+    display: inline-flex;
+}
+
+.nes-console-buttons .field {
+    margin: 8px;
+}
+
+.nes-console-buttons .nes-button {
+    width: 110px;
+    padding: 8px;
+    color: #ff003c;
+    background-color: #c8c8c8;
+    font-size: small;
+    font-family: "nintenderregular";
+    box-shadow: 0 1px 1px 1px #a0a0a0;
+}
+
+.nes-console-buttons:hover {
+    cursor: pointer;
+}

@@ -8,6 +8,8 @@ import { MainTitle } from "./web/components/Title";
 import { Footer } from "./web/components/Footer";
 import { ButtonMappingInfo } from "./web/components/ButtonMappingInfo";
 import NesConsoleScreen from "./web/components/NesConsoleScreen";
+import NesConsoleButtons from "./web/components/NesConsoleButtons";
+import NesConsoleGameSelect from "./web/components/NesConsoleGameSelect";
 
 // @ts-ignore
 const WasmModule = Module;
@@ -43,10 +45,6 @@ document.onreadystatechange = () => {
         );
         notificationContainer.classList.add("hidden");
       });
-
-    document.getElementById("btn-reset").addEventListener("click", () => {
-      gameConsole.nes.reset();
-    });
   }
 };
 
@@ -107,29 +105,97 @@ document.getElementById("btn-save").addEventListener("click", () => {
 // Run bootstrap code
 checkModule();
 
+function onPlayClick() {
+  eventEmitter.emit("stop");
+  eventEmitter.removeAllListeners("stop");
+
+  var selectElement = document.getElementById(
+    "select-game"
+  ) as HTMLSelectElement;
+  var selectedGame = Number(
+    selectElement.options[selectElement.selectedIndex].value
+  );
+
+  var game = RomManager.valueToGame(selectedGame);
+
+  gameConsole = new NesConsole(game, canvasId, eventEmitter, WasmModule);
+  gameConsole.setupDOM();
+
+  setTimeout(function() {
+    setImmediate(() => gameConsole.run(performance.now()));
+  }, 1000);
+}
+
+function onResetClick() {
+  if (!gameConsole) {
+    return;
+  }
+  gameConsole.nes.reset();
+}
+
 function init() {
-  const pf = WasmModule;
-
-  document.getElementById("btn-play").addEventListener("click", () => {
-    eventEmitter.emit("stop");
-    eventEmitter.removeAllListeners("stop");
-
-    var selectElement = document.getElementById(
-      "select-game"
-    ) as HTMLSelectElement;
-    var selectedGame = Number(
-      selectElement.options[selectElement.selectedIndex].value
-    );
-
-    var game = RomManager.valueToGame(selectedGame);
-
-    gameConsole = new NesConsole(game, canvasId, eventEmitter, pf);
-    gameConsole.setupDOM();
-
-    setTimeout(function() {
-      setImmediate(() => gameConsole.run(performance.now()));
-    }, 1000);
-  });
+  ReactDOM.render(
+    React.createElement(MainTitle, { title: "NesThing" }),
+    document.getElementById("main-title-container")
+  );
+  ReactDOM.render(
+    React.createElement(Footer),
+    document.getElementById("footer-container")
+  );
+  ReactDOM.render(
+    React.createElement(ButtonMappingInfo),
+    document.getElementById("button-mapping-info")
+  );
+  ReactDOM.render(
+    React.createElement(NesConsoleScreen),
+    document.getElementById("nes-console-screen")
+  );
+  ReactDOM.render(
+    React.createElement(NesConsoleGameSelect, {
+      options: [{
+        value: 1,
+        title: "Donkey Kong"
+      }, {
+        value: 0,
+        title: "Mario Bros."
+      }, {
+        value: 5,
+        title: "Super Mario Bros."
+      }, {
+        value: 12,
+        title: "Super Mario Bros. 3"
+      }, {
+        value: 4,
+        title: "Tetris"
+      }, {
+        value: 8,
+        title: "Final Fantasy"
+      }, {
+        value: 6,
+        title: "Legend of Zelda"
+      }, {
+        value: 7,
+        title: "Mega Man"
+      }, {
+        value: 10,
+        title: "Mega Man 2"
+      }, {
+        value: 11,
+        title: "Super C"
+      }, {
+        value: 9,
+        title: "Silk Worm"
+      }]
+    }),
+    document.getElementById("nes-console-game-select-container")
+  );
+  ReactDOM.render(
+    React.createElement(NesConsoleButtons, {
+      onPlayClick: onPlayClick.bind(this),
+      onResetClick: onResetClick.bind(this)
+    }),
+    document.getElementById("nes-console-buttons-container")
+  );
 
   document.getElementById("overlay").className = "hidden";
 }
@@ -194,20 +260,3 @@ function saveData(data, filename) {
   );
   a.dispatchEvent(e);
 }
-
-ReactDOM.render(
-  React.createElement(MainTitle, { title: "NesThing" }),
-  document.getElementById("main-title-container")
-);
-ReactDOM.render(
-  React.createElement(Footer),
-  document.getElementById("footer-container")
-);
-ReactDOM.render(
-  React.createElement(ButtonMappingInfo),
-  document.getElementById("button-mapping-info")
-);
-ReactDOM.render(
-  React.createElement(NesConsoleScreen),
-  document.getElementById("nes-console-screen")
-)
