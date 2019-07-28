@@ -11,3 +11,12 @@
   margin-left: 84px;
   margin-top: 58px;
 }
+
+#nes-console-screen #nes-console-fps {
+  color: yellow;
+  font-size: smaller;
+  font-weight: bold;
+  margin-top: 60px;
+  margin-left: 46px;
+  position: absolute;
+}

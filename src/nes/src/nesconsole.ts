@@ -97,9 +97,9 @@ export class NesConsole {
         this._nes.run();
         if (this._nes.ppuFrames > this._ppuFrames) {
           // Calculate current FPS
-          const currFps = (ONE_SECOND_MS / this._frameTime).toFixed(2);
+          const currFps = (ONE_SECOND_MS / this._frameTime).toFixed(1);
           if (currFps !== this._lastFps && this._ppuFrames % FPS === 0) {
-            document.getElementById("fps").innerHTML = `${currFps} fps`;
+            document.getElementById("nes-console-fps").innerHTML = `${currFps}`;
             this._lastFps = currFps;
           }
 

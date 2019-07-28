@@ -9,15 +9,21 @@ const styles = {
 
 export interface TitleProps {
   title: string;
+  subtitle: string;
 }
 
 export const MainTitle: React.FunctionComponent<TitleProps> = (
   props: TitleProps
 ) => {
-  const { title } = props;
+  const { title, subtitle } = props;
   return (
-    <h1 className="title is-1" style={styles.mainTitle}>
-      {title}
-    </h1>
+    <section className="hero is-light is-bold">
+      <div className="hero-body">
+        <h1 className="title" style={styles.mainTitle}>
+          {title}
+        </h1>
+        <h2 className="subtitle">{subtitle}</h2>
+      </div>
+    </section>
   );
 };

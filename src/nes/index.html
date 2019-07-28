@@ -32,19 +32,11 @@
         margin-bottom: 16px;
       }
 
-      .indicators {
-        margin-top: 16px;
-      }
-
-      #fps {
-        font-weight: bold;
-      }
-
       #overlay {
-        height: 80vh;
+        height: 100vh;
         width: 100vw;
         position: absolute;
-        opacity: 0.55;
+        opacity: 0.75;
         background-color: white;
       }
 
@@ -70,44 +62,33 @@
     </style>
   </head>
   <body>
+    <div id="overlay">
+      <div><strong>Loading...</strong></div>
+      <div><img src="src/web/spinner.gif" /></div>
+    </div>
     <div class="container">
-      <hr />
-      Back to <a href="http://rogerngo.com">home page</a>.
-      <hr />
-      <div id="main-title-container"></div>
-      <div>
-        For this demo, a few games are supported. Choose one from the list and
-        press "Play".
         <hr />
-      </div>
-      <div id="button-mapping-info"></div>
+        Back to <a href="http://rogerngo.com">home page</a>.
+        <hr/>
+    </div>
 
-      <div id="overlay">
-        <div>
-          <strong>Loading...</strong>
-        </div>
-        <div>
-          <img src="src/web/spinner.gif" />
-        </div>
-      </div>
+    <div id="main-title-container"></div>
+
+
+    <div class="container">
+      <div id="button-mapping-info"></div>
 
       <div class="notification" id="notification-container">
         <button class="delete" id="btn-dismiss-notification"></button>
         <div id="notification-message"></div>
       </div>
 
-      <div id="nes-console-screen"></div>
-      <div>
-        <div id="fps">0 fps</div>
-      </div>
+      <div id="nes-console-container"></div>
 
+      <div id="nes-console-screen"></div>
       <div class="nes-console-controls">
         <div id="nes-console-game-select-container"></div>
         <div id="nes-console-buttons-container"></div>
-      </div>
-
-      <div class="indicators">
-        <div id="gamepad-status"></div>
       </div>
 
       <div>

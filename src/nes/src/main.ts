@@ -10,23 +10,17 @@ import { ButtonMappingInfo } from "./web/components/ButtonMappingInfo";
 import NesConsoleScreen from "./web/components/NesConsoleScreen";
 import NesConsoleButtons from "./web/components/NesConsoleButtons";
 import NesConsoleGameSelect from "./web/components/NesConsoleGameSelect";
+import {
+  ReadyState,
+  NotificationType,
+  uiGameOptions,
+  DomCanvasId
+} from "./constants";
 
 // @ts-ignore
 const WasmModule = Module;
-
 const pako = require("pako");
-const canvasId = "main";
 const eventEmitter = new EventEmitter();
-// https://developer.mozilla.org/en-US/docs/Web/API/Document/readyState
-const ReadyState = {
-  Loading: "loading",
-  Interactive: "interactive",
-  Complete: "complete"
-};
-enum NotificationType {
-  Danger = "is-danger",
-  Information = "is-info"
-}
 
 let gameConsole: NesConsole;
 
@@ -49,12 +43,13 @@ document.onreadystatechange = () => {
 };
 
 document.getElementById("save-file").addEventListener("change", () => {
-  var files = (document.getElementById("save-file") as HTMLInputElement).files;
+  const files = (document.getElementById("save-file") as HTMLInputElement)
+    .files;
   if (files.length === 0) {
     return;
   }
 
-  var file = files[0];
+  const file = files[0];
 
   document.getElementById("file-name").innerHTML = file.name;
 });
@@ -109,16 +104,16 @@ function onPlayClick() {
   eventEmitter.emit("stop");
   eventEmitter.removeAllListeners("stop");
 
-  var selectElement = document.getElementById(
+  const selectElement = document.getElementById(
     "select-game"
   ) as HTMLSelectElement;
-  var selectedGame = Number(
+  const selectedGame = Number(
     selectElement.options[selectElement.selectedIndex].value
   );
 
-  var game = RomManager.valueToGame(selectedGame);
+  const game = RomManager.valueToGame(selectedGame);
 
-  gameConsole = new NesConsole(game, canvasId, eventEmitter, WasmModule);
+  gameConsole = new NesConsole(game, DomCanvasId, eventEmitter, WasmModule);
   gameConsole.setupDOM();
 
   setTimeout(function() {
@@ -135,7 +130,11 @@ function onResetClick() {
 
 function init() {
   ReactDOM.render(
-    React.createElement(MainTitle, { title: "NesThing" }),
+    React.createElement(MainTitle, {
+      title: "NesThing",
+      subtitle:
+        "For this demo, a few games are supported. Choose one from the list and press \"Play\"."
+    }),
     document.getElementById("main-title-container")
   );
   ReactDOM.render(
@@ -152,40 +151,7 @@ function init() {
   );
   ReactDOM.render(
     React.createElement(NesConsoleGameSelect, {
-      options: [{
-        value: 1,
-        title: "Donkey Kong"
-      }, {
-        value: 0,
-        title: "Mario Bros."
-      }, {
-        value: 5,
-        title: "Super Mario Bros."
-      }, {
-        value: 12,
-        title: "Super Mario Bros. 3"
-      }, {
-        value: 4,
-        title: "Tetris"
-      }, {
-        value: 8,
-        title: "Final Fantasy"
-      }, {
-        value: 6,
-        title: "Legend of Zelda"
-      }, {
-        value: 7,
-        title: "Mega Man"
-      }, {
-        value: 10,
-        title: "Mega Man 2"
-      }, {
-        value: 11,
-        title: "Super C"
-      }, {
-        value: 9,
-        title: "Silk Worm"
-      }]
+      options: uiGameOptions
     }),
     document.getElementById("nes-console-game-select-container")
   );

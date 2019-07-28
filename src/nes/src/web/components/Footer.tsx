@@ -8,8 +8,8 @@ const styles = {
   container: {
     marginLeft: 16,
     marginRight: 16,
-    paddingTop: 32,
-    paddingBottom: 32,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderBottom: "1px solid #e0e0e0"
   }
 };
