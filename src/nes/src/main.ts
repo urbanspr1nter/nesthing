@@ -16,10 +16,11 @@ import {
   uiGameOptions,
   DomCanvasId
 } from "./constants";
+import { saveStateData, pako } from "./savemanager";
+import { setNotification } from "./ui/notificationhelper";
 
 // @ts-ignore
 const WasmModule = Module;
-const pako = require("pako");
 const eventEmitter = new EventEmitter();
 
 let gameConsole: NesConsole;
@@ -89,13 +90,13 @@ document.getElementById("btn-save").addEventListener("click", () => {
 
   setNotification("Saved state!", NotificationType.Information);
 
-  saveData(
+  saveStateData(
     data,
-    `${Roms[gameConsole.nes.rom]}-save-state-${new Date(
-      Date.now()
-    ).toISOString()}.dat`
+    Roms[gameConsole.nes.rom]
   );
 });
+
+
 
 // Run bootstrap code
 checkModule();
@@ -174,55 +175,4 @@ function checkModule() {
     console.log("Waiting to initialize...");
     setTimeout(checkModule, 250);
   }
-}
-
-function setNotification(message: string, type: NotificationType) {
-  const notificationMessage = document.getElementById("notification-message");
-  notificationMessage.innerHTML = message;
-
-  const notificationContainer = document.getElementById(
-    "notification-container"
-  );
-  notificationContainer.classList.remove("hidden");
-  notificationContainer.classList.add(type);
-}
-
-function saveData(data, filename) {
-  if (!data) {
-    setNotification("No data to save.", NotificationType.Danger);
-    return;
-  }
-
-  if (!filename) {
-    filename = `${Roms[gameConsole.nes.rom]}-save-state-${new Date(
-      Date.now()
-    ).toISOString()}.dat`;
-  }
-
-  const compressedData = pako.deflate(data, { to: "string" });
-  const blob = new Blob([compressedData]);
-  const e = document.createEvent("MouseEvents");
-  const a = document.createElement("a");
-
-  a.download = filename;
-  a.href = window.URL.createObjectURL(blob);
-  a.dataset.downloadurl = ["text/plain", a.download, a.href].join(":");
-  e.initMouseEvent(
-    "click",
-    true,
-    false,
-    window,
-    0,
-    0,
-    0,
-    0,
-    0,
-    false,
-    false,
-    false,
-    false,
-    0,
-    null
-  );
-  a.dispatchEvent(e);
 }
