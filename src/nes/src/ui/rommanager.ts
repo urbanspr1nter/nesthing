@@ -12,7 +12,8 @@ export enum Roms {
   MegaMan2,
   SuperC,
   SuperMarioBros3,
-  Battletoads
+  Battletoads,
+  ExciteBike
 }
 
 export const RomFiles = {
@@ -26,7 +27,8 @@ export const RomFiles = {
   SilkWorm: require("../roms/silkworm.json"),
   MegaMan2: require("../roms/mm2.json"),
   SuperC: require("../roms/superc.json"),
-  SuperMarioBros3: require("../roms/smb3.json")
+  SuperMarioBros3: require("../roms/smb3.json"),
+  ExciteBike: require("../roms/ebike.json")
 };
 
 export default class RomManager {
@@ -54,6 +56,8 @@ export default class RomManager {
         return Roms.SuperC;
       case 12:
         return Roms.SuperMarioBros3;
+      case 13:
+        return Roms.ExciteBike;
     }
     return Roms.MarioBros;
   }
@@ -82,6 +86,8 @@ export default class RomManager {
         return RomFiles.SuperC;
       case Roms.SuperMarioBros3:
         return RomFiles.SuperMarioBros3;
+      case Roms.ExciteBike:
+        return RomFiles.ExciteBike;
     }
   }
 }

@@ -33,7 +33,7 @@ export const ButtonMappingInfo: React.FunctionComponent = () => {
           </tr>
           <tr>
             <td>A, B</td>
-            <td>J, K</td>
+            <td>K, J</td>
           </tr>
         </table>
         <strong>Player 2: Keyboard Mapping</strong>

@@ -7,8 +7,8 @@ export const DEFAULT_FRAME_BUFFER_COLOR = "#0000C0";
 export const PlayerOneKeyMap = {
   Start: "Enter",
   Select: "Shift",
-  A: "j",
-  B: "k",
+  A: "k",
+  B: "j",
   Up: "w",
   Down: "s",
   Left: "a",

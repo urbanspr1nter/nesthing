@@ -56,5 +56,9 @@ export const uiGameOptions = [
   {
     value: 9,
     title: "Silk Worm"
+  },
+  {
+    value: 13,
+    title: "Excite Bike"
   }
 ];
