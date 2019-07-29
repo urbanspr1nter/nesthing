@@ -1,6 +1,3 @@
-import { NotificationType } from "./constants";
-import { setNotification } from "./ui/notificationhelper";
-
 export const pako = require("pako");
 
 function getSaveStateFilename(romName: string) {
@@ -9,7 +6,6 @@ function getSaveStateFilename(romName: string) {
 
 export function saveStateData(data: string, romName: string) {
   if (!data) {
-    setNotification("No data to save.", NotificationType.Danger);
     return;
   }
 

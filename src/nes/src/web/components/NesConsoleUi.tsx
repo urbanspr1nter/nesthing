@@ -8,16 +8,27 @@ import { NesConsole } from "../../nesconsole";
 import { EventEmitter } from "events";
 import RomManager, { Roms } from "../../ui/rommanager";
 import { DomCanvasId, NotificationType } from "../../constants";
-import { setNotification } from "../../ui/notificationhelper";
 import { ConsoleState } from "../../nes";
 import { pako, saveStateData } from "../../savemanager";
+import { NotificationMessage } from "./NotificationMessage";
+
+require("./NesConsoleUi.css");
 
 export interface NesConsoleProps {
   options: NesConsoleGameSelectValue[];
   wasmModule: any;
 }
 
-export default class NesConsoleUi extends React.PureComponent<NesConsoleProps> {
+export interface NesConsoleState {
+  notificationMessage: string;
+  notificationVisible: boolean;
+  notificationType: NotificationType
+}
+
+export default class NesConsoleUi extends React.PureComponent<
+  NesConsoleProps,
+  NesConsoleState
+> {
   private _eventEmitter: EventEmitter;
   private _gameConsole: NesConsole;
 
@@ -26,6 +37,12 @@ export default class NesConsoleUi extends React.PureComponent<NesConsoleProps> {
 
     this._eventEmitter = new EventEmitter();
     this._gameConsole = null;
+
+    this.state = {
+      notificationMessage: "",
+      notificationVisible: false,
+      notificationType: NotificationType.Information
+    };
   }
 
   public componentDidMount() {
@@ -43,7 +60,7 @@ export default class NesConsoleUi extends React.PureComponent<NesConsoleProps> {
 
     document.getElementById("btn-load").addEventListener("click", () => {
       if (!this._gameConsole) {
-        setNotification("Start a game!", NotificationType.Danger);
+        this._setNotification("Start a game!", NotificationType.Danger);
         return;
       }
       const files = (document.getElementById("save-file") as HTMLInputElement)
@@ -60,7 +77,7 @@ export default class NesConsoleUi extends React.PureComponent<NesConsoleProps> {
           const data: ConsoleState = JSON.parse(jsonString);
 
           if (data.currentRom !== gameConsole.nes.rom) {
-            setNotification("Game doesn't match!", NotificationType.Danger);
+            this._setNotification("Game doesn't match!", NotificationType.Danger);
             return;
           }
 
@@ -74,7 +91,7 @@ export default class NesConsoleUi extends React.PureComponent<NesConsoleProps> {
     document.getElementById("btn-save").addEventListener("click", () => {
       const data = this._gameConsole.save();
 
-      setNotification("Saved state!", NotificationType.Information);
+      this._setNotification("Saved state!", NotificationType.Information);
 
       saveStateData(data, Roms[this._gameConsole.nes.rom]);
     });
@@ -85,10 +102,16 @@ export default class NesConsoleUi extends React.PureComponent<NesConsoleProps> {
 
     return (
       <div>
+        <NotificationMessage
+          message={this.state.notificationMessage}
+          visible={this.state.notificationVisible}
+          type={this.state.notificationType}
+          onDismissClick={this._notificationDismiss.bind(this)}
+        />
         <div id="nes-console-screen">
           <NesConsoleScreen />
         </div>
-        <div className="nes-console-conntrols">
+        <div className="nes-console-controls">
           <div id="nes-console-game-select-container">
             <NesConsoleGameSelect options={options} />
           </div>
@@ -136,5 +159,19 @@ export default class NesConsoleUi extends React.PureComponent<NesConsoleProps> {
       return;
     }
     this._gameConsole.nes.reset();
+  }
+
+  private _notificationDismiss() {
+    this.setState({
+      notificationVisible: false
+    });
+  }
+
+  private _setNotification(message: string, type: NotificationType) {
+    this.setState({
+      notificationMessage: message,
+      notificationVisible: true,
+      notificationType: type
+    });
   }
 }

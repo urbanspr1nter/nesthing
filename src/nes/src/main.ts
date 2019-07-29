@@ -15,24 +15,6 @@ const WasmModule = Module;
 // Run bootstrap code
 checkModule();
 
-document.onreadystatechange = () => {
-  if (document.readyState === ReadyState.Interactive) {
-    const notificationContainer = document.getElementById(
-      "notification-container"
-    );
-    notificationContainer.classList.add("hidden");
-
-    document
-      .getElementById("btn-dismiss-notification")
-      .addEventListener("click", () => {
-        const notificationContainer = document.getElementById(
-          "notification-container"
-        );
-        notificationContainer.classList.add("hidden");
-      });
-  }
-};
-
 function init() {
   ReactDOM.render(
     React.createElement(MainTitle, {
