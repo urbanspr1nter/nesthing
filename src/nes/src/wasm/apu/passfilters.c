@@ -59,6 +59,14 @@ FirstOrderFilter *pf_highPassFilter(int sampleRate, int cutoffFrequency) {
 
 void pf_addFilterToChain(FirstOrderFilter *f) {
     filters[chainIdx++] = *f;
+
+    /* 
+        Ensure that the list of filters circles back to the beginning if another filter has been added. 
+        We only support max=3.
+    */
+    if(chainIdx >= FILTER_COUNT) {
+        chainIdx = 0;
+    }
 }
 
 float pf_step(float x, FirstOrderFilter *f) {

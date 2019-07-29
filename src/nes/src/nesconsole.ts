@@ -27,33 +27,17 @@ export class NesConsole {
     eventEmitter: EventEmitter,
     pf: any
   ) {
-    const playerOneController = new Controller();
-    const playerTwoController = new Controller();
 
-    this._options = {
-      keyHandler: new UiKeyHandler(playerOneController, playerTwoController),
-      frameRenderer: new UiFrameBuffer(canvasId),
-      controller: {
-        one: playerOneController,
-        two: playerTwoController
-      },
-      rom
-    };
-
-    this._nes = new Nes(this._options, pf);
-    this._frameTime = 0;
-    this._lastFrameTime = 0;
-    this._ppuFrames = 0;
-    this._msPerFrame = ONE_SECOND_MS / FPS;
-
-    this._lastFps = "0.0";
-    this._isRunning = true;
-
+    this._init(canvasId, rom, pf);
     this._eventEmitter = eventEmitter;
 
     this._eventEmitter.on("stop", () => {
       this._isRunning = false;
     });
+
+    this._eventEmitter.on("start", () => {
+      this._init(canvasId, rom, pf);
+    })
   }
 
   get nes() {
@@ -114,5 +98,30 @@ export class NesConsole {
     }
     
     setImmediate(() => this.run(performance.now()));
+  }
+
+
+  private _init(canvasId: string, rom: Roms, pf: any) {
+    const playerOneController = new Controller();
+    const playerTwoController = new Controller();
+
+    this._options = {
+      keyHandler: new UiKeyHandler(playerOneController, playerTwoController),
+      frameRenderer: new UiFrameBuffer(canvasId),
+      controller: {
+        one: playerOneController,
+        two: playerTwoController
+      },
+      rom
+    };
+
+    this._nes = new Nes(this._options, pf);
+    this._frameTime = 0;
+    this._lastFrameTime = 0;
+    this._ppuFrames = 0;
+    this._msPerFrame = ONE_SECOND_MS / FPS;
+
+    this._lastFps = "0.0";
+    this._isRunning = true;
   }
 }
