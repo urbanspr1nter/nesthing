@@ -7,12 +7,12 @@
 }
 
 .button-mapping-info-container .button-mapping-info-table tr {
-  border: 1px solid black;
+  border: 1px dotted black;
 }
 
 .button-mapping-info-container .button-mapping-info-table td {
-  border: 1px solid black;
-  padding: 4px;
+  border: 1px dotted black;
+  padding: 6px;
 }
 
 .button-mapping-info-container .button-mapping-info-table td:nth-of-type(even) {

@@ -1,4 +1,9 @@
+.nes-console-ui-container {
+  margin-left: 32px;
+}
 .nes-console-controls {
-    display: inline-flex;
-  }
+  display: inline-flex;
+}
+
+
   

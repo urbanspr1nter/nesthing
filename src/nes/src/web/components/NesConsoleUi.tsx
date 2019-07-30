@@ -11,6 +11,7 @@ import { DomCanvasId, NotificationType } from "../../constants";
 import { ConsoleState } from "../../nes";
 import { pako, saveStateData } from "../../savemanager";
 import { NotificationMessage } from "./NotificationMessage";
+import SaveManager from "./SaveManager";
 
 require("./NesConsoleUi.css");
 
@@ -101,7 +102,7 @@ export default class NesConsoleUi extends React.PureComponent<
     const { options } = this.props;
 
     return (
-      <div>
+      <div className="nes-console-ui-container">
         <NotificationMessage
           message={this.state.notificationMessage}
           visible={this.state.notificationVisible}
@@ -122,6 +123,7 @@ export default class NesConsoleUi extends React.PureComponent<
             />
           </div>
         </div>
+        <SaveManager />
       </div>
     );
   }

@@ -8,8 +8,8 @@ const styles = {
     display: "inline-flex"
   } as React.CSSProperties,
   table: {
-    border: "1px solid black",
-    borderCollapse: "collapse"
+    border: "1px dotted #888888",
+    borderCollapse: "collapse",
   } as React.CSSProperties
 };
 
