@@ -90,7 +90,7 @@ export class NesConsole {
           this._frameCounter++;
           if(this._cumulativeFrameTime >= ONE_SECOND_MS) {
             const currFps = this._frameCounter.toFixed(1);
-            if (currFps !== this._lastFps && this._ppuFrames % FPS === 0) {
+            if (currFps !== this._lastFps) {
               document.getElementById("nes-console-fps").innerHTML = `${currFps}`;
               this._lastFps = currFps;
             }
