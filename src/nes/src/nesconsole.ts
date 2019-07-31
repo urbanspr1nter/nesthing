@@ -87,16 +87,7 @@ export class NesConsole {
         this._nes.run();
         if (this._nes.ppuFrames > this._ppuFrames) {
           // Calculate current FPS
-          this._frameCounter++;
-          if(this._cumulativeFrameTime >= ONE_SECOND_MS) {
-            const currFps = this._frameCounter.toFixed(1);
-            if (currFps !== this._lastFps) {
-              document.getElementById("nes-console-fps").innerHTML = `${currFps}`;
-              this._lastFps = currFps;
-            }
-            this._cumulativeFrameTime = 0;
-            this._frameCounter = 0;
-          }
+          this._putFps();
 
           // Handle joypad
           this._options.keyHandler.handlePlayerOneJoypad();
@@ -109,6 +100,20 @@ export class NesConsole {
     }
     
     setImmediate(() => this.run(performance.now()));
+  }
+
+  private _putFps() {
+    this._frameCounter++;
+
+    if(this._cumulativeFrameTime >= ONE_SECOND_MS) {
+      const currFps = this._frameCounter.toFixed(1);
+      if (currFps !== this._lastFps) {
+        document.getElementById("nes-console-fps").innerHTML = `${currFps}`;
+        this._lastFps = currFps;
+      }
+      this._cumulativeFrameTime = 0;
+      this._frameCounter = 0;
+    }
   }
 
 
