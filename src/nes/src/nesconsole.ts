@@ -20,6 +20,8 @@ export class NesConsole {
   private _msPerFrame: number;
   private _ppuFrames: number;
   private _lastFps: string;
+  private _cumulativeFrameTime: number;
+  private _frameCounter: number;
 
   constructor(
     rom: Roms,
@@ -37,7 +39,10 @@ export class NesConsole {
 
     this._eventEmitter.on("start", () => {
       this._init(canvasId, rom, pf);
-    })
+    });
+
+    this._cumulativeFrameTime = 0;
+    this._frameCounter = 0;
   }
 
   get nes() {
@@ -73,6 +78,7 @@ export class NesConsole {
     }
 
     this._frameTime += timestamp - this._lastFrameTime;
+    this._cumulativeFrameTime += (timestamp - this._lastFrameTime);
     this._lastFrameTime = timestamp;
 
     while (this._frameTime >= this._msPerFrame) {
@@ -81,10 +87,15 @@ export class NesConsole {
         this._nes.run();
         if (this._nes.ppuFrames > this._ppuFrames) {
           // Calculate current FPS
-          const currFps = (ONE_SECOND_MS / this._frameTime).toFixed(1);
-          if (currFps !== this._lastFps && this._ppuFrames % FPS === 0) {
-            document.getElementById("nes-console-fps").innerHTML = `${currFps}`;
-            this._lastFps = currFps;
+          this._frameCounter++;
+          if(this._cumulativeFrameTime >= ONE_SECOND_MS) {
+            const currFps = this._frameCounter.toFixed(1);
+            if (currFps !== this._lastFps && this._ppuFrames % FPS === 0) {
+              document.getElementById("nes-console-fps").innerHTML = `${currFps}`;
+              this._lastFps = currFps;
+            }
+            this._cumulativeFrameTime = 0;
+            this._frameCounter = 0;
           }
 
           // Handle joypad
