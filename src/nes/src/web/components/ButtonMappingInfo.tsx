@@ -2,6 +2,11 @@ import * as React from "react";
 
 require("./ButtonMappingInfo.css");
 
+export interface ButtonMappingInfoProps {
+  visible: boolean;
+  onToggle: () => void;
+}
+
 const styles = {
   container: {
     marginBottom: 8,
@@ -9,13 +14,39 @@ const styles = {
   } as React.CSSProperties,
   table: {
     border: "1px dotted #888888",
-    borderCollapse: "collapse",
+    borderCollapse: "collapse"
   } as React.CSSProperties
 };
 
-export const ButtonMappingInfo: React.FunctionComponent = () => {
+export const ButtonMappingInfo: React.FunctionComponent<
+  ButtonMappingInfoProps
+> = (props: ButtonMappingInfoProps) => {
+  const { visible, onToggle } = props;
+
+  let buttonKeymapLabel = "Show Key Map";
+
+  let button = (
+    <button type="button" className="button is-info" onClick={onToggle}>
+      {buttonKeymapLabel}
+    </button>
+  );
+
+  if (!visible) {
+    return <div className="button-mapping-info-container">{button}</div>;
+  } else {
+    buttonKeymapLabel = "Hide Key Map";
+    button = (
+      <button type="button" className="button is-light" onClick={onToggle}>
+        {buttonKeymapLabel}
+      </button>
+    );
+  }
+
   return (
     <div className="button-mapping-info-container" style={styles.container}>
+      <div>
+        {button}
+      </div>
       <div>
         <strong>Player 1: Keyboard Mapping</strong>
         <table className="button-mapping-info-table" style={styles.table}>

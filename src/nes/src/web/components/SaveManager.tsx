@@ -1,5 +1,7 @@
 import * as React from "react";
 
+require("./SaveManager.css");
+
 export default class SaveManager extends React.PureComponent {
   constructor(props) {
     super(props);
@@ -15,7 +17,10 @@ export default class SaveManager extends React.PureComponent {
           <div className="field">
             <div className="control">
               <button type="button" className="button" id="btn-save">
-                <i className="fas fa-file-download" /> Save
+                <i className="fas fa-file-download" /> 
+                <span className="button-label">
+                  Save
+                </span>
               </button>
             </div>
           </div>
@@ -45,7 +50,10 @@ export default class SaveManager extends React.PureComponent {
           <div className="field">
             <div className="control">
               <button type="button" className="button is-info" id="btn-load">
-                <i className="fas fa-upload" /> Load
+                <i className="fas fa-upload" /> 
+                <span className="button-label">
+                  Load
+                </span>
               </button>
             </div>
           </div>

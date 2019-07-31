@@ -16,5 +16,10 @@
 }
 
 .button-mapping-info-container .button-mapping-info-table td:nth-of-type(even) {
-  font-weight: 700;
+  font-weight: bold;
+}
+
+.button-mapping-info-container button:first-of-type {
+  margin-top: 16px;
+  margin-bottom: 16px;
 }
