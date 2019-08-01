@@ -3,9 +3,11 @@
       "outDir": "./dist/",
       "noImplicitAny": false,
       "module": "es2015",
+      "moduleResolution": "node",
       "target": "esnext",
       "jsx": "react",
       "allowJs": true,
-      "sourceMap": true
+      "sourceMap": true,
+      "allowSyntheticDefaultImports": true
     }
   }
