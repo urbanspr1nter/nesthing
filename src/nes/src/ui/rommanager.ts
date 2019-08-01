@@ -13,7 +13,8 @@ export enum Roms {
   SuperC,
   SuperMarioBros3,
   Battletoads,
-  ExciteBike
+  ExciteBike,
+  Contra
 }
 
 export const RomFiles = {
@@ -28,7 +29,8 @@ export const RomFiles = {
   MegaMan2: require("../roms/mm2.json"),
   SuperC: require("../roms/superc.json"),
   SuperMarioBros3: require("../roms/smb3.json"),
-  ExciteBike: require("../roms/ebike.json")
+  ExciteBike: require("../roms/ebike.json"),
+  Contra: require("../roms/contra.json")
 };
 
 export default class RomManager {
@@ -58,6 +60,8 @@ export default class RomManager {
         return Roms.SuperMarioBros3;
       case 13:
         return Roms.ExciteBike;
+      case 14:
+        return Roms.Contra;
     }
     return Roms.MarioBros;
   }
@@ -88,6 +92,8 @@ export default class RomManager {
         return RomFiles.SuperMarioBros3;
       case Roms.ExciteBike:
         return RomFiles.ExciteBike;
+      case Roms.Contra:
+        return RomFiles.Contra;
     }
   }
 }

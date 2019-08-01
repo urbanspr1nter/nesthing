@@ -60,5 +60,9 @@ export const uiGameOptions = [
   {
     value: 13,
     title: "Excite Bike"
+  },
+  {
+    value: 14,
+    title: "Contra"
   }
 ];

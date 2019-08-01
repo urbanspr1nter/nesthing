@@ -8,14 +8,14 @@ import * as fs from "fs";
  */
 
 const bytes: number[] = [];
-const romContents = fs.readFileSync("./roms/original/excitebike.nes");
+const romContents = fs.readFileSync("./roms/original/Contra.nes");
 romContents.forEach(value => {
   bytes.push(value);
 });
 
 const result = {
-  name: "ebike.nes",
+  name: "contra.nes",
   raw: bytes
 };
 
-fs.writeFileSync("./ebike.json", JSON.stringify(result));
+fs.writeFileSync("./contra.json", JSON.stringify(result));
