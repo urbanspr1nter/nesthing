@@ -12,12 +12,15 @@ import { ConsoleState } from "../../nes";
 import { pako, saveStateData } from "../../savemanager";
 import { NotificationMessage } from "./NotificationMessage";
 import SaveManager from "./SaveManager";
+import NesNetPlay from "./NesNetPlay";
+import NetPlay from "../../netplay";
 
 require("./NesConsoleUi.css");
 
 export interface NesConsoleProps {
   options: NesConsoleGameSelectValue[];
   wasmModule: any;
+  netplay: NetPlay;
 }
 
 export interface NesConsoleState {
@@ -99,7 +102,7 @@ export default class NesConsoleUi extends React.PureComponent<
   }
 
   public render() {
-    const { options } = this.props;
+    const { options, netplay } = this.props;
 
     return (
       <div className="nes-console-ui-container">
@@ -124,6 +127,7 @@ export default class NesConsoleUi extends React.PureComponent<
           </div>
         </div>
         <SaveManager />
+        <NesNetPlay id={netplay.id} />
       </div>
     );
   }

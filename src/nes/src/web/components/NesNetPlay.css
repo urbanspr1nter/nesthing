@@ -1,0 +1,11 @@
+.nes-netplay-container label {
+    font-size: 0.8em;
+}
+.nes-netplay-container label.connection-id {
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-left: 8px;
+}
+.nes-netplay-container input.input {
+    max-width: 200px;
+}
