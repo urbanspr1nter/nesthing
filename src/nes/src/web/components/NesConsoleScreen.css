@@ -13,7 +13,7 @@
 }
 
 #nes-console-screen #nes-console-fps {
-  color: yellow;
+  color: #DD0000;
   font-size: smaller;
   font-weight: bold;
   margin-top: 60px;

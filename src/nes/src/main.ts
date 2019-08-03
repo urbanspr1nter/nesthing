@@ -19,18 +19,6 @@ function init() {
   );
 
   document.getElementById("overlay").className = "hidden";
-
-  document.getElementById("peer-id-connect").addEventListener("click", () => {
-    const peerId = (document.getElementById("peer-id") as HTMLInputElement)
-      .value;
-
-    const connection = netplay.connect(peerId);
-    connection.on("open", function() {
-      document.getElementById("peer-send").addEventListener("click", () => {
-        netplay.ping();
-      });
-    });
-  });
 }
 
 function checkModule() {

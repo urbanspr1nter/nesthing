@@ -26,7 +26,8 @@ export interface NesConsoleProps {
 export interface NesConsoleState {
   notificationMessage: string;
   notificationVisible: boolean;
-  notificationType: NotificationType
+  notificationType: NotificationType;
+  netplayPeerId: string;
 }
 
 export default class NesConsoleUi extends React.PureComponent<
@@ -45,7 +46,8 @@ export default class NesConsoleUi extends React.PureComponent<
     this.state = {
       notificationMessage: "",
       notificationVisible: false,
-      notificationType: NotificationType.Information
+      notificationType: NotificationType.Information,
+      netplayPeerId: ""
     };
   }
 
@@ -81,7 +83,10 @@ export default class NesConsoleUi extends React.PureComponent<
           const data: ConsoleState = JSON.parse(jsonString);
 
           if (data.currentRom !== gameConsole.nes.rom) {
-            this._setNotification("Game doesn't match!", NotificationType.Danger);
+            this._setNotification(
+              "Game doesn't match!",
+              NotificationType.Danger
+            );
             return;
           }
 
@@ -127,9 +132,33 @@ export default class NesConsoleUi extends React.PureComponent<
           </div>
         </div>
         <SaveManager />
-        <NesNetPlay id={netplay.id} />
+        <NesNetPlay
+          id={netplay.id}
+          onPingClick={this._onPingClick.bind(this)}
+          onConnectClick={this._onConnectClick.bind(this)}
+          onNetplayPeerIdChange={this._onNetplayIdChange.bind(this)}
+          netplayPeerId={this.state.netplayPeerId}
+        />
       </div>
     );
+  }
+
+  private _onNetplayIdChange(e: KeyboardEvent) {
+    const netplayPeerId = (e.target as HTMLInputElement).value;
+
+    this.setState({ netplayPeerId });
+  }
+
+  private _onConnectClick() {
+    const { netplay } = this.props;
+
+    netplay.connect(this.state.netplayPeerId);
+  }
+
+  private _onPingClick() {
+    const { netplay } = this.props;
+
+    netplay.ping();
   }
 
   private _handlePlayClick() {

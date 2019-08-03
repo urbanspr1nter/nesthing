@@ -49,7 +49,7 @@ export default class SaveManager extends React.PureComponent {
           </div>
           <div className="field">
             <div className="control">
-              <button type="button" className="button is-info" id="btn-load">
+              <button type="button" className="button is-link" id="btn-load">
                 <i className="fas fa-upload" /> 
                 <span className="button-label">
                   Load

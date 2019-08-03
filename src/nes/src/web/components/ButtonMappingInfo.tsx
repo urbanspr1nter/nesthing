@@ -26,7 +26,7 @@ export const ButtonMappingInfo: React.FunctionComponent<
   let buttonKeymapLabel = "Show Key Map";
 
   let button = (
-    <button type="button" className="button is-info" onClick={onToggle}>
+    <button type="button" className="button is-link" onClick={onToggle}>
       {buttonKeymapLabel}
     </button>
   );

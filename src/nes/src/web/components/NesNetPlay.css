@@ -9,3 +9,9 @@
 .nes-netplay-container input.input {
     max-width: 200px;
 }
+.nes-netplay-container button {
+    margin-right: 8px;
+}
+.nes-netplay-container svg {
+    margin-right: 8px;
+}
