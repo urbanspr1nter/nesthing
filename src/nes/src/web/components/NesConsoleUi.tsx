@@ -13,7 +13,7 @@ import { pako, saveStateData } from "../../savemanager";
 import { NotificationMessage } from "./NotificationMessage";
 import SaveManager from "./SaveManager";
 import NesNetPlay from "./NesNetPlay";
-import NetPlay from "../../netplay";
+import NetPlay, { NetPlayStatus } from "../../netplay";
 
 require("./NesConsoleUi.css");
 
@@ -28,6 +28,7 @@ export interface NesConsoleState {
   notificationVisible: boolean;
   notificationType: NotificationType;
   netplayPeerId: string;
+  netplayStatus: string;
 }
 
 export default class NesConsoleUi extends React.PureComponent<
@@ -47,7 +48,8 @@ export default class NesConsoleUi extends React.PureComponent<
       notificationMessage: "",
       notificationVisible: false,
       notificationType: NotificationType.Information,
-      netplayPeerId: ""
+      netplayPeerId: "",
+      netplayStatus: NetPlayStatus[props.netplay.status]
     };
   }
 
@@ -138,6 +140,7 @@ export default class NesConsoleUi extends React.PureComponent<
           onConnectClick={this._onConnectClick.bind(this)}
           onNetplayPeerIdChange={this._onNetplayIdChange.bind(this)}
           netplayPeerId={this.state.netplayPeerId}
+          netplayStatus={NetPlayStatus[this.state.netplayStatus]}
         />
       </div>
     );
@@ -153,12 +156,16 @@ export default class NesConsoleUi extends React.PureComponent<
     const { netplay } = this.props;
 
     netplay.connect(this.state.netplayPeerId);
+
+    this.setState({netplayStatus: NetPlayStatus[netplay.status]});
   }
 
   private _onPingClick() {
     const { netplay } = this.props;
 
     netplay.ping();
+
+    this.setState({netplayStatus: NetPlayStatus[netplay.status]});
   }
 
   private _handlePlayClick() {

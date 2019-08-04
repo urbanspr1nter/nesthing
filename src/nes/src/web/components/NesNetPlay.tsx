@@ -5,6 +5,7 @@ require("./NesNetPlay.css");
 export interface NesNetPlayProps {
   id: string;
   netplayPeerId: string;
+  netplayStatus: string;
   onConnectClick: () => void;
   onPingClick: () => void;
   onNetplayPeerIdChange: () => void;
@@ -26,6 +27,7 @@ export default class NesNetPlay extends React.PureComponent<
       onPingClick,
       onConnectClick,
       netplayPeerId,
+      netplayStatus,
       onNetplayPeerIdChange
     } = this.props;
 
@@ -34,6 +36,7 @@ export default class NesNetPlay extends React.PureComponent<
         <label>NetPlay ID</label>
         <label className="connection-id">{id}</label>
         <div className="tags has-addons">
+          <span className="tag is-link">{netplayStatus}</span>
           <span className="tag is-danger">Player 1</span>
           <span className="tag is-light">Player 2</span>
         </div>
