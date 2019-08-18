@@ -1,19 +1,15 @@
 const app = require("express")();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const server = require("http").createServer(app);
+const io = require("socket.io")(server);
 
-app.get("/", (req, res) => {
-    res.status(200).send("It works!");
+server.listen(3000, () => {
+    console.log("Listening on port 3000");
 });
 
 io.on("connection", (socket) => {
-    console.log("User connected");
-    socket.on("ping", (name, fn) => {
-        console.log("ping!");
-        fn("pong");
+    console.log("User connected aaa");
+    socket.on("pingy", (event) => {
+        console.log("ping!", event);
+        socket.emit("pongy");
     });
-});
-
-http.listen(3000, () => {
-    console.log("Listening on port 3000");
 });

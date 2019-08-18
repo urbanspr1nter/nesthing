@@ -12,23 +12,18 @@ import { ConsoleState } from "../../nes";
 import { pako, saveStateData } from "../../savemanager";
 import { NotificationMessage } from "./NotificationMessage";
 import SaveManager from "./SaveManager";
-import NesNetPlay from "./NesNetPlay";
-import NetPlay, { NetPlayStatus } from "../../netplay";
 
 require("./NesConsoleUi.css");
 
 export interface NesConsoleProps {
   options: NesConsoleGameSelectValue[];
   wasmModule: any;
-  netplay: NetPlay;
 }
 
 export interface NesConsoleState {
   notificationMessage: string;
   notificationVisible: boolean;
   notificationType: NotificationType;
-  netplayPeerId: string;
-  netplayStatus: string;
 }
 
 export default class NesConsoleUi extends React.PureComponent<
@@ -47,9 +42,7 @@ export default class NesConsoleUi extends React.PureComponent<
     this.state = {
       notificationMessage: "",
       notificationVisible: false,
-      notificationType: NotificationType.Information,
-      netplayPeerId: "",
-      netplayStatus: NetPlayStatus[props.netplay.status]
+      notificationType: NotificationType.Information
     };
   }
 
@@ -109,7 +102,7 @@ export default class NesConsoleUi extends React.PureComponent<
   }
 
   public render() {
-    const { options, netplay } = this.props;
+    const { options } = this.props;
 
     return (
       <div className="nes-console-ui-container">
@@ -134,38 +127,8 @@ export default class NesConsoleUi extends React.PureComponent<
           </div>
         </div>
         <SaveManager />
-        <NesNetPlay
-          id={netplay.id}
-          onPingClick={this._onPingClick.bind(this)}
-          onConnectClick={this._onConnectClick.bind(this)}
-          onNetplayPeerIdChange={this._onNetplayIdChange.bind(this)}
-          netplayPeerId={this.state.netplayPeerId}
-          netplayStatus={NetPlayStatus[this.state.netplayStatus]}
-        />
       </div>
     );
-  }
-
-  private _onNetplayIdChange(e: KeyboardEvent) {
-    const netplayPeerId = (e.target as HTMLInputElement).value;
-
-    this.setState({ netplayPeerId });
-  }
-
-  private _onConnectClick() {
-    const { netplay } = this.props;
-
-    netplay.connect(this.state.netplayPeerId);
-
-    this.setState({netplayStatus: NetPlayStatus[netplay.status]});
-  }
-
-  private _onPingClick() {
-    const { netplay } = this.props;
-
-    netplay.ping();
-
-    this.setState({netplayStatus: NetPlayStatus[netplay.status]});
   }
 
   private _handlePlayClick() {

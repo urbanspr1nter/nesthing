@@ -4,11 +4,9 @@ import { ButtonMappingInfo } from "./ButtonMappingInfo";
 import NesConsoleUi from "./NesConsoleUi";
 import { uiGameOptions } from "../../constants";
 import { Footer } from "./Footer";
-import NetPlay from "../../netplay";
 
 export interface AppProps {
   wasmModule: any;
-  netplay: NetPlay;
 }
 
 export interface AppState {
@@ -25,7 +23,7 @@ export default class App extends React.PureComponent<AppProps, AppState> {
   }
 
   public render() {
-    const { wasmModule, netplay } = this.props;
+    const { wasmModule } = this.props;
     const { buttonInfoMappingVisible } = this.state;
     return (
       <div>
@@ -42,7 +40,6 @@ export default class App extends React.PureComponent<AppProps, AppState> {
         <NesConsoleUi
           options={uiGameOptions}
           wasmModule={wasmModule}
-          netplay={netplay}
         />
         <Footer />
       </div>
