@@ -1,18 +1,7 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import App from "./web/components/App";
-import io from "socket.io-client";
-
-const SERVER_ENDPOINT = "http://localhost:3000";
-
-const socket = io(SERVER_ENDPOINT);
-socket.on("connect", () => {
-  console.log("CONNECTED!");
-  socket.on("pongy", () => {
-    console.log("PONG!");
-  });
-  socket.emit("pingy", {data: "ping"});
-});
+import NetPlay from "./netplay";
 
 // @ts-ignore
 const WasmModule = Module;
@@ -20,11 +9,7 @@ const WasmModule = Module;
 // Run bootstrap code
 checkModule();
 
-
 function init() {
-
-
-
   ReactDOM.render(
     React.createElement(App, { wasmModule: WasmModule }),
     document.getElementById("app")

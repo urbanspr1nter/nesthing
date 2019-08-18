@@ -1,78 +1,55 @@
-import Peer from "peerjs";
-import {v4 as uuid} from "uuid";
+import { v4 as uuid } from "uuid";
+import io from "socket.io-client";
+import { NesConsole } from "./nesconsole";
 
-export enum NetPlayStatus {
-    Inactive = "Inactive",
-    Waiting = "Waiting",
-    Active = "Active"
+const SERVER_PING_INTERVAL = 20000;
+const SERVER_ENDPOINT = "http://localhost:3000";
+
+enum NetPlayEvents {
+  Ping = "pingy",
+  Pong = "pongy",
+  StreamState = "stream-state",
+  ReceiveState = "receive-state"
 }
-
 export default class NetPlay {
-    private _peer: Peer;
-    private _connection: Peer.DataConnection;
-    private _thisPeerId: string;
-    private _thatPeerId: string;
-    private _thatPeerConnected: boolean;
+  private _clientId: string;
+  private _ioSocket: SocketIOClient.Socket;
+  private _pingInterval: NodeJS.Timer;
 
-    constructor() {
-        this._thisPeerId = uuid();
-        this._thatPeerId = null;
-        this._connection = null;
-        this._thatPeerConnected = null;
+  constructor(nesConsole: NesConsole) {
+    this._clientId = uuid();
 
-        this._peer = new Peer(this._thisPeerId);
-        this._peer.on("open", () => {
-            console.log(`Connection opened. ${this._thisPeerId}`);
-        });
+    this._ioSocket = io(SERVER_ENDPOINT);
+    this._ioSocket.on("connect", () => {
+      this._ioSocket.on("receive-state", (data: any) => {
+          if(data.clientId === this._clientId) {
+              return;
+          }
+        nesConsole.load(data.payload);
+        console.log(data);
+      });
 
-        // Handle incoming data from others.
-        this._peer.on("connection", (connection: any) => {
-            if(this._connection && this._connection.peer === connection.peer) {
-                this._thatPeerConnected = true;
-            }
-            connection.on("data", (data: any) => {
-                console.log(`Payload ${data}`);
-                if(data.indexOf("ping") !== -1) {
-                    connection.send(`${this._thatPeerId} :: pong`);
-                } else {
-                    // Save state payload
-                }                
-            });
-        });
-    }
+      this._ioSocket.on("pongy", () => {
+        console.log("PONG!");
+      });
 
-    get id() {
-        return this._thisPeerId;
-    }
+      this._pingInterval = setInterval(
+        this.ping.bind(this),
+        SERVER_PING_INTERVAL
+      );
+    });
 
-    get peerId() {
-        return this._thatPeerId;
-    }
+    this._ioSocket.on("disconnect", () => {
+      clearInterval(this._pingInterval);
+      this._ioSocket.connect();
+    });
+  }
 
-    get status() {
-        if(!this._thisPeerId || !this._thatPeerId || !this._thatPeerConnected) {
-            return NetPlayStatus.Waiting;
-        }
-        if(this._thisPeerId && this._thatPeerId && this._thatPeerConnected) {
-            return NetPlayStatus.Active;
-        }
+  public ping() {
+    this._ioSocket.emit(NetPlayEvents.Ping, { clientId: this._clientId });
+  }
 
-        return NetPlayStatus.Inactive;
-    }
-
-    public connect(destPeerId: string): Peer.DataConnection {
-        this._thatPeerId = destPeerId;
-
-        this._connection = this._peer.connect(this._thatPeerId, { reliable: true });
-
-        return this._connection;
-    }
-
-    public ping() {
-        this._connection.send(`${this._thisPeerId} :: ping`);
-    }
-
-    public send(data: string) {
-        this._connection.send(data);
-    }
+  public stream(payload: string) {
+    this._ioSocket.emit("stream-state", {clientId: this._clientId, payload: JSON.parse(payload)});
+  }
 }

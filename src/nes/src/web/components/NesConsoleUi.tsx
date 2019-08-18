@@ -12,6 +12,7 @@ import { ConsoleState } from "../../nes";
 import { pako, saveStateData } from "../../savemanager";
 import { NotificationMessage } from "./NotificationMessage";
 import SaveManager from "./SaveManager";
+import NetPlay from "../../netplay";
 
 require("./NesConsoleUi.css");
 
@@ -32,6 +33,7 @@ export default class NesConsoleUi extends React.PureComponent<
 > {
   private _eventEmitter: EventEmitter;
   private _gameConsole: NesConsole;
+  private _netplay: NetPlay;
 
   constructor(props: NesConsoleProps) {
     super(props);
@@ -153,6 +155,11 @@ export default class NesConsoleUi extends React.PureComponent<
       wasmModule
     );
     this._gameConsole.setupDOM();
+
+    this._netplay = new NetPlay(this._gameConsole);
+    document.addEventListener("keydown", () => {
+      this._netplay.stream(this._gameConsole.save());
+    });
 
     setTimeout(() => {
       setImmediate(() => this._gameConsole.run(performance.now()));
