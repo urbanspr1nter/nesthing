@@ -20,7 +20,7 @@ import {
   CycleContext
 } from "./cpu.interface";
 import { CpuState } from "./constants";
-import { read16Bug, read16 } from "./cpu.helpers";
+import { read16Bug, read16, isCarry, isOverflow } from "./cpu.helpers";
 
 /**
  * Provides the main implementation for the CPU. It emulates only the necessary instructions
@@ -258,48 +258,6 @@ export class Cpu {
     return (this.P & (1 << bit)) > 0;
   }
 
-  private _isOverflow(
-    first: number,
-    second: number,
-    final: number,
-    isAdc: boolean
-  ): boolean {
-    const modifiedFirst = first & 0xff;
-    const modifiedSecond = second & 0xff;
-    const modifiedFinal = final & 0xff;
-
-    if (isAdc) {
-      if (
-        ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
-        ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      if (
-        ((modifiedFirst ^ modifiedSecond) & 0x80) !== 0 &&
-        ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-
-  private _isCarry(first: number, second: number, carry: number, adc: boolean) {
-    const modifiedFirst = first & 0xff;
-    const modifiedSecond = second & 0xff;
-    const modifiedCarry = carry & 0xff;
-    if (adc) {
-      return modifiedFirst + modifiedSecond + modifiedCarry > 0xff;
-    } else {
-      return modifiedFirst - modifiedSecond - modifiedCarry >= 0;
-    }
-  }
-
   private _stackPush(data: number): void {
     this.memWrite(0x100 | this.SP, data);
     this.SP = this.SP - 1;
@@ -395,13 +353,13 @@ export class Cpu {
     this._setZero(this.A);
     this._setNegative(this.A);
 
-    if (this._isCarry(a, b, carry, true)) {
+    if (isCarry(a, b, carry, true)) {
       this._setStatusBit(StatusBitPositions.Carry);
     } else {
       this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (this._isOverflow(a, b, this.A, true)) {
+    if (isOverflow(a, b, this.A, true)) {
       this._setStatusBit(StatusBitPositions.Overflow);
     } else {
       this._clearStatusBit(StatusBitPositions.Overflow);
@@ -767,13 +725,13 @@ export class Cpu {
     this._setZero(this.A);
     this._setNegative(this.A);
 
-    if (this._isCarry(a, b, 1 - carry, false)) {
+    if (isCarry(a, b, 1 - carry, false)) {
       this._setStatusBit(StatusBitPositions.Carry);
     } else {
       this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (this._isOverflow(a, b, this.A, false)) {
+    if (isOverflow(a, b, this.A, false)) {
       this._setStatusBit(StatusBitPositions.Overflow);
     } else {
       this._clearStatusBit(StatusBitPositions.Overflow);

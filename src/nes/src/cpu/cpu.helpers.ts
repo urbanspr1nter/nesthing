@@ -21,3 +21,50 @@ export function read16(cpu: Cpu, address: number): number {
 
   return ((high << 8) | low) & 0xffff;
 }
+
+export function isOverflow(
+  first: number,
+  second: number,
+  final: number,
+  isAdc: boolean
+): boolean {
+  const modifiedFirst = first & 0xff;
+  const modifiedSecond = second & 0xff;
+  const modifiedFinal = final & 0xff;
+
+  if (isAdc) {
+    if (
+      ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
+      ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    if (
+      ((modifiedFirst ^ modifiedSecond) & 0x80) !== 0 &&
+      ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+}
+
+export function isCarry(
+  first: number,
+  second: number,
+  carry: number,
+  adc: boolean
+) {
+  const modifiedFirst = first & 0xff;
+  const modifiedSecond = second & 0xff;
+  const modifiedCarry = carry & 0xff;
+  if (adc) {
+    return modifiedFirst + modifiedSecond + modifiedCarry > 0xff;
+  } else {
+    return modifiedFirst - modifiedSecond - modifiedCarry >= 0;
+  }
+}

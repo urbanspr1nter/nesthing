@@ -18,7 +18,7 @@ describe("cpu.helpers tests", () => {
     expect(result).toBe(0x0200);
   });
 
-  it("should read 2 bytes form memory to form an effective address", () => {
+  it("should read 2 bytes from memory to form an effective address", () => {
     const mockCpu = {
       memRead: jest.fn().mockImplementation((param: number) => {
         const mockMemory = {
