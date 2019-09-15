@@ -78,11 +78,21 @@ If you are too lazy to clone and build the project, feel free to check out the l
 
 
 
-**NesThing - http://rogerngo.com/demo/nesthing/index.html**
+**NesThing - http://rogerngo.com/nesthing**
 
 ![Emulator Demo](./assets/demo.gif)
 
+## Testing
 
+```
+npm run test
+```
+
+### nestest
+
+* The CPU currently passes all `nestest` ROM tests. :)
+
+![nestest rom results](./assets/nestest_results.png)
 
 ## Feedback? Contact?
 

@@ -14,7 +14,8 @@ export enum Roms {
   SuperMarioBros3,
   Battletoads,
   ExciteBike,
-  Contra
+  Contra,
+  NesTest
 }
 
 export const RomFiles = {
@@ -24,13 +25,15 @@ export const RomFiles = {
   SuperMarioBros: require("../roms/smb.json"),
   LegendOfZelda: require("../roms/loz.json"),
   MegaMan: require("../roms/mm.json"),
-  FinalFantasy:  require("../roms/ff.json"),
+  FinalFantasy: require("../roms/ff.json"),
   SilkWorm: require("../roms/silkworm.json"),
   MegaMan2: require("../roms/mm2.json"),
   SuperC: require("../roms/superc.json"),
   SuperMarioBros3: require("../roms/smb3.json"),
   ExciteBike: require("../roms/ebike.json"),
-  Contra: require("../roms/contra.json")
+  Contra: require("../roms/contra.json"),
+  NesTest: require("../roms/nestest.json"),
+  BattleToads: require("../roms/bt.json")
 };
 
 export default class RomManager {
@@ -62,6 +65,10 @@ export default class RomManager {
         return Roms.ExciteBike;
       case 14:
         return Roms.Contra;
+      case 15:
+        return Roms.NesTest;
+      case 16:
+        return Roms.Battletoads;
     }
     return Roms.MarioBros;
   }
@@ -94,6 +101,10 @@ export default class RomManager {
         return RomFiles.ExciteBike;
       case Roms.Contra:
         return RomFiles.Contra;
+      case Roms.NesTest:
+        return RomFiles.NesTest;
+      case Roms.Battletoads:
+        return RomFiles.BattleToads;
     }
   }
 }

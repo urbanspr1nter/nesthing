@@ -1,6 +1,6 @@
 /**
  * cpu.ts
- * 
+ *
  * Roger Ngo
  */
 
@@ -20,9 +20,10 @@ import {
   CycleContext
 } from "./cpu.interface";
 import { CpuState } from "./constants";
+import { read16Bug, read16 } from "./cpu.helpers";
 
 /**
- * Provides the main implementation for the CPU. It emulates only the necessary instructions 
+ * Provides the main implementation for the CPU. It emulates only the necessary instructions
  * to successfully run NES games based on the Ricoh 2A03.
  */
 export class Cpu {
@@ -50,6 +51,10 @@ export class Cpu {
     this._setCurrentContext(0, AddressingModes.Immediate);
   }
 
+  get registers() {
+    return this._registers;
+  }
+
   get memory() {
     return this._memory;
   }
@@ -66,6 +71,44 @@ export class Cpu {
     return this._currentCycles;
   }
 
+  get A() {
+    return this._registers.A;
+  }
+  get X() {
+    return this._registers.X;
+  }
+  get Y() {
+    return this._registers.Y;
+  }
+  get PC() {
+    return this._registers.PC;
+  }
+  get SP() {
+    return this._registers.SP;
+  }
+  get P() {
+    return this._registers.P;
+  }
+
+  set A(value: number) {
+    this._registers.A = value & 0xff;
+  }
+  set X(value: number) {
+    this._registers.X = value & 0xff;
+  }
+  set Y(value: number) {
+    this._registers.Y = value & 0xff;
+  }
+  set PC(value: number) {
+    this._registers.PC = value & 0xffff;
+  }
+  set SP(value: number) {
+    this._registers.SP = value & 0xffff;
+  }
+  set P(value: number) {
+    this._registers.P = value & 0xff;
+  }
+
   public load(state: CpuState) {
     this._registers = state.registers;
     this._currentCycles = state.currentCycles;
@@ -80,13 +123,13 @@ export class Cpu {
       stallCycles: this._stallCycles,
       interrupt: this._interrupt,
       context: this._context
-    }
+    };
   }
 
   /**
    * Initial boot up routine for the CPU. Will set:
-   * 
-   * 1. P - status register to 0x24, 
+   *
+   * 1. P - status register to 0x24,
    * 2. SP - stack pointer register to 0x01fd
    * 3. Initialize all CPU memory to be 0xff
    * 4. Performs a Reset interrupt
@@ -96,7 +139,7 @@ export class Cpu {
     this.P = 0x24;
     this.SP = 0x01fd;
 
-    for (let i = 0x0000; i <= 0x07ff; i++) {
+    for (let i = 0x0; i <= 0x07ff; i++) {
       this.memWrite(i, 0xff);
     }
 
@@ -106,24 +149,26 @@ export class Cpu {
   }
 
   /**
-   * Requests the CPU to execute an interrupt handler for the next execution cycle. 
-   * We will ignore the interrupt request if the request type is IRQ and interrupts are 
+   * Requests the CPU to execute an interrupt handler for the next execution cycle.
+   * We will ignore the interrupt request if the request type is IRQ and interrupts are
    * disabled.
-   * 
+   *
    * @param interruptRequestType interrupt type to be requested for the next execution cycle
    */
   public requestInterrupt(interruptRequestType: InterruptRequestType) {
-    if(interruptRequestType === InterruptRequestType.IRQ 
-      && this._getStatusBitFlag(StatusBitPositions.InterruptDisable)) {
+    if (
+      interruptRequestType === InterruptRequestType.IRQ &&
+      this._getStatusBitFlag(StatusBitPositions.InterruptDisable)
+    ) {
       return;
     }
     this._interrupt = interruptRequestType;
   }
 
   /**
-   * Runs a single instruction for the CPU. If an interrupt was previously requested, then 
+   * Runs a single instruction for the CPU. If an interrupt was previously requested, then
    * the interrupt will be handled first, followed by the instruction to be executed.
-   * 
+   *
    * What is returned is the total number of CPU cycles the CPU had executed.
    */
   public step(): number {
@@ -133,7 +178,7 @@ export class Cpu {
       this._runStallCycle();
       return this._currentCycles - prevCurrentCycles;
     }
-    
+
     if (this._interrupt === InterruptRequestType.NMI) {
       this._handleNmi();
     } else if (
@@ -142,7 +187,7 @@ export class Cpu {
     ) {
       this._irq();
     }
-    
+
     const op = this._memory.get(this.PC);
 
     let addressInfo = this._getAddressFromMode(OpAddressingMode[op]);
@@ -160,15 +205,23 @@ export class Cpu {
     return this._currentCycles - prevCurrentCycles;
   }
 
+  public memWrite(address: number, data: number) {
+    this._memory.set(address, data);
+  }
+
+  public memRead(address: number): number {
+    return this._memory.get(address);
+  }
+
   private _setCurrentContext(address: number, addressingMode: AddressingModes) {
-    if(this._context === undefined) {
+    if (this._context === undefined) {
       this._context = {
         PC: 0,
         Address: 0,
         Mode: AddressingModes.Immediate
       };
     }
-    
+
     this._context.PC = this.PC;
     this._context.Address = address & 0xffff;
     this._context.Mode = addressingMode;
@@ -193,44 +246,6 @@ export class Cpu {
     this._currentCycles += 7;
   }
 
-  private get A() {
-    return this._registers.A;
-  }
-  private get X() {
-    return this._registers.X;
-  }
-  private get Y() {
-    return this._registers.Y;
-  }
-  private get PC() {
-    return this._registers.PC;
-  }
-  private get SP() {
-    return this._registers.SP;
-  }
-  private get P() {
-    return this._registers.P;
-  }
-
-  private set A(value: number) {
-    this._registers.A = value & 0xff;
-  }
-  private set X(value: number) {
-    this._registers.X = value & 0xff;
-  }
-  private set Y(value: number) {
-    this._registers.Y = value & 0xff;
-  }
-  private set PC(value: number) {
-    this._registers.PC = value & 0xffff;
-  }
-  private set SP(value: number) {
-    this._registers.SP = value & 0xffff;
-  }
-  private set P(value: number) {
-    this._registers.P = value & 0xff;
-  }
-
   private _setStatusBit(bit: StatusBitPositions): void {
     this.P = this.P | (1 << bit);
   }
@@ -243,17 +258,34 @@ export class Cpu {
     return (this.P & (1 << bit)) > 0;
   }
 
-  private _isOverflow(first: number, second: number, final: number): boolean {
+  private _isOverflow(
+    first: number,
+    second: number,
+    final: number,
+    isAdc: boolean
+  ): boolean {
     const modifiedFirst = first & 0xff;
     const modifiedSecond = second & 0xff;
     const modifiedFinal = final & 0xff;
-    if (
-      ((modifiedFirst ^ modifiedSecond) & 0x80) !== 0 &&
-      ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
-    ) {
-      return true;
+
+    if (isAdc) {
+      if (
+        ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
+        ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
+      ) {
+        return true;
+      } else {
+        return false;
+      }
     } else {
-      return false;
+      if (
+        ((modifiedFirst ^ modifiedSecond) & 0x80) !== 0 &&
+        ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
+      ) {
+        return true;
+      } else {
+        return false;
+      }
     }
   }
 
@@ -264,18 +296,8 @@ export class Cpu {
     if (adc) {
       return modifiedFirst + modifiedSecond + modifiedCarry > 0xff;
     } else {
-      return (
-        (modifiedFirst & 0xff) - (modifiedSecond & 0xff) - modifiedCarry >= 0
-      );
+      return modifiedFirst - modifiedSecond - modifiedCarry >= 0;
     }
-  }
-
-  public memWrite(address: number, data: number) {
-    this._memory.set(address, data);
-  }
-
-  public memRead(address: number): number {
-    return this._memory.get(address);
   }
 
   private _stackPush(data: number): void {
@@ -286,24 +308,6 @@ export class Cpu {
   private _stackPull(): number {
     this.SP = this.SP + 1;
     return this.memRead(0x100 | this.SP);
-  }
-
-  private _read16(address: number): number {
-    const low = this.memRead(address);
-    const high = this.memRead(address + 1);
-
-    return ((high << 8) | low) & 0xffff;
-  }
-
-  private _read16Bug(address: number): number {
-    const a = address;
-    const b = (a & 0xff00) | (((a & 0xff) + 1) & 0xff);
-    const low = this.memRead(a);
-    const high = this.memRead(b);
-
-    const effAddress = ((high << 8) | low) & 0xffff;
-
-    return effAddress;
   }
 
   private _crossesPageBoundary(a: number, b: number): boolean {
@@ -397,7 +401,7 @@ export class Cpu {
       this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (this._isOverflow(a, b, this.A)) {
+    if (this._isOverflow(a, b, this.A, true)) {
       this._setStatusBit(StatusBitPositions.Overflow);
     } else {
       this._clearStatusBit(StatusBitPositions.Overflow);
@@ -769,7 +773,7 @@ export class Cpu {
       this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (this._isOverflow(a, b, this.A)) {
+    if (this._isOverflow(a, b, this.A, false)) {
       this._setStatusBit(StatusBitPositions.Overflow);
     } else {
       this._clearStatusBit(StatusBitPositions.Overflow);
@@ -859,20 +863,20 @@ export class Cpu {
         address = this.PC + 1;
         break;
       case AddressingModes.Absolute:
-        address = this._read16(this.PC + 1);
+        address = read16(this, this.PC + 1);
         break;
       case AddressingModes.AbsoluteIndirect:
-        address = this._read16Bug(this._read16(this.PC + 1));
+        address = read16Bug(this, read16(this, this.PC + 1));
         break;
       case AddressingModes.DirectPage:
-        address = this.memRead(this.PC + 1);
+        address = this.memRead(this.PC + 1) & 0xff;
         break;
       case AddressingModes.AbsoluteIndexedX:
-        address = this._read16(this.PC + 1) + this.X;
+        address = read16(this, this.PC + 1) + this.X;
         pageCrossed = this._crossesPageBoundary(address - this.X, address);
         break;
       case AddressingModes.AbsoluteIndexedY:
-        address = this._read16(this.PC + 1) + this.Y;
+        address = read16(this, this.PC + 1) + this.Y;
         pageCrossed = this._crossesPageBoundary(address - this.Y, address);
         break;
       case AddressingModes.DirectPageIndexedX:
@@ -882,10 +886,10 @@ export class Cpu {
         address = (this.memRead(this.PC + 1) + this.Y) & 0xff;
         break;
       case AddressingModes.DirectPageIndexedIndirectX:
-        address = this._read16Bug(this.memRead(this.PC + 1) + this.X);
+        address = read16Bug(this, (this.memRead(this.PC + 1) + this.X) & 0xff);
         break;
       case AddressingModes.DirectPageIndirectIndexedY:
-        address = this._read16Bug(this.memRead(this.PC + 1)) + this.Y;
+        address = read16Bug(this, this.memRead(this.PC + 1)) + this.Y;
         pageCrossed = this._crossesPageBoundary(address - this.Y, address);
         break;
       case AddressingModes.Implicit:

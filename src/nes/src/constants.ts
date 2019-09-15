@@ -64,5 +64,13 @@ export const uiGameOptions = [
   {
     value: 14,
     title: "Contra"
+  },
+  {
+    value: 15,
+    title: "NesTest"
+  },
+  {
+    value: 16,
+    title: "Battletoads"
   }
 ];
