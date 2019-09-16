@@ -59,6 +59,10 @@ export class Cpu {
     return this._memory;
   }
 
+  get interruptType() {
+    return this._interrupt;
+  }
+
   set stallCycles(cycles: number) {
     this._stallCycles = cycles;
   }
@@ -796,16 +800,16 @@ export class Cpu {
     this._setZero(this.A);
   }
 
-  private _dcp() {}
-  private _ign() {}
-  private _isb() {}
-  private _lax() {}
-  private _rla() {}
-  private _rra() {}
-  private _sax() {}
-  private _skb() {}
-  private _slo() {}
-  private _sre() {}
+  public dcp() {}
+  public ign() {}
+  public isb() {}
+  public lax() {}
+  public rla() {}
+  public rra() {}
+  public sax() {}
+  public skb() {}
+  public slo() {}
+  public sre() {}
 
   private _runStallCycle() {
     this._stallCycles--;
@@ -910,7 +914,7 @@ export class Cpu {
       case 0x74:
       case 0xd4:
       case 0xf4:
-        this._ign();
+        this.ign();
         break;
       case 0x10:
         this._bpl();
@@ -1158,7 +1162,7 @@ export class Cpu {
       case 0x89:
       case 0xc2:
       case 0xe2:
-        this._skb();
+        this.skb();
         break;
       case 0xf0:
         this._beq();
@@ -1172,13 +1176,13 @@ export class Cpu {
       case 0xb3:
       case 0xb7:
       case 0xbf:
-        this._lax();
+        this.lax();
         break;
       case 0x83:
       case 0x87:
       case 0x8f:
       case 0x97:
-        this._sax();
+        this.sax();
         break;
       case 0xc3:
       case 0xc7:
@@ -1187,7 +1191,7 @@ export class Cpu {
       case 0xd7:
       case 0xdb:
       case 0xdf:
-        this._dcp();
+        this.dcp();
         break;
       case 0xe3:
       case 0xe7:
@@ -1196,7 +1200,7 @@ export class Cpu {
       case 0xf7:
       case 0xfb:
       case 0xff:
-        this._isb();
+        this.isb();
         break;
       case 0x03:
       case 0x07:
@@ -1205,7 +1209,7 @@ export class Cpu {
       case 0x17:
       case 0x1b:
       case 0x1f:
-        this._slo();
+        this.slo();
         break;
       case 0x23:
       case 0x27:
@@ -1214,7 +1218,7 @@ export class Cpu {
       case 0x37:
       case 0x3b:
       case 0x3f:
-        this._rla();
+        this.rla();
         break;
       case 0x43:
       case 0x47:
@@ -1223,7 +1227,7 @@ export class Cpu {
       case 0x57:
       case 0x5b:
       case 0x5f:
-        this._sre();
+        this.sre();
         break;
       case 0x63:
       case 0x67:
@@ -1232,7 +1236,7 @@ export class Cpu {
       case 0x77:
       case 0x7b:
       case 0x7f:
-        this._rra();
+        this.rra();
         break;
       default:
         break;
