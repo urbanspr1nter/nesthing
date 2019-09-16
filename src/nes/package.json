@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "test:watch": "jest --watch --coverage",
     "build-wasm": "sh ./src/wasm/build.sh",
     "build": "webpack && npm run build-wasm"
