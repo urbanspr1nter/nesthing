@@ -1,4 +1,4 @@
-import { read16Bug, read16 } from "./cpu.helpers";
+import { read16Bug, read16, isCarry, isOverflow } from "./cpu.helpers";
 
 describe("cpu.helpers tests", () => {
   it("should simulate wraparound bug - wrap around low byte without incrementing high byte", () => {
@@ -39,5 +39,85 @@ describe("cpu.helpers tests", () => {
     address = 0x10ff;
     result = read16(mockCpu as any, address);
     expect(result).toBe(0x0504);
+  });
+
+  it("should carry on addition when carry not set", () => {
+    const first = 0xfe;
+    const second = 0x02;
+    const carry = 0;
+
+    expect(isCarry(first, second, carry, true)).toBe(true);
+  });
+
+  it("should carry on addition when carry is set", () => {
+    const first = 0xfe;
+    const second = 0x1;
+    const carry = 1;
+
+    expect(isCarry(first, second, carry, true)).toBe(true);
+  });
+
+  it("should not carry on addition when carry not set", () => {
+    const first = 0xfe;
+    const second = 0x1;
+    const carry = 0;
+
+    expect(isCarry(first, second, carry, true)).toBe(false);
+  });
+
+  it("should not carry on addition when carry is set", () => {
+    const first = 0xfd;
+    const second = 0x1;
+    const carry = 0x1;
+
+    expect(isCarry(first, second, carry, true)).toBe(false);
+  });
+
+  it("should carry on subtraction when carry not set", () => {
+    const first = 0xf0;
+    const second = 0xef;
+    const carry = 0x0;
+
+    expect(isCarry(first, second, carry, false)).toBe(true);
+  });
+
+  it("should carry on subtraction when carry is set", () => {
+    const first = 0xf0;
+    const second = 0xef;
+    const carry = 0x1;
+
+    expect(isCarry(first, second, carry, false)).toBe(true);
+  });
+
+  it("should carry on subtraction when carry is not set", () => {
+    const first = 0xf0;
+    const second = 0xf1;
+    const carry = 0x0;
+
+    expect(isCarry(first, second, carry, false)).toBe(false);
+  });
+
+  it("should carry on subtraction when carry is set", () => {
+    const first = 0xf0;
+    const second = 0xf0;
+    const carry = 0x1;
+
+    expect(isCarry(first, second, carry, false)).toBe(false);
+  });
+
+  it("should overflow on addition", () => {
+    const first = 0x80;
+    const second = 0x80;
+    const final = 0x100;
+
+    expect(isOverflow(first, second, final, true)).toBe(true);
+  });
+
+  it("should not overflow on addition", () => {
+    const first = 0x80;
+    const second = 0x7f;
+    const final = 0xff;
+
+    expect(isOverflow(first, second, final, true)).toBe(false);
   });
 });

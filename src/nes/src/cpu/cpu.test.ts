@@ -2,7 +2,7 @@ import { Cpu } from "./cpu";
 import { Memory } from "../memory";
 import { InterruptRequestType, AddressingModes } from "./cpu.interface";
 import { CpuState } from "./constants";
-import { isOverflow } from "./cpu.helpers";
+import { isOverflow, isCarry } from "./cpu.helpers";
 
 const mockMemory = ({
   save: jest.fn(),
@@ -105,22 +105,6 @@ describe("cput.test", () => {
     expect({ X, Y, A }).toEqual({ X: 0x56, Y: 0xff, A: 0xde });
     expect(cpu.stallCycles).toEqual(0x123);
     expect(cpu.currentCycles).toEqual(0x8888);
-  });
-
-  it("should overflow on addition", () => {
-    const first = 0x80;
-    const second = 0x80;
-    const final = 0x100;
-
-    expect(isOverflow(first, second, final, true)).toBe(true);
-  });
-
-  it("should not overflow on addition", () => {
-    const first = 0x80;
-    const second = 0x7f;
-    const final = 0xff;
-
-    expect(isOverflow(first, second, final, true)).toBe(false);
   });
 
   it("should set the proper interrupt type", () => {
