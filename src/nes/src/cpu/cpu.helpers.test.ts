@@ -105,19 +105,106 @@ describe("cpu.helpers tests", () => {
     expect(isCarry(first, second, carry, false)).toBe(false);
   });
 
-  it("should overflow on addition", () => {
-    const first = 0x80;
-    const second = 0x80;
-    const final = 0x100;
+  it("should overflow on subtraction: pos - neg = neg", () => {
+    const first = 3;
+    const second = -126;
+    const borrow = 0;
+    const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, true)).toBe(true);
+    expect(isOverflow(first, second, final, false)).toBe(true);
   });
 
-  it("should not overflow on addition", () => {
-    const first = 0x80;
-    const second = 0x7f;
-    const final = 0xff;
+  it("should overflow on subtraction: neg - pos = pos", () => {
+    const first = -3;
+    const second = 127;
+    const borrow = 0;
+    const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, true)).toBe(false);
+    expect(isOverflow(first, second, final, false)).toBe(true);
+  });
+
+  it("should not overflow on subtraction: pos - pos = pos", () => {
+    const first = 120;
+    const second = 100;
+    const borrow = 0;
+    const final = first - second - borrow;
+
+    expect(isOverflow(first, second, final, false)).toBe(false);
+  });
+
+  it("should not overflow on subtraction: neg - neg = neg", () => {
+    const first = -125;
+    const second = -2;
+    const borrow = 0;
+    const final = first - second - borrow;
+
+    expect(isOverflow(first, second, final, false)).toBe(false);
+  });
+
+  it("should not overflow on subtraction: pos - neg = pos", () => {
+    const first = 100;
+    const second = -3;
+    const borrow = 0;
+    const final = first - second - borrow;
+
+    expect(isOverflow(first, second, final, false)).toBe(false);
+  });
+
+  it("should not overflow on subtraction: neg - pos = neg", () => {
+    const first = -100;
+    const second = 3;
+    const borrow = 0;
+    const final = first - second - borrow;
+
+    expect(isOverflow(first, second, final, false)).toBe(false);
+  });
+
+  it("should not overflow on subtraction: neg - neg = pos", () => {
+    const first = -100;
+    const second = -103;
+    const borrow = 0;
+    const final = first - second - borrow;
+
+    expect(isOverflow(first, second, final, false)).toBe(false);
+  });
+
+  it("should not overflow on subtraction: pos - pos = neg", () => {
+    const first = 100;
+    const second = 103;
+    const borrow = 0;
+    const final = first - second - borrow;
+
+    expect(isOverflow(first, second, final, false)).toBe(false);
+  });
+
+  it("should check for addition overflow", () => {
+    let first = 0;
+
+    // positive + positive = positive
+    while (first < 0x80) {
+      let second = 0x7f - first;
+      while (second >= 0) {
+        const result = first + second;
+        expect(isOverflow(first, second, result, true)).toBe(false);
+        second--;
+      }
+      first++;
+    }
+
+    // positive + negative = positive
+    first = 0;
+    while (first < 0x80) {
+      let second = 0x80 + first;
+      while (second <= 0xff) {
+        const result = first + second;
+        expect(isOverflow(first, second, result, true)).toBe(false);
+        second++;
+      }
+      first++;
+    }
+
+    // negative + positive = positive
+    // negative + negative = negative
+    // negative + positive = negative
   });
 });

@@ -32,6 +32,31 @@ export function isOverflow(
   const modifiedSecond = second & 0xff;
   const modifiedFinal = final & 0xff;
 
+  const sbcA =
+    (modifiedFirst & 0x80) === 0 &&
+    (modifiedSecond & 0x80) !== 0 &&
+    (modifiedFinal & 0x80) !== 0;
+  const sbcB =
+    (modifiedFirst & 0x80) !== 0 &&
+    (modifiedSecond & 0x80) === 0 &&
+    (modifiedFinal & 0x80) === 0;
+
+  if (isAdc) {
+    if (
+      ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
+      ((modifiedFinal ^ modifiedFirst) & 0x80) !== 0
+    ) {
+      return true;
+    }
+  } else {
+    if (sbcA || sbcB) {
+      return true;
+    }
+  }
+
+  return false;
+
+  /*
   if (isAdc) {
     if (
       ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
@@ -50,7 +75,7 @@ export function isOverflow(
     } else {
       return false;
     }
-  }
+  }*/
 }
 
 export function isCarry(
