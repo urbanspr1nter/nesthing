@@ -1,4 +1,10 @@
-import { read16Bug, read16, isCarry, isOverflowOnSbc, isOverflowOnAdc } from "./cpu.helpers";
+import {
+  read16Bug,
+  read16,
+  isCarry,
+  isOverflowOnSbc,
+  isOverflowOnAdc
+} from "./cpu.helpers";
 
 describe("cpu.helpers tests", () => {
   it("should simulate wraparound bug - wrap around low byte without incrementing high byte", () => {
@@ -178,13 +184,13 @@ describe("cpu.helpers tests", () => {
   });
 
   it("should check for addition overflow", () => {
-    for(let carry = 0; carry <= 1; carry++) {
-      for(let a = 0; a <= 0xff; a++) {
-        for(let b = 0; b <= 0xff; b++) {
+    for (let carry = 0; carry <= 1; carry++) {
+      for (let a = 0; a <= 0xff; a++) {
+        for (let b = 0; b <= 0xff; b++) {
           const result = (a + b + carry) & 0xff;
-          if(a <= 0x7F && b <= 0x7F && result >= 0x80) {
+          if (a <= 0x7f && b <= 0x7f && result >= 0x80) {
             expect(isOverflowOnAdc(a, b, result)).toBe(true);
-          } else if(a >= 0x80 && b >= 0x80 && result <= 0x7F) {
+          } else if (a >= 0x80 && b >= 0x80 && result <= 0x7f) {
             expect(isOverflowOnAdc(a, b, result)).toBe(true);
           } else {
             expect(isOverflowOnAdc(a, b, result)).toBe(false);
@@ -195,13 +201,13 @@ describe("cpu.helpers tests", () => {
   });
 
   it("should check for subtraction overflow", () => {
-    for(let carry = 0; carry <= 1; carry++) {
-      for(let a = 0; a <= 0xff; a++) {
-        for(let b = 0; b <= 0xff; b++) {
-          const result = (a + b + carry) & 0xff;
-          if(a <= 0x7F && b >= 0x80 && result >= 0x80) {
+    for (let carry = 0; carry <= 1; carry++) {
+      for (let a = 0; a <= 0xff; a++) {
+        for (let b = 0; b <= 0xff; b++) {
+          const result = (a - b - (1 - carry)) & 0xff;
+          if (a <= 0x7f && b >= 0x80 && result >= 0x80) {
             expect(isOverflowOnSbc(a, b, result)).toBe(true);
-          } else if(a >= 0x80 && b <= 0x7F && result <= 0x7F) {
+          } else if (a >= 0x80 && b <= 0x7f && result <= 0x7f) {
             expect(isOverflowOnSbc(a, b, result)).toBe(true);
           } else {
             expect(isOverflowOnSbc(a, b, result)).toBe(false);

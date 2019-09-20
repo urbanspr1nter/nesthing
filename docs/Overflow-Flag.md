@@ -69,8 +69,6 @@ The resulting number will be the number which the signed binary number represent
 
 Using our previous example:
 
-Using our previous example:
-
 ```
 1011 1100
 ```
@@ -524,7 +522,7 @@ function testAdcOverflow() {
   for(let carry = 0; carry <= 1; carry++) {
     for(let a = 0; a <= 0xff; a++) {
       for(let b = 0; b <= 0xff; b++) {
-        const result = (a + b + carry) & 0xff;
+        const result = (a - b - ( 1 - carry)) & 0xff;
         if(a <= 0x7F && b >= 0x80 && result >= 0x80) {
           expect(isOverflowOnSbc(a, b, result)).toBe(true);
         } else if(a >= 0x80 && b <= 0x7F && result <= 0x7F) {
