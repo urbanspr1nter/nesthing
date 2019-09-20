@@ -20,7 +20,7 @@ import {
   CycleContext
 } from "./cpu.interface";
 import { CpuState } from "./constants";
-import { read16Bug, read16, isCarry, isOverflow } from "./cpu.helpers";
+import { read16Bug, read16, isCarry, isOverflowOnAdc, isOverflowOnSbc } from "./cpu.helpers";
 
 /**
  * Provides the main implementation for the CPU. It emulates only the necessary instructions
@@ -363,7 +363,7 @@ export class Cpu {
       this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (isOverflow(a, b, this.A, true)) {
+    if (isOverflowOnAdc(a, b, this.A)) {
       this._setStatusBit(StatusBitPositions.Overflow);
     } else {
       this._clearStatusBit(StatusBitPositions.Overflow);
@@ -735,7 +735,7 @@ export class Cpu {
       this._clearStatusBit(StatusBitPositions.Carry);
     }
 
-    if (isOverflow(a, b, this.A, false)) {
+    if (isOverflowOnSbc(a, b, this.A)) {
       this._setStatusBit(StatusBitPositions.Overflow);
     } else {
       this._clearStatusBit(StatusBitPositions.Overflow);

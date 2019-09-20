@@ -1,4 +1,4 @@
-import { read16Bug, read16, isCarry, isOverflow } from "./cpu.helpers";
+import { read16Bug, read16, isCarry, isOverflowOnSbc, isOverflowOnAdc } from "./cpu.helpers";
 
 describe("cpu.helpers tests", () => {
   it("should simulate wraparound bug - wrap around low byte without incrementing high byte", () => {
@@ -111,7 +111,7 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(true);
+    expect(isOverflowOnSbc(first, second, final)).toBe(true);
   });
 
   it("should overflow on subtraction: neg - pos = pos", () => {
@@ -120,7 +120,7 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(true);
+    expect(isOverflowOnSbc(first, second, final)).toBe(true);
   });
 
   it("should not overflow on subtraction: pos - pos = pos", () => {
@@ -129,7 +129,7 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(false);
+    expect(isOverflowOnSbc(first, second, final)).toBe(false);
   });
 
   it("should not overflow on subtraction: neg - neg = neg", () => {
@@ -138,7 +138,7 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(false);
+    expect(isOverflowOnSbc(first, second, final)).toBe(false);
   });
 
   it("should not overflow on subtraction: pos - neg = pos", () => {
@@ -147,7 +147,7 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(false);
+    expect(isOverflowOnSbc(first, second, final)).toBe(false);
   });
 
   it("should not overflow on subtraction: neg - pos = neg", () => {
@@ -156,7 +156,7 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(false);
+    expect(isOverflowOnSbc(first, second, final)).toBe(false);
   });
 
   it("should not overflow on subtraction: neg - neg = pos", () => {
@@ -165,7 +165,7 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(false);
+    expect(isOverflowOnSbc(first, second, final)).toBe(false);
   });
 
   it("should not overflow on subtraction: pos - pos = neg", () => {
@@ -174,37 +174,40 @@ describe("cpu.helpers tests", () => {
     const borrow = 0;
     const final = first - second - borrow;
 
-    expect(isOverflow(first, second, final, false)).toBe(false);
+    expect(isOverflowOnSbc(first, second, final)).toBe(false);
   });
 
   it("should check for addition overflow", () => {
-    let first = 0;
-
-    // positive + positive = positive
-    while (first < 0x80) {
-      let second = 0x7f - first;
-      while (second >= 0) {
-        const result = first + second;
-        expect(isOverflow(first, second, result, true)).toBe(false);
-        second--;
+    for(let carry = 0; carry <= 1; carry++) {
+      for(let a = 0; a <= 0xff; a++) {
+        for(let b = 0; b <= 0xff; b++) {
+          const result = (a + b + carry) & 0xff;
+          if(a <= 0x7F && b <= 0x7F && result >= 0x80) {
+            expect(isOverflowOnAdc(a, b, result)).toBe(true);
+          } else if(a >= 0x80 && b >= 0x80 && result <= 0x7F) {
+            expect(isOverflowOnAdc(a, b, result)).toBe(true);
+          } else {
+            expect(isOverflowOnAdc(a, b, result)).toBe(false);
+          }
+        }
       }
-      first++;
     }
+  });
 
-    // positive + negative = positive
-    first = 0;
-    while (first < 0x80) {
-      let second = 0x80 + first;
-      while (second <= 0xff) {
-        const result = first + second;
-        expect(isOverflow(first, second, result, true)).toBe(false);
-        second++;
+  it("should check for subtraction overflow", () => {
+    for(let carry = 0; carry <= 1; carry++) {
+      for(let a = 0; a <= 0xff; a++) {
+        for(let b = 0; b <= 0xff; b++) {
+          const result = (a + b + carry) & 0xff;
+          if(a <= 0x7F && b >= 0x80 && result >= 0x80) {
+            expect(isOverflowOnSbc(a, b, result)).toBe(true);
+          } else if(a >= 0x80 && b <= 0x7F && result <= 0x7F) {
+            expect(isOverflowOnSbc(a, b, result)).toBe(true);
+          } else {
+            expect(isOverflowOnSbc(a, b, result)).toBe(false);
+          }
+        }
       }
-      first++;
     }
-
-    // negative + positive = positive
-    // negative + negative = negative
-    // negative + positive = negative
   });
 });

@@ -22,60 +22,16 @@ export function read16(cpu: Cpu, address: number): number {
   return ((high << 8) | low) & 0xffff;
 }
 
-export function isOverflow(
+export function isOverflowOnAdc(
   first: number,
   second: number,
-  final: number,
-  isAdc: boolean
+  result: number
 ): boolean {
-  const modifiedFirst = first & 0xff;
-  const modifiedSecond = second & 0xff;
-  const modifiedFinal = final & 0xff;
+  return ((first ^ second) & 0x80) === 0 && ((first ^ result) & 0x80) !== 0;
+}
 
-  const sbcA =
-    (modifiedFirst & 0x80) === 0 &&
-    (modifiedSecond & 0x80) !== 0 &&
-    (modifiedFinal & 0x80) !== 0;
-  const sbcB =
-    (modifiedFirst & 0x80) !== 0 &&
-    (modifiedSecond & 0x80) === 0 &&
-    (modifiedFinal & 0x80) === 0;
-
-  if (isAdc) {
-    if (
-      ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
-      ((modifiedFinal ^ modifiedFirst) & 0x80) !== 0
-    ) {
-      return true;
-    }
-  } else {
-    if (sbcA || sbcB) {
-      return true;
-    }
-  }
-
-  return false;
-
-  /*
-  if (isAdc) {
-    if (
-      ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
-      ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
-    ) {
-      return true;
-    } else {
-      return false;
-    }
-  } else {
-    if (
-      ((modifiedFirst ^ modifiedSecond) & 0x80) !== 0 &&
-      ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0
-    ) {
-      return true;
-    } else {
-      return false;
-    }
-  }*/
+export function isOverflowOnSbc(first: number, second: number, result: number) {
+  return ((first ^ second) & 0x80) !== 0 && ((first ^ result) & 0x80) !== 0;
 }
 
 export function isCarry(

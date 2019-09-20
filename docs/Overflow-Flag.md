@@ -311,97 +311,235 @@ The implementation language of choice is TypeScript 3, but if you know any JavaS
 
 We'll also write some unit tests using the `jest` framework to check our work.
 
-## ADC Logic
+### ADC Logic
+
+We know that `ADC` overflow occurs under the following conditions:
+
+- positive + positive = negative
+- negative + negative = positive
+
+We can simplify to say that both operands in addition must be the same sign, and the result must be a different sign.
+
+Since the sign bit in signed arithmetic is just bit 7, we can use `0x80` as the bit mask to test to see if the either operands, or result has its MSB set, or not.
+
+We can test for the operands to be the same sign with the following boolean conditional:
 
 ```js
-const modifiedFirst = first & 0xff;
-const modifiedSecond = second & 0xff;
-const modifiedFinal = final & 0xff;
+const positiveOperands = (first & 0x80) === 0 && (second & 0x80) === 0;
 
-const adcA =
-  (modifiedFirst & 0x80) === 0 &&
-  (modifiedSecond & 0x80) === 0 &&
-  (modifiedFirst & 0x80) === 0 &&
-  (modifiedFinal & 0x80) !== 0 &&
-  (modifiedSecond & 0x80) === 0 &&
-  (modifiedFinal & 0x80) !== 0;
+const negativeOperands = (first & 0x80) !== 0 && (second & 0x80) !== 0;
+```
 
-const adcB =
-  (modifiedFirst & 0x80) !== 0 &&
-  (modifiedSecond & 0x80) !== 0 &&
-  (modifiedFirst & 0x80) !== 0 &&
-  (modifiedFinal & 0x80) === 0 &&
-  (modifiedSecond & 0x80) !== 0 &&
-  (modifiedFinal & 0x80) === 0;
+Now, we need to check the if the sign of the result is different from the operands.
 
-if (adcA || adcB) {
-  return true;
+```js
+const negativeResult = (result & 0x80) !== 0;
+
+const positiveResult = (result & 0x80) === 0;
+```
+
+Finally, we can then combine these checks:
+
+```js
+function isOverflowOnAdc(first: number, second: number, result: number) {
+  if (
+    (positiveOperands && negativeResult) ||
+    (negativeOperands && positiveResult)
+  ) {
+    return true;
+  }
+  return false;
 }
-
-return false;
 ```
 
-We can simplify this logic to:
+We can do better! Notice that we only need to be considered whether, or not the `first` or `second` number have the same signs. We can achieve this by taking computing `first ^ second`, which will then either set the bit 7 of this computed result to `0` if the signs are the same, `1/1`, or `0/0`, and `1` if the signs are different `1/0`, or `0/1`. 
 
 ```js
-const adcA =
-  ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
-  ((modifiedFirst ^ modifiedFinal) & 0x80) !== 0 &&
-  ((modifiedSecond ^ modifiedFinal) & 0x80) !== 0;
+const isSameOperandSign = ((first ^ second) & 0x80) === 0;
 ```
 
-```js
-const adcA =
-  ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 &&
-  ((modifiedFinal ^ (modifiedFirst ^ modifiedSecond)) & 0x80) !== 0;
-```
+The result is also the same, we can just check to see if either operand and the result signs are different by performing an  `xor` again. We choose `first` to be tested with `result` in this case:
 
 ```js
-const adcA =
-  ((modifiedFirst ^ modifiedSecond) & 0x80) === 0 && // has to be the same sign!
-  ((modifiedFinal ^ modifiedFirst) & 0x80) !== 0;
+const isDifferentResultSign = ((first ^ result) & 0x80) !== 0
 ```
 
-```js
-const adcB =
-  (modifiedFirst & 0x80) !== 0 && // negative
-  (modifiedSecond & 0x80) !== 0 && // negative
-  (modifiedFirst & 0x80) !== 0 &&
-  (modifiedFinal & 0x80) === 0 && // positive
-  (modifiedSecond & 0x80) !== 0 &&
-  (modifiedFinal & 0x80) === 0; // positive
-```
+We can rewrite the function to be:
 
 ```js
-const adcB =
-  (modifiedFirst ^ modifiedSecond) & (0x80 === 0) &&
-  ((modifiedFinal ^ (modifiedFirst ^ modifiedSecond)) & 0x80) !== 0;
+function isOverflowOnAdc(first: number, second: number, result: number) {
+  const isSameOperandSign = ((first ^ second) & 0x80) === 0;
+  const isDifferentResultSign = ((first ^ result) & 0x80) !== 0
+
+  return isSameOperandSign && isDifferentResultSign;
+}
 ```
 
+Or:
+
 ```js
-const adcB =
-  (modifiedFirst ^ modifiedSecond) & (0x80 === 0) &&
-  ((modifiedFinal ^ modifiedFirst) & 0x80) !== 0;
+function isOverflowOnAdc(first: number, second: number, result: number) {
+  return ((first ^ second) & 0x80) === 0 && ((first ^ result) & 0x80) !== 0;
+}
 ```
 
 ## SBC Logic
 
-```js
-const sbcA =
-  (modifiedFirst & 0x80) === 0 &&
-  (modifiedSecond & 0x80) !== 0 &&
-  (modifiedFinal & 0x80) !== 0;
-const sbcB =
-  (modifiedFirst & 0x80) !== 0 &&
-  (modifiedSecond & 0x80) === 0 &&
-  (modifiedFinal & 0x80) === 0;
+We know that `SBC` overflow occurs under the following conditions:
 
-if (sbcA || sbcB) {
-  return true;
+* positive - negative = negative
+* negative - positive = positive
+
+Looking at this, the operands must be a different sign from each other:
+
+```js
+const isOperandDifferentSign = 
+  ((first & 0x80) === 0 && (second & 0x80) !== 0) || 
+  ((first & 0x80) !== 0 && (second & 0x80) === 0);
+```
+
+We simplifying this, we can perform the `xor` on both operands and mask only the bit position of the sign bit to determine whether or not both operands have a different sign:
+
+```js
+const isOperandDifferentSign = ((first ^ second) & 0x80) !== 0;
+```
+
+How about the result? Well looks like the only requirement here is that the result's sign must be different from the `first` operand sign!
+
+```js
+const isResultSignDifferentFromFirst = ((first ^ result) & 0x80) !== 0;
+```
+
+Now, combining it into a function:
+
+```js
+function isOverflowOnSbc(first: number, second: number, result: number) {
+  const isOperandDifferentSign = ((first ^ second) & 0x80) !== 0;
+  const isResultSignDifferentFromFirst = ((first ^ result) & 0x80) !== 0;
+
+  return isOperandDifferentSign && isResultSignDifferentFromFirst;
+}
+```
+Simplifying it all:
+
+```js
+function isOverflowOnSbc(first: number, second: number, result: number) {
+  return ((first ^ second) & 0x80) !== 0 && ((first ^ result) & 0x80) !== 0;
+}
+```
+
+## Tests
+
+Okay now we have written these two functions to determine overflow on `ADC`, and `SBC`:
+
+```js
+function isOverflowOnAdc(first: number, second: number, result: number) {
+  return ((first ^ second) & 0x80) === 0 && ((first ^ result) & 0x80) !== 0;
 }
 
-return false;
+function isOverflowOnSbc(first: number, second: number, result: number) {
+  return ((first ^ second) & 0x80) !== 0 && ((first ^ result) & 0x80) !== 0;
+}
 ```
+
+It'd be nice to cover every single case. For addition, we would want to first start out with a carry in of 0. 
+
+#### ADC positive + positive = negative
+
+We know that positive numbers range from `0x00` to `0x7F`. This is `[0, 127]`. In order to force an overflow, we must then take any number within this range and add it against another number that will exceed `0x7F`. Otherwise we shouldn't expect an overflow.
+
+Suppose we have `a` and `b`. 
+
+* If `a` is `1` then that means `b` must be from `0x7F`. 
+* If `a` is `2` then `b` can range from `0x7E` to `0x7F`. 
+* If `a` is `3` then `b` can range from `[0x7C, 0x7F]`. 
+
+All of these will trigger overflow, anything else won't. We can then generalize it as:
+
+```js
+function testAdcPositiveOperandOverflow() {
+  const carry = 0;
+  for(let a = 0; a <= 0x7F; a++) {
+    for(let b = 0; b <= 0x7F; b++) {
+      const result = (a + b + carry) & 0xff;
+      if(result <= 0x7F) {
+        expect(isOverflowOnAdc(a, b, result)).toBe(false);
+      } else {
+        expect(isOverflowOnAdc(a, b, result)).toBe(true);
+      }
+    }
+  }
+}
+```
+
+#### ADC negative + negative = positive
+
+Same thing for the above, instead, we want to start in the range of `0x80` to `0xFF` (`[-128, -1]`).
+
+```js
+function testAdcNegativeOperandOverflow() {
+  const carry = 0;
+  for(let a = 0; a <= 0xff; a++) {
+    for(let b = 0; b <= 0xff; b++) {
+      const result = (a + b + carry) & 0xff;
+      if(result <= 0x7F) {
+        expect(isOverflowOnAdc(a, b, result)).toBe(true);
+      } else {
+        expect(isOverflowOnAdc(a, b, result)).toBe(false);
+      }
+    }
+  }
+}
+```
+
+#### General Test for Testing ADC Overflow
+
+Let's generalize all this in addition with accounting for the carry bit. The following test will test for all combinations of numbers from 0 to 255 on ADC. 
+
+```js
+function testAdcOverflow() {
+  for(let carry = 0; carry <= 1; carry++) {
+    for(let a = 0; a <= 0xff; a++) {
+      for(let b = 0; b <= 0xff; b++) {
+        const result = (a + b + carry) & 0xff;
+        if(a <= 0x7F && b <= 0x7F && result >= 0x80) {
+          expect(isOverflowOnAdc(a, b, result)).toBe(true);
+        } else if(a >= 0x80 && b >= 0x80 && result <= 0x7F) {
+          expect(isOverflowOnAdc(a, b, result)).toBe(true);
+        } else {
+          expect(isOverflowOnAdc(a, b, result)).toBe(false);
+        }
+      }
+    }
+  }
+}
+```
+
+#### SBC Tests
+
+Once we know the general approach for ADC, SBC is actually pretty simple:
+
+```js
+function testAdcOverflow() {
+  for(let carry = 0; carry <= 1; carry++) {
+    for(let a = 0; a <= 0xff; a++) {
+      for(let b = 0; b <= 0xff; b++) {
+        const result = (a + b + carry) & 0xff;
+        if(a <= 0x7F && b >= 0x80 && result >= 0x80) {
+          expect(isOverflowOnSbc(a, b, result)).toBe(true);
+        } else if(a >= 0x80 && b <= 0x7F && result <= 0x7F) {
+          expect(isOverflowOnSbc(a, b, result)).toBe(true);
+        } else {
+          expect(isOverflowOnSbc(a, b, result)).toBe(false);
+        }
+      }
+    }
+  }
+}
+```
+
+## Conclusion
+
 
 ## References
 

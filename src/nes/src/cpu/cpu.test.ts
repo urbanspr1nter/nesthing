@@ -2,7 +2,6 @@ import { Cpu } from "./cpu";
 import { Memory } from "../memory";
 import { InterruptRequestType, AddressingModes } from "./cpu.interface";
 import { CpuState } from "./constants";
-import { isOverflow, isCarry } from "./cpu.helpers";
 
 const mockMemory = ({
   save: jest.fn(),
