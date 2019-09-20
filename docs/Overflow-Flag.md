@@ -538,9 +538,6 @@ function testAdcOverflow() {
 }
 ```
 
-## Conclusion
-
-
 ## References
 
 - http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
